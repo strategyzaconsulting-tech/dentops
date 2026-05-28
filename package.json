@@ -1,0 +1,21 @@
+{
+  "name": "dentops",
+  "private": true,
+  "version": "0.0.1",
+  "description": "DentOps — multi-tenant dental practice HR SaaS",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "type-check": "turbo type-check",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .gitignore",
+    "clean": "turbo clean"
+  },
+  "devDependencies": {
+    "@dentops/prettier-config": "workspace:*",
+    "prettier": "^3.3.3",
+    "turbo": "^2.1.3"
+  },
+  "prettier": "@dentops/prettier-config"
+}
