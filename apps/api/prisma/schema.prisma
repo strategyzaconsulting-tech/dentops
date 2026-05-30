@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Practice {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  logoUrl    String?  @map("logo_url")
+  brandColor String?  @map("brand_color")
+  type       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  users       User[]
+  locations   Location[]
+  timePunches TimePunch[]
+  ptoRequests PtoRequest[]
+
+  @@map("practices")
+}
+
+model User {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String @map("practice_id") @db.Uuid
+  firstName  String @map("first_name")
+  lastName   String @map("last_name")
+  email      String @unique
+  role       String
+  status     String
+
+  practice    Practice     @relation(fields: [practiceId], references: [id])
+  timePunches TimePunch[]
+  ptoRequests PtoRequest[]
+
+  @@map("users")
+}
+
+model Location {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String  @map("practice_id") @db.Uuid
+  name       String
+  address    String?
+  city       String?
+  state      String?
+  zip        String?
+
+  practice    Practice    @relation(fields: [practiceId], references: [id])
+  timePunches TimePunch[]
+
+  @@map("locations")
+}
+
+model TimePunch {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String    @map("practice_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  locationId String    @map("location_id") @db.Uuid
+  punchIn    DateTime  @map("punch_in")
+  punchOut   DateTime? @map("punch_out")
+  specialty  String?
+  breakStart DateTime? @map("break_start")
+  breakEnd   DateTime? @map("break_end")
+
+  practice  Practice  @relation(fields: [practiceId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+  location  Location  @relation(fields: [locationId], references: [id])
+
+  @@map("time_punches")
+}
+
+model PtoRequest {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String   @map("practice_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  startDate  DateTime @map("start_date") @db.Date
+  endDate    DateTime @map("end_date") @db.Date
+  type       String
+  status     String
+  notes      String?
+
+  practice Practice @relation(fields: [practiceId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@map("pto_requests")
+}

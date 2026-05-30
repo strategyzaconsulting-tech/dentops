@@ -3,6 +3,7 @@ import fastifyCors from "@fastify/cors";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
 import { healthRoutes } from "./routes/health.js";
+import setupRoutes from "./routes/setup.js";
 
 export async function createServer() {
   const server = Fastify({
@@ -33,6 +34,7 @@ export async function createServer() {
   });
 
   await server.register(healthRoutes, { prefix: "/api" });
+  await server.register(setupRoutes, { prefix: "/api" });
 
   return server;
 }
