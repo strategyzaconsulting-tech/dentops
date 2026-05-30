@@ -13,6 +13,11 @@ const PRACTICE_ID = 'replace-with-real-practice-id'
 const USER_ID = 'replace-with-real-user-id'
 const API_BASE = 'http://localhost:3000'
 
+const TEST_LOCATIONS = [
+  { id: 'test-loc-1', name: 'Main Office', address: '123 Dental Ave', city: 'New York', state: 'NY' },
+  { id: 'test-loc-2', name: 'Uptown Branch', address: '456 Park Ave', city: 'New York', state: 'NY' },
+]
+
 const SPECIALTIES = [
   'General Dentistry',
   'Orthodontics',
@@ -68,7 +73,6 @@ export default function HomeScreen() {
 
   // --- idle state ---
   const [locations, setLocations] = useState<Location[]>([])
-  const [locationsError, setLocationsError] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
   const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null)
   const [clockingIn, setClockingIn] = useState(false)
@@ -97,10 +101,10 @@ export default function HomeScreen() {
         if (Array.isArray(data) && data.length > 0) {
           setLocations(data)
         } else {
-          setLocationsError(true)
+          setLocations(TEST_LOCATIONS)
         }
       })
-      .catch(() => setLocationsError(true))
+      .catch(() => setLocations(TEST_LOCATIONS))
   }, [])
 
   // Elapsed timer while clocked in
@@ -120,6 +124,20 @@ export default function HomeScreen() {
   async function handleClockIn() {
     if (!selectedLocation) return
     setClockingIn(true)
+
+    const punchIn = new Date().toISOString()
+    const localPunch: TimePunch = {
+      id: `local-${Date.now()}`,
+      punchIn,
+      locationId: selectedLocation,
+      specialty: selectedSpecialty ?? undefined,
+    }
+
+    // Show clocked-in state immediately
+    setPunch(localPunch)
+    setClockingIn(false)
+
+    // Try to persist to API in background — update id if successful
     try {
       const res = await fetch(`${API_BASE}/api/time-punches`, {
         method: 'POST',
@@ -129,15 +147,15 @@ export default function HomeScreen() {
           userId: USER_ID,
           locationId: selectedLocation,
           specialty: selectedSpecialty ?? undefined,
-          punchIn: new Date().toISOString(),
+          punchIn,
         }),
       })
-      const data: TimePunch = await res.json()
-      setPunch(data)
-    } catch (e) {
-      // swallow — in a real app show an error toast
-    } finally {
-      setClockingIn(false)
+      if (res.ok) {
+        const data: TimePunch = await res.json()
+        setPunch(data)
+      }
+    } catch {
+      // API unavailable — local state is still shown
     }
   }
 
@@ -165,21 +183,26 @@ export default function HomeScreen() {
   async function handleClockOut() {
     if (!punch) return
     setClockingOut(true)
-    try {
-      await fetch(`${API_BASE}/api/time-punches/${punch.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ punchOut: new Date().toISOString() }),
-      })
-      if (elapsedRef.current) clearInterval(elapsedRef.current)
-      setPunch(null)
-      setOnBreak(false)
-      setSelectedLocation(null)
-      setSelectedSpecialty(null)
-    } catch (e) {
-      // swallow
-    } finally {
-      setClockingOut(false)
+
+    // Reset UI immediately
+    if (elapsedRef.current) clearInterval(elapsedRef.current)
+    setPunch(null)
+    setOnBreak(false)
+    setSelectedLocation(null)
+    setSelectedSpecialty(null)
+    setClockingOut(false)
+
+    // Try to persist to API in background
+    if (!punch.id.startsWith('local-')) {
+      try {
+        await fetch(`${API_BASE}/api/time-punches/${punch.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ punchOut: new Date().toISOString() }),
+        })
+      } catch {
+        // API unavailable — local state already reset
+      }
     }
   }
 
@@ -247,9 +270,7 @@ export default function HomeScreen() {
         <View style={styles.card}>
           {/* Location picker */}
           <Text style={styles.cardLabel}>Location</Text>
-          {locationsError ? (
-            <Text style={styles.noLocationsText}>No locations available</Text>
-          ) : locations.length === 0 ? (
+          {locations.length === 0 ? (
             <ActivityIndicator color="#1D9E75" style={{ marginVertical: 8 }} />
           ) : (
             <ScrollView
