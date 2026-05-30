@@ -11,12 +11,14 @@ import Step7Staff from './pages/setup/steps/Step7Staff'
 import Step8Locations from './pages/setup/steps/Step8Locations'
 import Step9Launch from './pages/setup/steps/Step9Launch'
 import Dashboard from './pages/Dashboard'
+import TimeClock from './pages/TimeClock'
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/time-clock" element={<TimeClock />} />
         <Route
           path="/setup"
           element={

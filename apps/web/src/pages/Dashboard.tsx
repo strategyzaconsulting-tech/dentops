@@ -18,6 +18,13 @@ export default function Dashboard() {
               <p className="mt-1 text-sm text-muted-foreground">Manage {section.toLowerCase()}</p>
             </div>
           ))}
+          <a
+            href="/time-clock"
+            className="rounded-lg border bg-card p-6 shadow-sm hover:border-[#1D9E75] hover:shadow-md transition-all"
+          >
+            <h3 className="font-semibold text-[#1D9E75]">Time Clock</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Live clock-in board &amp; today's log</p>
+          </a>
         </div>
       </main>
     </div>

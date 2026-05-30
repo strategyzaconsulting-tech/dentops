@@ -4,14 +4,16 @@ import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
 import { healthRoutes } from "./routes/health.js";
 import setupRoutes from "./routes/setup.js";
+import timeclockRoutes from "./routes/timeClock.js";
 
 export async function createServer() {
   const server = Fastify({
     logger: { level: process.env.LOG_LEVEL ?? "info" },
   });
 
+  const corsOrigin = process.env.CORS_ORIGIN ?? "http://localhost:5173";
   await server.register(fastifyCors, {
-    origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+    origin: corsOrigin === "*" ? true : corsOrigin,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   });
 
@@ -35,6 +37,7 @@ export async function createServer() {
 
   await server.register(healthRoutes, { prefix: "/api" });
   await server.register(setupRoutes, { prefix: "/api" });
+  await server.register(timeclockRoutes, { prefix: "/api" });
 
   return server;
 }
