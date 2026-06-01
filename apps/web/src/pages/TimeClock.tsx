@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-const PRACTICE_ID = 'replace-with-real-practice-id'
+const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357 '
 const API_BASE = 'http://localhost:3000'
 
 const SPECIALTIES = [

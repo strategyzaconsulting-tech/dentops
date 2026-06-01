@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 
-const PRACTICE_ID = 'replace-with-real-practice-id'
+const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const TYPE_COLORS: Record<string, string> = {
