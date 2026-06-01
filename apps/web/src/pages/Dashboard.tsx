@@ -1,4 +1,4 @@
-const sections = ["Staff", "Schedules", "Payroll", "Compliance"] as const;
+const sections = ["Payroll", "Compliance"] as const;
 
 export default function Dashboard() {
   return (
@@ -18,6 +18,20 @@ export default function Dashboard() {
               <p className="mt-1 text-sm text-muted-foreground">Manage {section.toLowerCase()}</p>
             </div>
           ))}
+          <a
+            href="/staff"
+            className="rounded-lg border bg-card p-6 shadow-sm hover:border-[#1D9E75] hover:shadow-md transition-all"
+          >
+            <h3 className="font-semibold text-[#1D9E75]">Staff</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Directory, roles &amp; status</p>
+          </a>
+          <a
+            href="/schedules"
+            className="rounded-lg border bg-card p-6 shadow-sm hover:border-[#1D9E75] hover:shadow-md transition-all"
+          >
+            <h3 className="font-semibold text-[#1D9E75]">Schedules</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Weekly shift grid</p>
+          </a>
           <a
             href="/time-clock"
             className="rounded-lg border bg-card p-6 shadow-sm hover:border-[#1D9E75] hover:shadow-md transition-all"

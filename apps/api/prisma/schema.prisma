@@ -15,11 +15,12 @@ model Practice {
   type       String?
   createdAt  DateTime @default(now()) @map("created_at")
 
-  users        User[]
-  locations    Location[]
-  timePunches  TimePunch[]
-  ptoRequests  PtoRequest[]
+  users         User[]
+  locations     Location[]
+  timePunches   TimePunch[]
+  ptoRequests   PtoRequest[]
   blackoutDates BlackoutDate[]
+  shifts        Shift[]
 
   @@map("practices")
 }
@@ -36,6 +37,7 @@ model User {
   practice    Practice     @relation(fields: [practiceId], references: [id])
   timePunches TimePunch[]
   ptoRequests PtoRequest[]
+  shifts      Shift[]
 
   @@map("users")
 }
@@ -51,6 +53,7 @@ model Location {
 
   practice    Practice    @relation(fields: [practiceId], references: [id])
   timePunches TimePunch[]
+  shifts      Shift[]
 
   @@map("locations")
 }
@@ -87,6 +90,24 @@ model PtoRequest {
   user     User     @relation(fields: [userId], references: [id])
 
   @@map("pto_requests")
+}
+
+model Shift {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String   @map("practice_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  locationId String   @map("location_id") @db.Uuid
+  date       DateTime @db.Date
+  startTime  String   @map("start_time")
+  endTime    String   @map("end_time")
+  specialty  String?
+  notes      String?
+
+  practice Practice @relation(fields: [practiceId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+  location Location @relation(fields: [locationId], references: [id])
+
+  @@map("shifts")
 }
 
 model BlackoutDate {

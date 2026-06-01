@@ -1,0 +1,59 @@
+import type { FastifyInstance } from 'fastify'
+import { prisma } from '../lib/prisma.js'
+
+export default async function staffRoutes(server: FastifyInstance) {
+  // GET /api/staff?practiceId=
+  server.get<{ Querystring: { practiceId: string } }>('/staff', async (request, reply) => {
+    const { practiceId } = request.query
+    if (!practiceId) {
+      return reply.status(400).send({ error: 'practiceId is required' })
+    }
+    const staff = await prisma.user.findMany({
+      where: { practiceId },
+      orderBy: [{ role: 'asc' }, { lastName: 'asc' }],
+    })
+    return reply.send(staff)
+  })
+
+  // POST /api/staff
+  server.post<{
+    Body: {
+      practiceId: string
+      firstName: string
+      lastName: string
+      email: string
+      role: string
+    }
+  }>('/staff', async (request, reply) => {
+    const { practiceId, firstName, lastName, email, role } = request.body
+    const user = await prisma.user.create({
+      data: { practiceId, firstName, lastName, email, role, status: 'active' },
+    })
+    return reply.status(201).send(user)
+  })
+
+  // PATCH /api/staff/:id
+  server.patch<{
+    Params: { id: string }
+    Body: {
+      firstName?: string
+      lastName?: string
+      email?: string
+      role?: string
+      status?: string
+    }
+  }>('/staff/:id', async (request, reply) => {
+    const { id } = request.params
+    const { firstName, lastName, email, role, status } = request.body
+
+    const data: Record<string, unknown> = {}
+    if (firstName !== undefined) data.firstName = firstName
+    if (lastName !== undefined) data.lastName = lastName
+    if (email !== undefined) data.email = email
+    if (role !== undefined) data.role = role
+    if (status !== undefined) data.status = status
+
+    const user = await prisma.user.update({ where: { id }, data })
+    return reply.send(user)
+  })
+}

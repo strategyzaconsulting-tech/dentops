@@ -13,6 +13,8 @@ import Step9Launch from './pages/setup/steps/Step9Launch'
 import Dashboard from './pages/Dashboard'
 import TimeClock from './pages/TimeClock'
 import PtoAdmin from './pages/PtoAdmin'
+import Staff from './pages/Staff'
+import Schedules from './pages/Schedules'
 
 export default function App() {
   return (
@@ -21,6 +23,8 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/time-clock" element={<TimeClock />} />
         <Route path="/pto" element={<PtoAdmin />} />
+        <Route path="/staff" element={<Staff />} />
+        <Route path="/schedules" element={<Schedules />} />
         <Route
           path="/setup"
           element={
