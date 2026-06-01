@@ -51,6 +51,11 @@ export default function Step2PracticeInfo() {
           >
             <option>General Dentistry</option>
             <option>Orthodontics</option>
+            <option>Pediatrics</option>
+            <option>Oral Surgery</option>
+            <option>Prosthodontics</option>
+            <option>Endodontics</option>
+            <option>Periodontics</option>
             <option>Multi-specialty</option>
             <option>DSO</option>
           </select>
