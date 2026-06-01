@@ -12,6 +12,7 @@ import Step8Locations from './pages/setup/steps/Step8Locations'
 import Step9Launch from './pages/setup/steps/Step9Launch'
 import Dashboard from './pages/Dashboard'
 import TimeClock from './pages/TimeClock'
+import PtoAdmin from './pages/PtoAdmin'
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/time-clock" element={<TimeClock />} />
+        <Route path="/pto" element={<PtoAdmin />} />
         <Route
           path="/setup"
           element={

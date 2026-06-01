@@ -15,10 +15,11 @@ model Practice {
   type       String?
   createdAt  DateTime @default(now()) @map("created_at")
 
-  users       User[]
-  locations   Location[]
-  timePunches TimePunch[]
-  ptoRequests PtoRequest[]
+  users        User[]
+  locations    Location[]
+  timePunches  TimePunch[]
+  ptoRequests  PtoRequest[]
+  blackoutDates BlackoutDate[]
 
   @@map("practices")
 }
@@ -86,4 +87,15 @@ model PtoRequest {
   user     User     @relation(fields: [userId], references: [id])
 
   @@map("pto_requests")
+}
+
+model BlackoutDate {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String   @map("practice_id") @db.Uuid
+  date       DateTime @db.Date
+  reason     String?
+
+  practice Practice @relation(fields: [practiceId], references: [id])
+
+  @@map("blackout_dates")
 }

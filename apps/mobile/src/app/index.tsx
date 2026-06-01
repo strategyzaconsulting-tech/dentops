@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { router } from 'expo-router'
 
 const PRACTICE_ID = 'replace-with-real-practice-id'
 const USER_ID = 'replace-with-real-user-id'
@@ -260,6 +261,13 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.idleRoot}>
       <ScrollView contentContainerStyle={styles.idleScroll} keyboardShouldPersistTaps="handled">
+        {/* Top nav */}
+        <View style={styles.topNav}>
+          <TouchableOpacity onPress={() => router.push('/pto')} style={styles.ptoNavBtn}>
+            <Text style={styles.ptoNavText}>Time Off</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Time + date */}
         <View style={styles.timeSection}>
           <Text style={styles.timeText}>{formatTime(now)}</Text>
@@ -348,6 +356,23 @@ const styles = StyleSheet.create({
   idleScroll: {
     flexGrow: 1,
     paddingBottom: 40,
+  },
+  topNav: {
+    alignItems: 'flex-end',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  ptoNavBtn: {
+    borderWidth: 1.5,
+    borderColor: '#1D9E75',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  ptoNavText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1D9E75',
   },
   timeSection: {
     alignItems: 'center',

@@ -5,6 +5,7 @@ import fastifySwaggerUi from "@fastify/swagger-ui";
 import { healthRoutes } from "./routes/health.js";
 import setupRoutes from "./routes/setup.js";
 import timeclockRoutes from "./routes/timeClock.js";
+import ptoRoutes from "./routes/pto.js";
 
 export async function createServer() {
   const server = Fastify({
@@ -38,6 +39,7 @@ export async function createServer() {
   await server.register(healthRoutes, { prefix: "/api" });
   await server.register(setupRoutes, { prefix: "/api" });
   await server.register(timeclockRoutes, { prefix: "/api" });
+  await server.register(ptoRoutes, { prefix: "/api" });
 
   return server;
 }
