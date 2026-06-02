@@ -34,6 +34,8 @@ model User {
   role       String
   status     String
 
+  pushToken   String?      @map("push_token")
+
   practice    Practice     @relation(fields: [practiceId], references: [id])
   timePunches TimePunch[]
   ptoRequests PtoRequest[]

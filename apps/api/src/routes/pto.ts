@@ -1,6 +1,35 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
 
+const TYPE_LABELS: Record<string, string> = {
+  pto: 'PTO request',
+  unpaid: 'Unpaid time-off request',
+  schedule_adjustment: 'Schedule adjustment',
+  late_arrival: 'Late arrival request',
+  early_departure: 'Early departure request',
+  long_lunch: 'Long lunch request',
+}
+
+async function sendPushNotification(
+  token: string,
+  title: string,
+  body: string,
+  data?: Record<string, unknown>
+): Promise<void> {
+  try {
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ to: token, title, body, sound: 'default', data }),
+    })
+  } catch {
+    // non-blocking — notification failure never breaks the API response
+  }
+}
+
 const ALLOCATIONS: Record<string, number> = {
   vacation: 15,
   sick: 10,
@@ -139,9 +168,21 @@ export default async function ptoRoutes(server: FastifyInstance) {
       where: { id },
       data: { status },
       include: {
-        user: { select: { id: true, firstName: true, lastName: true } },
+        user: { select: { id: true, firstName: true, lastName: true, pushToken: true } },
       },
     })
+
+    if (req.user.pushToken && status !== 'pending') {
+      const typeLabel = TYPE_LABELS[req.type] ?? 'Request'
+      const approved = status === 'approved'
+      await sendPushNotification(
+        req.user.pushToken,
+        approved ? 'Request Approved ✓' : 'Request Denied',
+        `Your ${typeLabel} has been ${approved ? 'approved' : 'denied'}.`,
+        { requestId: id, status, type: req.type }
+      )
+    }
+
     return reply.send(req)
   })
 
