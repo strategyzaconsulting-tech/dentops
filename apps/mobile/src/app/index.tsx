@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -131,6 +132,11 @@ export default function HomeScreen() {
   // --- shared clock state ---
   const [now, setNow] = useState(new Date())
 
+  // --- practice branding + settings ---
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [practiceName, setPracticeName] = useState<string | null>(null)
+  const [requireSpecialty, setRequireSpecialty] = useState(false)
+
   // --- idle state ---
   const [locations, setLocations] = useState<Location[]>([])
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
@@ -163,6 +169,18 @@ export default function HomeScreen() {
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
+  }, [])
+
+  // Fetch practice branding on mount
+  useEffect(() => {
+    fetch(`${API_BASE}/api/practice/${PRACTICE_ID}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.logoUrl) setLogoUrl(data.logoUrl)
+        if (data?.name) setPracticeName(data.name)
+        if (typeof data?.requireSpecialty === 'boolean') setRequireSpecialty(data.requireSpecialty)
+      })
+      .catch(() => {})
   }, [])
 
   // Fetch locations on mount
@@ -505,103 +523,162 @@ export default function HomeScreen() {
 
   // ---- IDLE STATE ----
   return (
-    <SafeAreaView style={styles.idleRoot}>
-      <ScrollView contentContainerStyle={styles.idleScroll} keyboardShouldPersistTaps="handled">
-        {/* Top nav */}
-        <View style={styles.topNav}>
-          <TouchableOpacity onPress={() => router.push('/pto')} style={styles.ptoNavBtn}>
-            <Text style={styles.ptoNavText}>Time Off</Text>
+    <View style={styles.idleRoot}>
+      <SafeAreaView style={styles.idleTopArea} edges={['top']}>
+        <ScrollView contentContainerStyle={styles.idleScroll} keyboardShouldPersistTaps="handled">
+          {/* Logo section */}
+          <View style={styles.logoSection}>
+            {logoUrl ? (
+              <Image source={{ uri: logoUrl }} style={styles.logoImage} resizeMode="contain" />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <View style={styles.logoPlaceholderInner} />
+              </View>
+            )}
+            {practiceName && <Text style={styles.practiceNameText}>{practiceName}</Text>}
+          </View>
+
+          {/* Time + date */}
+          <View style={styles.timeSection}>
+            <Text style={styles.timeText}>{formatTime(now)}</Text>
+            <Text style={styles.dateText}>{formatDate(now)}</Text>
+          </View>
+
+          {/* Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>Location</Text>
+            {locations.length === 0 ? (
+              <ActivityIndicator color="#1D9E75" style={{ marginVertical: 8 }} />
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.chipScroll}
+                contentContainerStyle={styles.chipContent}
+              >
+                {locations.map((loc) => {
+                  const selected = selectedLocation === loc.id
+                  return (
+                    <TouchableOpacity
+                      key={loc.id}
+                      style={selected ? styles.chipSelected : styles.chip}
+                      onPress={() => setSelectedLocation(loc.id)}
+                    >
+                      <Text style={selected ? styles.chipTextSelected : styles.chipText}>
+                        {loc.name}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </ScrollView>
+            )}
+
+            {requireSpecialty && (
+              <>
+                <Text style={[styles.cardLabel, { marginTop: 20 }]}>Specialty</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.chipScroll}
+                  contentContainerStyle={styles.chipContent}
+                >
+                  {SPECIALTIES.map((spec) => {
+                    const selected = selectedSpecialty === spec
+                    return (
+                      <TouchableOpacity
+                        key={spec}
+                        style={selected ? styles.chipSelected : styles.chip}
+                        onPress={() => setSelectedSpecialty(spec)}
+                      >
+                        <Text style={selected ? styles.chipTextSelected : styles.chipText}>{spec}</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </ScrollView>
+              </>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.clockInBtn, (!selectedLocation || clockingIn) && styles.clockInBtnDisabled]}
+            onPress={handleClockIn}
+            disabled={!selectedLocation || clockingIn}
+          >
+            {clockingIn ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.clockInBtnText}>Clock in</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+
+      {/* Bottom module dock */}
+      <SafeAreaView style={styles.bottomNav} edges={['bottom']}>
+        <View style={styles.bottomNavInner}>
+          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/pto')}>
+            <Text style={styles.bottomNavItemIcon}>📅</Text>
+            <Text style={styles.bottomNavItemLabel}>Time Off</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Time + date */}
-        <View style={styles.timeSection}>
-          <Text style={styles.timeText}>{formatTime(now)}</Text>
-          <Text style={styles.dateText}>{formatDate(now)}</Text>
-        </View>
-
-        {/* Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Location</Text>
-          {locations.length === 0 ? (
-            <ActivityIndicator color="#1D9E75" style={{ marginVertical: 8 }} />
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.chipScroll}
-              contentContainerStyle={styles.chipContent}
-            >
-              {locations.map((loc) => {
-                const selected = selectedLocation === loc.id
-                return (
-                  <TouchableOpacity
-                    key={loc.id}
-                    style={selected ? styles.chipSelected : styles.chip}
-                    onPress={() => setSelectedLocation(loc.id)}
-                  >
-                    <Text style={selected ? styles.chipTextSelected : styles.chipText}>
-                      {loc.name}
-                    </Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </ScrollView>
-          )}
-
-          <Text style={[styles.cardLabel, { marginTop: 20 }]}>Specialty</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.chipScroll}
-            contentContainerStyle={styles.chipContent}
-          >
-            {SPECIALTIES.map((spec) => {
-              const selected = selectedSpecialty === spec
-              return (
-                <TouchableOpacity
-                  key={spec}
-                  style={selected ? styles.chipSelected : styles.chip}
-                  onPress={() => setSelectedSpecialty(spec)}
-                >
-                  <Text style={selected ? styles.chipTextSelected : styles.chipText}>{spec}</Text>
-                </TouchableOpacity>
-              )
-            })}
-          </ScrollView>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.clockInBtn, (!selectedLocation || clockingIn) && styles.clockInBtnDisabled]}
-          onPress={handleClockIn}
-          disabled={!selectedLocation || clockingIn}
-        >
-          {clockingIn ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.clockInBtnText}>Clock in</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   // --- Idle ---
   idleRoot: { flex: 1, backgroundColor: '#F1EFE8' },
-  idleScroll: { flexGrow: 1, paddingBottom: 40 },
-  topNav: { alignItems: 'flex-end', paddingHorizontal: 20, paddingTop: 12 },
-  ptoNavBtn: {
-    borderWidth: 1.5,
-    borderColor: '#1D9E75',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+  idleTopArea: { flex: 1 },
+  idleScroll: { flexGrow: 1, paddingBottom: 24 },
+  bottomNav: {
+    backgroundColor: '#fff',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#D8D8D8',
+    shadowColor: '#000',
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 8,
   },
-  ptoNavText: { fontSize: 13, fontWeight: '600', color: '#1D9E75' },
-  timeSection: { alignItems: 'center', paddingTop: 48, paddingBottom: 24 },
-  timeText: { fontSize: 52, fontWeight: '700', color: '#2C2C2A', letterSpacing: -1 },
+  bottomNavInner: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  bottomNavItem: { alignItems: 'center', paddingHorizontal: 16, gap: 3 },
+  bottomNavItemIcon: { fontSize: 22 },
+  bottomNavItemLabel: { fontSize: 11, fontWeight: '600', color: '#555', letterSpacing: 0.2 },
+  logoSection: { alignItems: 'center', paddingTop: 28, paddingBottom: 8 },
+  logoImage: { width: 96, height: 96, borderRadius: 16 },
+  logoPlaceholder: {
+    width: 96,
+    height: 96,
+    borderRadius: 16,
+    backgroundColor: '#E8F5F0',
+    borderWidth: 1.5,
+    borderColor: '#C5E8DE',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoPlaceholderInner: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#1D9E75',
+    opacity: 0.25,
+  },
+  practiceNameText: {
+    marginTop: 10,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2C2C2A',
+    letterSpacing: 0.1,
+  },
+  timeSection: { alignItems: 'center', paddingTop: 20, paddingBottom: 20 },
+  timeText: { fontSize: 44, fontWeight: '700', color: '#2C2C2A', letterSpacing: -1 },
   dateText: { fontSize: 14, color: '#888', marginTop: 6 },
   card: {
     backgroundColor: '#fff',

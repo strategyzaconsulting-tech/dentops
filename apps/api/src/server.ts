@@ -8,7 +8,8 @@ import timeclockRoutes from "./routes/timeClock.js";
 import ptoRoutes from "./routes/pto.js";
 import staffRoutes from "./routes/staff.js";
 import shiftsRoutes from "./routes/shifts.js";
-import userRoutes from "./routes/users.js";
+import userRoutes from "./routes/users.js"
+import practiceRoutes from "./routes/practice.js";
 
 export async function createServer() {
   const server = Fastify({
@@ -46,6 +47,7 @@ export async function createServer() {
   await server.register(staffRoutes, { prefix: "/api" });
   await server.register(shiftsRoutes, { prefix: "/api" });
   await server.register(userRoutes, { prefix: "/api" });
+  await server.register(practiceRoutes, { prefix: "/api" });
 
   return server;
 }

@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Practice {
@@ -12,8 +13,9 @@ model Practice {
   name       String
   logoUrl    String?  @map("logo_url")
   brandColor String?  @map("brand_color")
-  type       String?
-  createdAt  DateTime @default(now()) @map("created_at")
+  type              String?
+  requireSpecialty  Boolean  @default(false) @map("require_specialty")
+  createdAt         DateTime @default(now()) @map("created_at")
 
   users         User[]
   locations     Location[]

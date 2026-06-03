@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357 '
+const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = 'http://localhost:3000'
 
 const SPECIALTIES = [
@@ -110,6 +110,8 @@ export default function TimeClock() {
   const [now, setNow] = useState<number>(Date.now())
   const [editState, setEditState] = useState<EditState | null>(null)
   const [saving, setSaving] = useState(false)
+  const [requireSpecialty, setRequireSpecialty] = useState(false)
+  const [togglingSpecialty, setTogglingSpecialty] = useState(false)
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -146,6 +148,12 @@ export default function TimeClock() {
       .then((data: LocationItem[]) => setLocations(Array.isArray(data) ? data : []))
       .catch(() => {})
 
+    // fetch practice settings
+    fetch(`${API_BASE}/api/practice/${PRACTICE_ID}`)
+      .then((r) => r.json())
+      .then((data) => { if (typeof data?.requireSpecialty === 'boolean') setRequireSpecialty(data.requireSpecialty) })
+      .catch(() => {})
+
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
       if (tickRef.current) clearInterval(tickRef.current)
@@ -160,6 +168,23 @@ export default function TimeClock() {
       locationId: punch.locationId,
       specialty: punch.specialty ?? '',
     })
+  }
+
+  async function toggleRequireSpecialty() {
+    setTogglingSpecialty(true)
+    try {
+      const next = !requireSpecialty
+      await fetch(`${API_BASE}/api/practice/${PRACTICE_ID}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requireSpecialty: next }),
+      })
+      setRequireSpecialty(next)
+    } catch {
+      // swallow
+    } finally {
+      setTogglingSpecialty(false)
+    }
   }
 
   async function saveEdit() {
@@ -214,6 +239,36 @@ export default function TimeClock() {
       </header>
 
       <main className="container py-8 space-y-10">
+        {/* Clock-in settings */}
+        <section>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800">Clock-In Settings</h2>
+          <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900">Require specialty on clock-in</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Staff must select a specialty before clocking in from the mobile app.
+                </p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={requireSpecialty}
+                onClick={toggleRequireSpecialty}
+                disabled={togglingSpecialty}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
+                  requireSpecialty ? 'bg-[#1D9E75]' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                    requireSpecialty ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        </section>
+
         {/* Live board */}
         <section>
           <h2 className="mb-4 text-lg font-semibold text-gray-800">Currently clocked in</h2>
