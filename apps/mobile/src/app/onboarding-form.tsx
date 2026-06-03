@@ -19,6 +19,15 @@ const API_BASE = 'http://192.168.0.137:3000'
 
 type FormType = 'i9' | 'w4' | 'personal-info' | 'emergency-contact' | 'direct-deposit'
 
+const FIELD_LABELS: Partial<Record<FormType, Record<string, string>>> = {
+  'personal-info': {
+    firstName: 'First Name', lastName: 'Last Name',
+    phone: 'Phone', email: 'Email Address', address: 'Home Address',
+    city: 'City', state: 'State', zip: 'Zip',
+    dob: 'Date of Birth', birthdayPrivacy: 'Birthday Preference',
+  },
+}
+
 const FORM_TITLES: Record<FormType, string> = {
   'i9':                'I-9 Employment Eligibility',
   'w4':                'W-4 Withholding Certificate',
@@ -130,15 +139,41 @@ function W4Form({ data, onChange }: { data: Record<string, unknown>; onChange: (
 function PersonalInfoForm({ data, onChange }: { data: Record<string, string>; onChange: (k: string, v: string) => void }) {
   return (
     <>
-      <Field label="Preferred Name"><Input value={data.preferredName ?? ''} onChangeText={(v) => onChange('preferredName', v)} placeholder="Jane" /></Field>
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}><Field label="First Name"><Input value={data.firstName ?? ''} onChangeText={(v) => onChange('firstName', v)} placeholder="Jane" /></Field></View>
+        <View style={{ flex: 1 }}><Field label="Last Name"><Input value={data.lastName ?? ''} onChangeText={(v) => onChange('lastName', v)} placeholder="Doe" /></Field></View>
+      </View>
       <Field label="Phone"><Input value={data.phone ?? ''} onChangeText={(v) => onChange('phone', v)} placeholder="(212) 555-0100" keyboardType="phone-pad" /></Field>
-      <Field label="Personal Email"><Input value={data.email ?? ''} onChangeText={(v) => onChange('email', v)} placeholder="jane@example.com" keyboardType="email-address" autoCapitalize="none" /></Field>
-      <Field label="Street Address"><Input value={data.address ?? ''} onChangeText={(v) => onChange('address', v)} placeholder="123 Main St" /></Field>
+      <Field label="Email Address"><Input value={data.email ?? ''} onChangeText={(v) => onChange('email', v)} placeholder="jane@example.com" keyboardType="email-address" autoCapitalize="none" /></Field>
+      <Field label="Home Address"><Input value={data.address ?? ''} onChangeText={(v) => onChange('address', v)} placeholder="123 Main St" /></Field>
       <View style={styles.row}>
         <View style={{ flex: 2 }}><Field label="City"><Input value={data.city ?? ''} onChangeText={(v) => onChange('city', v)} placeholder="New York" /></Field></View>
         <View style={{ flex: 1 }}><Field label="State"><Input value={data.state ?? ''} onChangeText={(v) => onChange('state', v)} placeholder="NY" maxLength={2} autoCapitalize="characters" /></Field></View>
         <View style={{ flex: 1 }}><Field label="Zip"><Input value={data.zip ?? ''} onChangeText={(v) => onChange('zip', v)} placeholder="10001" keyboardType="number-pad" maxLength={5} /></Field></View>
       </View>
+      <Field label="Date of Birth">
+        <Input value={data.dob ?? ''} onChangeText={(v) => onChange('dob', v)} placeholder="MM/DD/YYYY" keyboardType="number-pad" maxLength={10} />
+      </Field>
+      <Field label="Birthday Preference">
+        <View style={styles.toggleRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toggleTitle}>
+              {data.birthdayPrivacy === 'private' ? '🔒 Keep private' : '🎉 Celebrate with the team'}
+            </Text>
+            <Text style={styles.toggleSub}>
+              {data.birthdayPrivacy === 'private'
+                ? 'Your birthday will not be shared with others'
+                : 'Your team will be notified to wish you a happy birthday'}
+            </Text>
+          </View>
+          <Switch
+            value={data.birthdayPrivacy !== 'private'}
+            onValueChange={(v) => onChange('birthdayPrivacy', v ? 'celebrated' : 'private')}
+            trackColor={{ false: '#E0E0E0', true: '#1D9E75' }}
+            thumbColor="#fff"
+          />
+        </View>
+      </Field>
     </>
   )
 }
@@ -299,12 +334,17 @@ export default function OnboardingFormScreen() {
             <Text style={styles.submittedText}>✓ Submitted</Text>
           </View>
           <View style={styles.card}>
-            {Object.entries(existingData).map(([k, v]) => (
-              <View key={k} style={styles.readOnlyRow}>
-                <Text style={styles.readOnlyKey}>{k}</Text>
-                <Text style={styles.readOnlyValue}>{String(v)}</Text>
-              </View>
-            ))}
+            {Object.entries(existingData).map(([k, v]) => {
+              const labelMap = FIELD_LABELS[formType] ?? {}
+              const label = labelMap[k] ?? k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())
+              const display = k === 'birthdayPrivacy' ? (v === 'private' ? '🔒 Keep private' : '🎉 Celebrate with team') : String(v)
+              return (
+                <View key={k} style={styles.readOnlyRow}>
+                  <Text style={styles.readOnlyKey}>{label}</Text>
+                  <Text style={styles.readOnlyValue}>{display}</Text>
+                </View>
+              )
+            })}
           </View>
           <TouchableOpacity style={styles.editBtn} onPress={() => setIsEditMode(true)}>
             <Text style={styles.editBtnText}>Edit</Text>
@@ -458,6 +498,18 @@ const styles = StyleSheet.create({
   },
   readOnlyKey: { fontSize: 13, color: '#888', fontWeight: '500', textTransform: 'capitalize' },
   readOnlyValue: { fontSize: 13, color: '#2C2C2A', fontWeight: '600', maxWidth: '60%', textAlign: 'right' },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F8FFFE',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E8F5F0',
+  },
+  toggleTitle: { fontSize: 14, fontWeight: '600', color: '#2C2C2A', marginBottom: 2 },
+  toggleSub: { fontSize: 12, color: '#888', lineHeight: 16 },
   editBtn: {
     borderWidth: 1.5,
     borderColor: '#1D9E75',

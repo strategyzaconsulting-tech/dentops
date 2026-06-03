@@ -123,14 +123,14 @@ export default function OnboardingScreen() {
             <TouchableOpacity
               key={item.type}
               style={[styles.checkRow, idx < SECTION_A.length - 1 && styles.checkRowBorder]}
-              onPress={() => !item.done && router.push(`/onboarding-form?type=${item.type}` as never)}
-              activeOpacity={item.done ? 1 : 0.7}
+              onPress={() => router.push(`/onboarding-form?type=${item.type}` as never)}
+              activeOpacity={0.7}
             >
               <View style={[styles.checkCircle, item.done && styles.checkCircleDone]}>
                 {item.done && <Text style={styles.checkMark}>✓</Text>}
               </View>
-              <Text style={[styles.checkLabel, item.done && styles.checkLabelDone]}>{item.label}</Text>
-              {!item.done && <Text style={styles.chevron}>›</Text>}
+              <Text style={[styles.checkLabel, item.done && styles.checkLabelComplete]}>{item.label}</Text>
+              <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
           ))}
 
@@ -140,7 +140,7 @@ export default function OnboardingScreen() {
               {(checklist?.equipmentItems?.length ?? 0) > 0 && <Text style={styles.checkMark}>✓</Text>}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.checkLabel, (checklist?.equipmentItems?.length ?? 0) > 0 && styles.checkLabelDone]}>
+              <Text style={[styles.checkLabel, (checklist?.equipmentItems?.length ?? 0) > 0 && styles.checkLabelComplete]}>
                 Equipment Log
               </Text>
               {(checklist?.equipmentItems?.length ?? 0) > 0 ? (
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
   checkCircleDone: { backgroundColor: '#1D9E75', borderColor: '#1D9E75' },
   checkMark: { color: '#fff', fontSize: 13, fontWeight: '700' },
   checkLabel: { flex: 1, fontSize: 15, color: '#2C2C2A', fontWeight: '500' },
-  checkLabelDone: { color: '#888', textDecorationLine: 'line-through' },
+  checkLabelComplete: { flex: 1, fontSize: 15, color: '#1D9E75', fontWeight: '500' },
   chevron: { fontSize: 20, color: '#C0C0C0', fontWeight: '300' },
   navIcon: {
     width: 32,
