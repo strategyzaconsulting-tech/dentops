@@ -111,6 +111,10 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="pto" options={{ headerShown: false }} />
+        <Stack.Screen name="time-clock" options={{ headerShown: false }} />
+        <Stack.Screen name="open-shifts" options={{ headerShown: false }} />
+        <Stack.Screen name="announcements" options={{ headerShown: false }} />
+        <Stack.Screen name="benefits" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </>
