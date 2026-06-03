@@ -27,6 +27,24 @@ const API_BASE = 'http://192.168.0.137:3000'
 type FormType = 'i9' | 'w4' | 'personal-info' | 'emergency-contact' | 'direct-deposit'
 
 const FIELD_LABELS: Partial<Record<FormType, Record<string, string>>> = {
+  'i9': {
+    lastName: 'Last Name', firstName: 'First Name', middleInitial: 'M.I.',
+    otherLastNames: 'Other Last Names', address: 'Address', aptNumber: 'Apt #',
+    city: 'City', state: 'State', zip: 'ZIP',
+    dob: 'Date of Birth', ssn4: 'Last 4 SSN', email: 'Email', phone: 'Phone',
+    citizenshipStatus: 'Citizenship Status', alienNumber: 'Alien/USCIS No.',
+    i94Number: 'I-94 Number', foreignPassport: 'Foreign Passport', countryOfIssuance: 'Country of Issuance',
+    workAuthExpiry: 'Work Auth Expiry',
+    signatureName: 'Electronic Signature', signatureDate: 'Signed On',
+  },
+  'w4': {
+    firstName: 'First Name & M.I.', lastName: 'Last Name', ssn4: 'Last 4 SSN',
+    address: 'Address', city: 'City', state: 'State', zip: 'ZIP',
+    filingStatus: 'Filing Status', multipleJobs: 'Multiple Jobs',
+    qualifyingChildren: 'Qualifying Children ($)', otherDependents: 'Other Dependents ($)', totalDependents: 'Total Dependents ($)',
+    otherIncome: 'Other Income ($)', deductions: 'Deductions ($)', extraWithholding: 'Extra Withholding ($)',
+    signatureName: 'Electronic Signature', signatureDate: 'Signed On',
+  },
   'personal-info': {
     firstName: 'First Name', lastName: 'Last Name',
     phone: 'Phone', email: 'Email Address', address: 'Home Address',
@@ -61,10 +79,10 @@ function Chips({ options, value, onChange }: { options: string[]; value: string;
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldLabel}>{label}{required && <Text style={styles.required}> *</Text>}</Text>
       {children}
     </View>
   )
@@ -74,70 +92,225 @@ function Input(props: React.ComponentProps<typeof TextInput>) {
   return <TextInput style={styles.input} placeholderTextColor="#bbb" {...props} />
 }
 
+function SectionHeader({ number, title, subtitle }: { number?: string; title: string; subtitle?: string }) {
+  return (
+    <View style={styles.sectionHeader}>
+      {number && <Text style={styles.sectionHeaderNum}>{number}</Text>}
+      <View style={{ flex: 1 }}>
+        <Text style={styles.sectionHeaderTitle}>{title}</Text>
+        {subtitle && <Text style={styles.sectionHeaderSub}>{subtitle}</Text>}
+      </View>
+    </View>
+  )
+}
+
 // ─── Form components ──────────────────────────────────────────────────────────
 
 function I9Form({ data, onChange }: { data: Record<string, string>; onChange: (k: string, v: string) => void }) {
+  const status = data.citizenshipStatus ?? ''
   return (
     <>
+      <SectionHeader
+        title="Section 1. Employee Information and Attestation"
+        subtitle="Complete and sign Section 1 as of your first day of employment."
+      />
+
+      {/* Name */}
       <View style={styles.row}>
-        <View style={{ flex: 1 }}>
-          <Field label="First Name"><Input value={data.firstName ?? ''} onChangeText={(v) => onChange('firstName', v)} placeholder="Jane" /></Field>
+        <View style={{ flex: 1.2 }}>
+          <Field label="Last Name" required><Input value={data.lastName ?? ''} onChangeText={(v) => onChange('lastName', v)} placeholder="Doe" /></Field>
         </View>
         <View style={{ flex: 1 }}>
-          <Field label="Last Name"><Input value={data.lastName ?? ''} onChangeText={(v) => onChange('lastName', v)} placeholder="Doe" /></Field>
+          <Field label="First Name" required><Input value={data.firstName ?? ''} onChangeText={(v) => onChange('firstName', v)} placeholder="Jane" /></Field>
+        </View>
+        <View style={{ flex: 0.5 }}>
+          <Field label="M.I."><Input value={data.middleInitial ?? ''} onChangeText={(v) => onChange('middleInitial', v)} placeholder="A" maxLength={1} autoCapitalize="characters" /></Field>
         </View>
       </View>
-      <Field label="Street Address"><Input value={data.address ?? ''} onChangeText={(v) => onChange('address', v)} placeholder="123 Main St" /></Field>
-      <View style={styles.row}>
-        <View style={{ flex: 2 }}><Field label="City"><Input value={data.city ?? ''} onChangeText={(v) => onChange('city', v)} placeholder="New York" /></Field></View>
-        <View style={{ flex: 1 }}><Field label="State"><Input value={data.state ?? ''} onChangeText={(v) => onChange('state', v)} placeholder="NY" maxLength={2} autoCapitalize="characters" /></Field></View>
-        <View style={{ flex: 1 }}><Field label="Zip"><Input value={data.zip ?? ''} onChangeText={(v) => onChange('zip', v)} placeholder="10001" keyboardType="number-pad" maxLength={5} /></Field></View>
-      </View>
-      <Field label="Date of Birth (YYYY-MM-DD)"><Input value={data.dob ?? ''} onChangeText={(v) => onChange('dob', v)} placeholder="1990-01-15" keyboardType="number-pad" maxLength={10} /></Field>
-      <Field label="Last 4 of SSN"><Input value={data.ssn4 ?? ''} onChangeText={(v) => onChange('ssn4', v)} placeholder="1234" keyboardType="number-pad" maxLength={4} secureTextEntry /></Field>
-      <Field label="Citizenship Status">
-        <Chips
-          options={['US Citizen', 'Permanent Resident', 'Authorized Alien']}
-          value={data.citizenshipStatus ?? ''}
-          onChange={(v) => onChange('citizenshipStatus', v)}
-        />
+      <Field label="Other Last Names Used (if any)">
+        <Input value={data.otherLastNames ?? ''} onChangeText={(v) => onChange('otherLastNames', v)} placeholder="N/A" />
       </Field>
+
+      {/* Address */}
+      <View style={styles.row}>
+        <View style={{ flex: 2 }}>
+          <Field label="Street Address" required><Input value={data.address ?? ''} onChangeText={(v) => onChange('address', v)} placeholder="123 Main St" /></Field>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Field label="Apt. Number"><Input value={data.aptNumber ?? ''} onChangeText={(v) => onChange('aptNumber', v)} placeholder="4B" /></Field>
+        </View>
+      </View>
+      <View style={styles.row}>
+        <View style={{ flex: 2 }}><Field label="City or Town" required><Input value={data.city ?? ''} onChangeText={(v) => onChange('city', v)} placeholder="New York" /></Field></View>
+        <View style={{ flex: 1 }}><Field label="State" required><Input value={data.state ?? ''} onChangeText={(v) => onChange('state', v)} placeholder="NY" maxLength={2} autoCapitalize="characters" /></Field></View>
+        <View style={{ flex: 1 }}><Field label="ZIP Code" required><Input value={data.zip ?? ''} onChangeText={(v) => onChange('zip', v)} placeholder="10001" keyboardType="number-pad" maxLength={5} /></Field></View>
+      </View>
+
+      {/* DOB + SSN + Contact */}
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Field label="Date of Birth" required><Input value={data.dob ?? ''} onChangeText={(v) => onChange('dob', v)} placeholder="MM/DD/YYYY" keyboardType="number-pad" maxLength={10} /></Field>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Field label="Last 4 of SSN" required><Input value={data.ssn4 ?? ''} onChangeText={(v) => onChange('ssn4', v)} placeholder="1234" keyboardType="number-pad" maxLength={4} secureTextEntry /></Field>
+        </View>
+      </View>
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Field label="Email Address"><Input value={data.email ?? ''} onChangeText={(v) => onChange('email', v)} placeholder="jane@example.com" keyboardType="email-address" autoCapitalize="none" /></Field>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Field label="Phone Number"><Input value={data.phone ?? ''} onChangeText={(v) => onChange('phone', v)} placeholder="(212) 555-0100" keyboardType="phone-pad" /></Field>
+        </View>
+      </View>
+
+      {/* Citizenship/Immigration Status */}
+      <Field label="Citizenship / Immigration Status" required>
+        <View style={{ gap: 8 }}>
+          {[
+            { val: 'us_citizen',              label: '1. A citizen of the United States' },
+            { val: 'noncitizen_national',      label: '2. A noncitizen national of the United States' },
+            { val: 'lawful_permanent_resident',label: '3. A lawful permanent resident' },
+            { val: 'alien_authorized',         label: '4. An alien authorized to work' },
+          ].map(({ val, label }) => (
+            <TouchableOpacity
+              key={val}
+              style={[styles.radioRow, status === val && styles.radioRowSelected]}
+              onPress={() => onChange('citizenshipStatus', val)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.radioCircle, status === val && styles.radioCircleSelected]}>
+                {status === val && <View style={styles.radioDot} />}
+              </View>
+              <Text style={[styles.radioLabel, status === val && styles.radioLabelSelected]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Field>
+
+      {/* Conditional: Alien Registration Number */}
+      {status === 'lawful_permanent_resident' && (
+        <Field label="Alien Registration No. / USCIS Number" required>
+          <Input value={data.alienNumber ?? ''} onChangeText={(v) => onChange('alienNumber', v)} placeholder="A-Number or USCIS Number" />
+        </Field>
+      )}
+      {status === 'alien_authorized' && (
+        <>
+          <Field label="Work Authorization Expiry (MM/DD/YYYY or N/A)" required>
+            <Input value={data.workAuthExpiry ?? ''} onChangeText={(v) => onChange('workAuthExpiry', v)} placeholder="MM/DD/YYYY or N/A" />
+          </Field>
+          <Text style={styles.noteText}>Provide ONE of the following:</Text>
+          <Field label="Alien Registration No. / USCIS No.">
+            <Input value={data.alienNumber ?? ''} onChangeText={(v) => onChange('alienNumber', v)} placeholder="A-Number" />
+          </Field>
+          <Field label="Form I-94 Admission Number">
+            <Input value={data.i94Number ?? ''} onChangeText={(v) => onChange('i94Number', v)} placeholder="11 digits" keyboardType="number-pad" maxLength={11} />
+          </Field>
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Field label="Foreign Passport No.">
+                <Input value={data.foreignPassport ?? ''} onChangeText={(v) => onChange('foreignPassport', v)} placeholder="Passport number" />
+              </Field>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Field label="Country of Issuance">
+                <Input value={data.countryOfIssuance ?? ''} onChangeText={(v) => onChange('countryOfIssuance', v)} placeholder="e.g. Mexico" />
+              </Field>
+            </View>
+          </View>
+        </>
+      )}
     </>
   )
 }
 
 function W4Form({ data, onChange }: { data: Record<string, unknown>; onChange: (k: string, v: unknown) => void }) {
+  const str = (k: string) => (data[k] as string) ?? ''
+  const filingStatus = str('filingStatus')
+
   return (
     <>
-      <Field label="Filing Status">
-        <Chips
-          options={['Single', 'MFJ', 'MFS', 'HOH']}
-          value={(data.filingStatus as string) ?? ''}
-          onChange={(v) => onChange('filingStatus', v)}
-        />
+      {/* Step 1 */}
+      <SectionHeader number="Step 1" title="Personal Information" />
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Field label="First Name & M.I." required><Input value={str('firstName')} onChangeText={(v) => onChange('firstName', v)} placeholder="Jane A." /></Field>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Field label="Last Name" required><Input value={str('lastName')} onChangeText={(v) => onChange('lastName', v)} placeholder="Doe" /></Field>
+        </View>
+      </View>
+      <Field label="Social Security Number (last 4)" required>
+        <Input value={str('ssn4')} onChangeText={(v) => onChange('ssn4', v)} placeholder="1234" keyboardType="number-pad" maxLength={4} secureTextEntry />
       </Field>
-      <Field label="Has Multiple Jobs">
-        <Switch
-          value={!!data.hasMultipleJobs}
-          onValueChange={(v) => onChange('hasMultipleJobs', v)}
-          trackColor={{ true: '#1D9E75' }}
-        />
+      <Field label="Home Address" required>
+        <Input value={str('address')} onChangeText={(v) => onChange('address', v)} placeholder="123 Main St" />
       </Field>
-      <Field label="Dependents Amount ($)">
-        <Input
-          value={(data.dependentsAmount as string) ?? ''}
-          onChangeText={(v) => onChange('dependentsAmount', v)}
-          placeholder="0.00"
-          keyboardType="decimal-pad"
-        />
+      <View style={styles.row}>
+        <View style={{ flex: 2 }}><Field label="City or Town" required><Input value={str('city')} onChangeText={(v) => onChange('city', v)} placeholder="New York" /></Field></View>
+        <View style={{ flex: 1 }}><Field label="State" required><Input value={str('state')} onChangeText={(v) => onChange('state', v)} placeholder="NY" maxLength={2} autoCapitalize="characters" /></Field></View>
+        <View style={{ flex: 1 }}><Field label="ZIP Code" required><Input value={str('zip')} onChangeText={(v) => onChange('zip', v)} placeholder="10001" keyboardType="number-pad" maxLength={5} /></Field></View>
+      </View>
+      <Field label="Filing Status" required>
+        <View style={{ gap: 8 }}>
+          {[
+            { val: 'single_mfs', label: 'Single or Married filing separately' },
+            { val: 'mfj',        label: 'Married filing jointly or Qualifying surviving spouse' },
+            { val: 'hoh',        label: 'Head of household (single; pays more than half cost of home for self and dependents)' },
+          ].map(({ val, label }) => (
+            <TouchableOpacity
+              key={val}
+              style={[styles.radioRow, filingStatus === val && styles.radioRowSelected]}
+              onPress={() => onChange('filingStatus', val)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.radioCircle, filingStatus === val && styles.radioCircleSelected]}>
+                {filingStatus === val && <View style={styles.radioDot} />}
+              </View>
+              <Text style={[styles.radioLabel, filingStatus === val && styles.radioLabelSelected]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </Field>
-      <Field label="Extra Withholding ($)">
-        <Input
-          value={(data.extraWithholding as string) ?? ''}
-          onChangeText={(v) => onChange('extraWithholding', v)}
-          placeholder="0.00"
-          keyboardType="decimal-pad"
-        />
+
+      {/* Step 2 */}
+      <SectionHeader number="Step 2" title="Multiple Jobs or Spouse Works" subtitle="Complete if you hold more than one job at a time, or are married filing jointly and your spouse also works." />
+      <Field label="I have multiple jobs or my spouse works">
+        <View style={styles.toggleRow}>
+          <Text style={[styles.toggleTitle, { flex: 1 }]}>
+            {data.multipleJobs ? 'Yes — apply higher withholding rate' : 'No'}
+          </Text>
+          <Switch
+            value={!!data.multipleJobs}
+            onValueChange={(v) => onChange('multipleJobs', v)}
+            trackColor={{ false: '#E0E0E0', true: '#1D9E75' }}
+            thumbColor="#fff"
+          />
+        </View>
+      </Field>
+
+      {/* Step 3 */}
+      <SectionHeader number="Step 3" title="Claim Dependents" subtitle="If your total income is $200,000 or less ($400,000 or less if MFJ)." />
+      <Field label="Qualifying children under 17 (multiply × $2,000)">
+        <Input value={str('qualifyingChildren')} onChangeText={(v) => onChange('qualifyingChildren', v)} placeholder="0" keyboardType="decimal-pad" />
+      </Field>
+      <Field label="Other dependents (multiply × $500)">
+        <Input value={str('otherDependents')} onChangeText={(v) => onChange('otherDependents', v)} placeholder="0" keyboardType="decimal-pad" />
+      </Field>
+      <Field label="Total ($)">
+        <Input value={str('totalDependents')} onChangeText={(v) => onChange('totalDependents', v)} placeholder="0.00" keyboardType="decimal-pad" />
+      </Field>
+
+      {/* Step 4 */}
+      <SectionHeader number="Step 4" title="Other Adjustments (Optional)" />
+      <Field label="Other income not from jobs ($)">
+        <Input value={str('otherIncome')} onChangeText={(v) => onChange('otherIncome', v)} placeholder="0.00" keyboardType="decimal-pad" />
+      </Field>
+      <Field label="Deductions (from Deductions Worksheet) ($)">
+        <Input value={str('deductions')} onChangeText={(v) => onChange('deductions', v)} placeholder="0.00" keyboardType="decimal-pad" />
+      </Field>
+      <Field label="Extra withholding per pay period ($)">
+        <Input value={str('extraWithholding')} onChangeText={(v) => onChange('extraWithholding', v)} placeholder="0.00" keyboardType="decimal-pad" />
       </Field>
     </>
   )
@@ -608,6 +781,42 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   signedBadgeText: { color: '#1D9E75', fontWeight: '700', fontSize: 13 },
+  sectionHeader: {
+    backgroundColor: '#1D9E75',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 4,
+    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  sectionHeaderNum: { color: '#fff', fontWeight: '800', fontSize: 12, marginRight: 8, marginTop: 1 },
+  sectionHeaderTitle: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  sectionHeaderSub: { color: 'rgba(255,255,255,0.8)', fontSize: 11, lineHeight: 15, marginTop: 2 },
+  required: { color: '#EF4444' },
+  radioRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FAFAFA',
+  },
+  radioRowSelected: { borderColor: '#1D9E75', backgroundColor: '#F0FAF6' },
+  radioCircle: {
+    width: 20, height: 20, borderRadius: 10,
+    borderWidth: 2, borderColor: '#C0C0C0',
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 1, flexShrink: 0,
+  },
+  radioCircleSelected: { borderColor: '#1D9E75' },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#1D9E75' },
+  radioLabel: { flex: 1, fontSize: 13, color: '#444', lineHeight: 18 },
+  radioLabelSelected: { color: '#1D9E75', fontWeight: '600' },
+  noteText: { fontSize: 12, color: '#888', fontStyle: 'italic', marginBottom: 4, marginTop: 4 },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',

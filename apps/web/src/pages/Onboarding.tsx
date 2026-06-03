@@ -95,14 +95,22 @@ function fmtDate(iso: string | null) {
 
 const FORM_FIELD_LABELS: Record<string, Record<string, string>> = {
   i9: {
-    firstName: 'First Name', lastName: 'Last Name',
-    address: 'Street Address', city: 'City', state: 'State', zip: 'Zip',
-    dob: 'Date of Birth', ssn4: 'Last 4 of SSN', citizenshipStatus: 'Citizenship Status',
+    lastName: 'Last Name', firstName: 'First Name', middleInitial: 'M.I.',
+    otherLastNames: 'Other Last Names', address: 'Address', aptNumber: 'Apt #',
+    city: 'City', state: 'State', zip: 'ZIP',
+    dob: 'Date of Birth', ssn4: 'Last 4 SSN', email: 'Email', phone: 'Phone',
+    citizenshipStatus: 'Citizenship Status', alienNumber: 'Alien/USCIS No.',
+    i94Number: 'I-94 Number', foreignPassport: 'Foreign Passport',
+    countryOfIssuance: 'Country of Issuance', workAuthExpiry: 'Work Auth Expiry',
     signatureName: 'Electronic Signature', signatureDate: 'Signed On',
   },
   w4: {
-    filingStatus: 'Filing Status', hasMultipleJobs: 'Multiple Jobs',
-    dependentsAmount: 'Dependents Amount', extraWithholding: 'Extra Withholding',
+    firstName: 'First Name & M.I.', lastName: 'Last Name', ssn4: 'Last 4 SSN',
+    address: 'Address', city: 'City', state: 'State', zip: 'ZIP',
+    filingStatus: 'Filing Status', multipleJobs: 'Multiple Jobs',
+    qualifyingChildren: 'Qualifying Children ($)', otherDependents: 'Other Dependents ($)',
+    totalDependents: 'Total Dependents ($)', otherIncome: 'Other Income ($)',
+    deductions: 'Deductions ($)', extraWithholding: 'Extra Withholding ($)',
     signatureName: 'Electronic Signature', signatureDate: 'Signed On',
   },
   'personal-info': {

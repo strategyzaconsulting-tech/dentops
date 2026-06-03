@@ -80,8 +80,8 @@ export default async function onboardingRoutes(server: FastifyInstance) {
 
       // Validate required fields before marking complete
       const requiredFields: Partial<Record<FormType, string[]>> = {
-        'i9': ['firstName', 'lastName', 'address', 'city', 'state', 'zip', 'dob', 'ssn4', 'citizenshipStatus', 'signatureName'],
-        'w4': ['filingStatus', 'signatureName'],
+        'i9': ['lastName', 'firstName', 'address', 'city', 'state', 'zip', 'dob', 'ssn4', 'citizenshipStatus', 'signatureName'],
+        'w4': ['firstName', 'lastName', 'ssn4', 'address', 'city', 'state', 'zip', 'filingStatus', 'signatureName'],
         'personal-info': ['firstName', 'lastName', 'phone', 'email'],
         'emergency-contact': ['name', 'relationship', 'primaryPhone'],
         'direct-deposit': ['bankName', 'accountType', 'routingNumber', 'accountNumber'],
