@@ -4,21 +4,25 @@ import { prisma } from '../lib/prisma.js'
 const FORM_FIELDS = ['i9', 'w4', 'personal-info', 'emergency-contact', 'direct-deposit'] as const
 type FormType = (typeof FORM_FIELDS)[number]
 
+function hasData(data: unknown): boolean {
+  return !!data && typeof data === 'object' && Object.keys(data as object).length > 0
+}
+
 function completionPct(checklist: {
-  i9CompletedAt: Date | null
-  w4CompletedAt: Date | null
-  personalInfoCompletedAt: Date | null
-  emergencyContactCompletedAt: Date | null
-  directDepositCompletedAt: Date | null
+  i9CompletedAt: Date | null;   i9Data: unknown
+  w4CompletedAt: Date | null;   w4Data: unknown
+  personalInfoCompletedAt: Date | null;       personalInfoData: unknown
+  emergencyContactCompletedAt: Date | null;   emergencyContactData: unknown
+  directDepositCompletedAt: Date | null;      directDepositData: unknown
   equipmentItems?: { id: string }[]
 }): number {
   const completed = [
-    checklist.i9CompletedAt,
-    checklist.w4CompletedAt,
-    checklist.personalInfoCompletedAt,
-    checklist.emergencyContactCompletedAt,
-    checklist.directDepositCompletedAt,
-    checklist.equipmentItems && checklist.equipmentItems.length > 0 ? true : null,
+    checklist.i9CompletedAt && hasData(checklist.i9Data) && (checklist.i9Data as Record<string,unknown>)?.signatureName,
+    checklist.w4CompletedAt && hasData(checklist.w4Data) && (checklist.w4Data as Record<string,unknown>)?.signatureName,
+    checklist.personalInfoCompletedAt && hasData(checklist.personalInfoData),
+    checklist.emergencyContactCompletedAt && hasData(checklist.emergencyContactData),
+    checklist.directDepositCompletedAt && hasData(checklist.directDepositData),
+    checklist.equipmentItems && checklist.equipmentItems.length > 0,
   ].filter(Boolean).length
   return Math.round((completed / 6) * 100)
 }
@@ -73,6 +77,20 @@ export default async function onboardingRoutes(server: FastifyInstance) {
 
       const fields = fieldMap[formType]
       if (!fields) return reply.status(400).send({ error: `Unknown formType: ${formType}` })
+
+      // Validate required fields before marking complete
+      const requiredFields: Partial<Record<FormType, string[]>> = {
+        'i9': ['firstName', 'lastName', 'address', 'city', 'state', 'zip', 'dob', 'ssn4', 'citizenshipStatus', 'signatureName'],
+        'w4': ['filingStatus', 'signatureName'],
+        'personal-info': ['firstName', 'lastName', 'phone', 'email'],
+        'emergency-contact': ['name', 'relationship', 'primaryPhone'],
+        'direct-deposit': ['bankName', 'accountType', 'routingNumber', 'accountNumber'],
+      }
+      const required = requiredFields[formType] ?? []
+      const missing = required.filter((f) => !data[f] || String(data[f]).trim() === '')
+      if (missing.length > 0) {
+        return reply.status(422).send({ error: `Missing required fields: ${missing.join(', ')}` })
+      }
 
       const checklist = await prisma.onboardingChecklist.upsert({
         where: { practiceId_userId: { practiceId, userId } },

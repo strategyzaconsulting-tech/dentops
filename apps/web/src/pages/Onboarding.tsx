@@ -386,11 +386,11 @@ export default function Onboarding() {
                             <span className="ml-2 text-xs text-muted-foreground">{isExpanded ? '▲' : '▼'}</span>
                           </td>
                           <td className="px-4 py-3 text-muted-foreground capitalize">{c.user.role}</td>
-                          <td className="px-3 py-3 text-center">{c.i9CompletedAt ? <Check /> : <Dash />}</td>
-                          <td className="px-3 py-3 text-center">{c.w4CompletedAt ? <Check /> : <Dash />}</td>
-                          <td className="px-3 py-3 text-center">{c.personalInfoCompletedAt ? <Check /> : <Dash />}</td>
-                          <td className="px-3 py-3 text-center">{c.emergencyContactCompletedAt ? <Check /> : <Dash />}</td>
-                          <td className="px-3 py-3 text-center">{c.directDepositCompletedAt ? <Check /> : <Dash />}</td>
+                          <td className="px-3 py-3 text-center">{c.i9CompletedAt && c.i9Data?.signatureName ? <Check /> : <Dash />}</td>
+                          <td className="px-3 py-3 text-center">{c.w4CompletedAt && c.w4Data?.signatureName ? <Check /> : <Dash />}</td>
+                          <td className="px-3 py-3 text-center">{c.personalInfoCompletedAt && c.personalInfoData && Object.keys(c.personalInfoData).length > 0 ? <Check /> : <Dash />}</td>
+                          <td className="px-3 py-3 text-center">{c.emergencyContactCompletedAt && c.emergencyContactData && Object.keys(c.emergencyContactData).length > 0 ? <Check /> : <Dash />}</td>
+                          <td className="px-3 py-3 text-center">{c.directDepositCompletedAt && c.directDepositData && Object.keys(c.directDepositData).length > 0 ? <Check /> : <Dash />}</td>
                           <td className="px-3 py-3 text-center">{c.equipmentItems.length > 0 ? <Check /> : <Dash />}</td>
                           <td className="px-3 py-3 text-center">{manualSigned ? <Check /> : <Dash />}</td>
                           <td className="px-3 py-3 text-center">{trainingCount > 0 ? <span className="text-[#1D9E75] font-semibold">{trainingCount}</span> : <Dash />}</td>
