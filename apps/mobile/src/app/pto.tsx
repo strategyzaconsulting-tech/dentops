@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +14,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { markModuleSeen } from '../store/navBadgeStore'
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
@@ -241,6 +242,8 @@ export default function TimeOffScreen() {
       setLoadingBalance(false)
     }
   }
+
+  useLayoutEffect(() => { markModuleSeen('timeOff') }, [])
 
   useState(() => { fetchData() })
 

@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import { Audio, type AVPlaybackStatus } from 'expo-av'
 import { hasUnreadAnnouncements } from '../store/announcementStore'
+import { timeClockHasBadge, openShiftsHasBadge, timeOffHasBadge } from '../store/navBadgeStore'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2' // Daniel Quiroga (staff)
@@ -165,8 +166,11 @@ export default function HomeScreen() {
   const [alertSound, setAlertSound] = useState(true)
   const [alertVibrate, setAlertVibrate] = useState(true)
 
-  // --- announcement badge ---
+  // --- nav badges ---
   const [announcementsUnread, setAnnouncementsUnread] = useState(false)
+  const [timeClockBadge, setTimeClockBadge] = useState(false)
+  const [openShiftsBadge, setOpenShiftsBadge] = useState(false)
+  const [timeOffBadge, setTimeOffBadge] = useState(false)
 
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -199,15 +203,20 @@ export default function HomeScreen() {
       .catch(() => setLocations(TEST_LOCATIONS))
   }, [])
 
-  // Check announcement badge whenever screen is focused
+  // Refresh all nav badges whenever home screen is focused
   useFocusEffect(
     useCallback(() => {
-      fetch(`${API_BASE}/api/announcements?practiceId=${PRACTICE_ID}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (Array.isArray(data)) setAnnouncementsUnread(hasUnreadAnnouncements(data))
-        })
-        .catch(() => {})
+      Promise.allSettled([
+        fetch(`${API_BASE}/api/announcements?practiceId=${PRACTICE_ID}`).then((r) => r.json()),
+        fetch(`${API_BASE}/api/clock-adjustments?practiceId=${PRACTICE_ID}&userId=${USER_ID}`).then((r) => r.json()),
+        fetch(`${API_BASE}/api/open-shifts?practiceId=${PRACTICE_ID}&status=open`).then((r) => r.json()),
+        fetch(`${API_BASE}/api/pto/requests?practiceId=${PRACTICE_ID}&userId=${USER_ID}`).then((r) => r.json()),
+      ]).then(([ann, adj, shifts, pto]) => {
+        if (ann.status === 'fulfilled' && Array.isArray(ann.value)) setAnnouncementsUnread(hasUnreadAnnouncements(ann.value))
+        if (adj.status === 'fulfilled' && Array.isArray(adj.value)) setTimeClockBadge(timeClockHasBadge(adj.value))
+        if (shifts.status === 'fulfilled' && Array.isArray(shifts.value)) setOpenShiftsBadge(openShiftsHasBadge(shifts.value))
+        if (pto.status === 'fulfilled' && Array.isArray(pto.value)) setTimeOffBadge(timeOffHasBadge(pto.value))
+      })
     }, [])
   )
 
@@ -637,15 +646,24 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.bottomNav} edges={['bottom']}>
         <View style={styles.bottomNavInner}>
           <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/time-clock')}>
-            <Text style={styles.bottomNavItemIcon}>🕐</Text>
+            <View style={styles.bottomNavIconWrap}>
+              <Text style={styles.bottomNavItemIcon}>🕐</Text>
+              {timeClockBadge && <View style={styles.badgeDot} />}
+            </View>
             <Text style={styles.bottomNavItemLabel}>Time Clock</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/open-shifts')}>
-            <Text style={styles.bottomNavItemIcon}>📋</Text>
+            <View style={styles.bottomNavIconWrap}>
+              <Text style={styles.bottomNavItemIcon}>📋</Text>
+              {openShiftsBadge && <View style={styles.badgeDot} />}
+            </View>
             <Text style={styles.bottomNavItemLabel}>Open Shifts</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/pto')}>
-            <Text style={styles.bottomNavItemIcon}>📅</Text>
+            <View style={styles.bottomNavIconWrap}>
+              <Text style={styles.bottomNavItemIcon}>📅</Text>
+              {timeOffBadge && <View style={styles.badgeDot} />}
+            </View>
             <Text style={styles.bottomNavItemLabel}>Time Off</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/announcements')}>
