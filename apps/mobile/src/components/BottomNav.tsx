@@ -10,11 +10,12 @@ const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
 const API_BASE = 'http://192.168.0.137:3000'
 
 const TABS = [
-  { route: 'time-clock', label: 'Clock',    icon: '🕐' },
-  { route: 'open-shifts', label: 'Shifts',  icon: '📋' },
-  { route: 'pto',         label: 'Time Off', icon: '📅' },
-  { route: 'announcements', label: 'News',  icon: '📢' },
-  { route: 'benefits',    label: 'Benefits', icon: '🏥' },
+  { route: 'time-clock',    label: 'Clock',    icon: '🕐' },
+  { route: 'open-shifts',   label: 'Shifts',   icon: '📋' },
+  { route: 'pto',           label: 'Time Off',  icon: '📅' },
+  { route: 'announcements', label: 'News',     icon: '📢' },
+  { route: 'benefits',      label: 'Benefits', icon: '🏥' },
+  { route: 'onboarding',    label: 'Profile',  icon: '👤' },
 ] as const
 
 type Route = typeof TABS[number]['route']
@@ -51,6 +52,7 @@ export default function BottomNav({ activeRoute }: Props) {
     'pto': ptoBadge,
     'announcements': annBadge,
     'benefits': false,
+    'onboarding': false,
   }
 
   return (

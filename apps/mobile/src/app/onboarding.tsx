@@ -42,9 +42,6 @@ interface TrainingSession {
   trainer: { id: string; firstName: string; lastName: string; role: string } | null
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
 
 export default function OnboardingScreen() {
   const [checklist, setChecklist] = useState<Checklist | null>(null)
@@ -72,8 +69,6 @@ export default function OnboardingScreen() {
 
   const assignedTrainer = training.length > 0 && training[0].trainer ? training[0].trainer : null
 
-  // Compute Section B completion
-  const manualItem = false // fetched separately; show as clickable
   const totalComplete =
     (checklist?.i9CompletedAt ? 1 : 0) +
     (checklist?.w4CompletedAt ? 1 : 0) +
@@ -94,12 +89,12 @@ export default function OnboardingScreen() {
     return (
       <View style={styles.root}>
         <SafeAreaView style={styles.header} edges={['top']}>
-          <Text style={styles.headerTitle}>Onboarding</Text>
+          <Text style={styles.headerTitle}>My Profile</Text>
         </SafeAreaView>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color="#1D9E75" size="large" />
         </View>
-        <BottomNav />
+        <BottomNav activeRoute="onboarding" />
       </View>
     )
   }
@@ -110,8 +105,8 @@ export default function OnboardingScreen() {
     <View style={styles.root}>
       {/* Teal header */}
       <SafeAreaView style={styles.header} edges={['top']}>
-        <Text style={styles.headerTitle}>Onboarding</Text>
-        <Text style={styles.headerSub}>{totalComplete} of 6 forms complete</Text>
+        <Text style={styles.headerTitle}>My Profile</Text>
+        <Text style={styles.headerSub}>{totalComplete} of 6 new hire forms complete</Text>
         {/* Progress bar */}
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
@@ -215,7 +210,7 @@ export default function OnboardingScreen() {
         <View style={{ height: 32 }} />
       </ScrollView>
 
-      <BottomNav />
+      <BottomNav activeRoute="onboarding" />
     </View>
   )
 }
