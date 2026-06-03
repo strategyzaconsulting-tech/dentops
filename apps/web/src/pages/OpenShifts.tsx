@@ -61,6 +61,13 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function formatTime12h(t: string) {
+  const [h, m] = t.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`
+}
+
 export default function OpenShifts() {
   const [shifts, setShifts] = useState<OpenShift[]>([])
   const [locations, setLocations] = useState<Location[]>([])
@@ -196,7 +203,7 @@ export default function OpenShifts() {
                   <>
                     <tr key={shift.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium text-gray-900">{formatDate(shift.date)}</td>
-                      <td className="px-4 py-3 text-gray-600">{shift.startTime} – {shift.endTime}</td>
+                      <td className="px-4 py-3 text-gray-600">{formatTime12h(shift.startTime)} – {formatTime12h(shift.endTime)}</td>
                       <td className="px-4 py-3 text-gray-600">{shift.location.name}</td>
                       <td className="px-4 py-3 text-gray-500">{shift.specialty ?? '—'}</td>
                       <td className="px-4 py-3">
