@@ -37,7 +37,8 @@
           "color": "#1D9E75",
           "sounds": []
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "updates": {
       "checkAutomatically": "NEVER"
