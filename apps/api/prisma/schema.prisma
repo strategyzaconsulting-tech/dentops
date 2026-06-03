@@ -29,6 +29,11 @@ model Practice {
   announcements      Announcement[]
   practiceBenefits   PracticeBenefit[]
   userBenefits       UserBenefit[]
+  onboardingChecklists OnboardingChecklist[]
+  equipmentItems     EquipmentItem[]
+  officeManuals      OfficeManual[]
+  manualSignatures   ManualSignature[]
+  trainingSessions   TrainingSession[]
 
   @@map("practices")
 }
@@ -53,6 +58,11 @@ model User {
   clockAdjustments ClockAdjustment[]
   openShiftClaims  OpenShiftClaim[]
   userBenefits     UserBenefit[]
+  onboardingChecklists OnboardingChecklist[]
+  equipmentItems   EquipmentItem[]
+  manualSignatures ManualSignature[]
+  trainingSessions TrainingSession[]
+  trainerSessions  TrainingSession[] @relation("Trainer")
 
   @@map("users")
 }
@@ -226,4 +236,97 @@ model Announcement {
   practice Practice @relation(fields: [practiceId], references: [id])
 
   @@map("announcements")
+}
+
+model OnboardingChecklist {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String   @map("practice_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+
+  i9CompletedAt               DateTime? @map("i9_completed_at") @db.Timestamptz()
+  w4CompletedAt               DateTime? @map("w4_completed_at") @db.Timestamptz()
+  personalInfoCompletedAt     DateTime? @map("personal_info_completed_at") @db.Timestamptz()
+  emergencyContactCompletedAt DateTime? @map("emergency_contact_completed_at") @db.Timestamptz()
+  directDepositCompletedAt    DateTime? @map("direct_deposit_completed_at") @db.Timestamptz()
+
+  i9Data               Json? @map("i9_data")
+  w4Data               Json? @map("w4_data")
+  personalInfoData     Json? @map("personal_info_data")
+  emergencyContactData Json? @map("emergency_contact_data")
+  directDepositData    Json? @map("direct_deposit_data")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  practice       Practice        @relation(fields: [practiceId], references: [id])
+  user           User            @relation(fields: [userId], references: [id])
+  equipmentItems EquipmentItem[]
+
+  @@unique([practiceId, userId])
+  @@map("onboarding_checklists")
+}
+
+model EquipmentItem {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId   String   @map("practice_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  onboardingId String   @map("onboarding_id") @db.Uuid
+  name         String
+  serialNumber String?  @map("serial_number")
+  assignedAt   DateTime @default(now()) @map("assigned_at") @db.Timestamptz()
+  returnedAt   DateTime? @map("returned_at") @db.Timestamptz()
+  notes        String?
+
+  practice   Practice            @relation(fields: [practiceId], references: [id])
+  user       User                @relation(fields: [userId], references: [id])
+  onboarding OnboardingChecklist @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+
+  @@map("equipment_items")
+}
+
+model OfficeManual {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String   @unique @map("practice_id") @db.Uuid
+  title      String
+  content    String
+  version    String   @default("1.0")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  practice   Practice          @relation(fields: [practiceId], references: [id])
+  signatures ManualSignature[]
+
+  @@map("office_manuals")
+}
+
+model ManualSignature {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  manualId   String   @map("manual_id") @db.Uuid
+  practiceId String   @map("practice_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  signedAt   DateTime @default(now()) @map("signed_at") @db.Timestamptz()
+
+  manual   OfficeManual @relation(fields: [manualId], references: [id], onDelete: Cascade)
+  practice Practice     @relation(fields: [practiceId], references: [id])
+  user     User         @relation(fields: [userId], references: [id])
+
+  @@unique([manualId, userId])
+  @@map("manual_signatures")
+}
+
+model TrainingSession {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId  String    @map("practice_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  trainerId   String?   @map("trainer_id") @db.Uuid
+  topic       String
+  scheduledAt DateTime  @map("scheduled_at") @db.Timestamptz()
+  completedAt DateTime? @map("completed_at") @db.Timestamptz()
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  practice Practice @relation(fields: [practiceId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+  trainer  User?    @relation("Trainer", fields: [trainerId], references: [id])
+
+  @@map("training_sessions")
 }

@@ -60,6 +60,13 @@ export default function Dashboard() {
             <h3 className="font-semibold text-[#1D9E75]">Announcements</h3>
             <p className="mt-1 text-sm text-muted-foreground">Broadcast messages to your staff</p>
           </a>
+          <a
+            href="/onboarding"
+            className="rounded-lg border bg-card p-6 shadow-sm hover:border-[#1D9E75] hover:shadow-md transition-all"
+          >
+            <h3 className="font-semibold text-[#1D9E75]">Onboarding</h3>
+            <p className="mt-1 text-sm text-muted-foreground">HR forms, training &amp; manual sign-off</p>
+          </a>
         </div>
       </main>
     </div>

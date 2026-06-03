@@ -17,6 +17,7 @@ import Staff from './pages/Staff'
 import Schedules from './pages/Schedules'
 import OpenShifts from './pages/OpenShifts'
 import Announcements from './pages/Announcements'
+import Onboarding from './pages/Onboarding'
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/schedules" element={<Schedules />} />
         <Route path="/open-shifts" element={<OpenShifts />} />
         <Route path="/announcements" element={<Announcements />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route
           path="/setup"
           element={

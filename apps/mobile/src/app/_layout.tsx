@@ -115,6 +115,11 @@ export default function RootLayout() {
         <Stack.Screen name="open-shifts" options={{ headerShown: false }} />
         <Stack.Screen name="announcements" options={{ headerShown: false }} />
         <Stack.Screen name="benefits" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding-form" options={{ headerShown: false }} />
+        <Stack.Screen name="office-manual" options={{ headerShown: false }} />
+        <Stack.Screen name="training" options={{ headerShown: false }} />
+        <Stack.Screen name="team-directory" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </>
