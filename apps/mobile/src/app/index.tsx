@@ -34,7 +34,7 @@ const SPECIALTIES = [
   'Front Desk',
 ]
 
-const PRESET_TIMER_MINS = [15, 30, 45, 60] as const
+const PRESET_TIMER_MINS = [30, 60] as const
 
 const LOG_LABELS: Record<string, string> = {
   clockIn: 'Clocked in',
@@ -61,6 +61,7 @@ interface TimePunch {
   punchIn: string
   locationId: string
   specialty?: string
+  isTardy?: boolean
 }
 
 interface LogEntry {
@@ -513,6 +514,9 @@ export default function HomeScreen() {
                 <View style={[styles.logDot, { backgroundColor: LOG_COLORS[entry.event] }]} />
                 <Text style={styles.logTime}>{formatLogTime(entry.time)}</Text>
                 <Text style={styles.logLabel}>{LOG_LABELS[entry.event]}</Text>
+                {entry.event === 'clockIn' && punch.isTardy && (
+                  <Text style={styles.tardyText}>Tardy</Text>
+                )}
               </View>
             ))}
           </View>
@@ -616,6 +620,10 @@ export default function HomeScreen() {
       {/* Bottom module dock */}
       <SafeAreaView style={styles.bottomNav} edges={['bottom']}>
         <View style={styles.bottomNavInner}>
+          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/time-clock')}>
+            <Text style={styles.bottomNavItemIcon}>🕐</Text>
+            <Text style={styles.bottomNavItemLabel}>Time Clock</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/pto')}>
             <Text style={styles.bottomNavItemIcon}>📅</Text>
             <Text style={styles.bottomNavItemLabel}>Time Off</Text>
@@ -747,6 +755,7 @@ const styles = StyleSheet.create({
   },
   elapsedText: { color: '#fff', fontSize: 48, fontWeight: '700', letterSpacing: -1 },
   activeSubtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 10 },
+  tardyText: { fontSize: 12, color: '#DC2626', fontStyle: 'italic', marginLeft: 4 },
   activeScroll: { paddingTop: 16, paddingBottom: 40 },
   activeCard: {
     backgroundColor: '#fff',

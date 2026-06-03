@@ -21,8 +21,9 @@ model Practice {
   locations     Location[]
   timePunches   TimePunch[]
   ptoRequests   PtoRequest[]
-  blackoutDates BlackoutDate[]
-  shifts        Shift[]
+  blackoutDates      BlackoutDate[]
+  shifts             Shift[]
+  clockAdjustments   ClockAdjustment[]
 
   @@map("practices")
 }
@@ -38,10 +39,11 @@ model User {
 
   pushToken   String?      @map("push_token")
 
-  practice    Practice     @relation(fields: [practiceId], references: [id])
-  timePunches TimePunch[]
-  ptoRequests PtoRequest[]
-  shifts      Shift[]
+  practice         Practice          @relation(fields: [practiceId], references: [id])
+  timePunches      TimePunch[]
+  ptoRequests      PtoRequest[]
+  shifts           Shift[]
+  clockAdjustments ClockAdjustment[]
 
   @@map("users")
 }
@@ -112,6 +114,23 @@ model Shift {
   location Location @relation(fields: [locationId], references: [id])
 
   @@map("shifts")
+}
+
+model ClockAdjustment {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String   @map("practice_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  punchId    String?  @map("punch_id") @db.Uuid
+  date       DateTime @db.Date
+  type       String
+  notes      String
+  status     String   @default("pending")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  practice Practice @relation(fields: [practiceId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@map("clock_adjustments")
 }
 
 model BlackoutDate {

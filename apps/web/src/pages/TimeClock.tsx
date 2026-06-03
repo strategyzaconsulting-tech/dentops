@@ -23,6 +23,7 @@ interface LivePunch {
   punchIn: string
   breakStart: string | null
   breakEnd: string | null
+  isTardy: boolean
 }
 
 interface TodayPunch {
@@ -36,6 +37,7 @@ interface TodayPunch {
   punchOut: string | null
   breakStart: string | null
   breakEnd: string | null
+  isTardy: boolean
 }
 
 interface LocationItem {
@@ -307,11 +309,18 @@ export default function TimeClock() {
                         {formatElapsed(p.punchIn, now)}
                       </p>
                     </div>
-                    {p.breakStart && !p.breakEnd && (
-                      <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                        On break
-                      </span>
-                    )}
+                    <div className="ml-auto flex gap-1.5">
+                      {p.isTardy && (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                          Tardy
+                        </span>
+                      )}
+                      {p.breakStart && !p.breakEnd && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                          On break
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600">
@@ -364,7 +373,12 @@ export default function TimeClock() {
                       </td>
                       <td className="px-4 py-3 text-gray-600">{p.location.name}</td>
                       <td className="px-4 py-3 text-gray-600">{p.specialty ?? '—'}</td>
-                      <td className="px-4 py-3 text-gray-600">{formatHm(p.punchIn)}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        <div className="flex items-center justify-between gap-3">
+                          <span>{formatHm(p.punchIn)}</span>
+                          {p.isTardy && <span className="text-xs italic text-red-600">Tardy</span>}
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         {p.punchOut ? (
                           <span className="text-gray-600">{formatHm(p.punchOut)}</span>
