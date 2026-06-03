@@ -101,6 +101,11 @@ function toISODate(d: Date): string {
   return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
 }
 
+function formatUSDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
 export default function TimeClockScreen() {
   const [punches, setPunches] = useState<MyPunch[]>([])
   const [adjustments, setAdjustments] = useState<Adjustment[]>([])
@@ -168,9 +173,12 @@ export default function TimeClockScreen() {
         setAdjustments((prev) => [data, ...prev])
         setModalVisible(false)
         Alert.alert('Submitted', 'Your adjustment request has been sent to your manager.')
+      } else {
+        const err = await res.json().catch(() => ({}))
+        Alert.alert('Could not submit', (err as { error?: string }).error ?? `Server error (${res.status}). Make sure the clock_adjustments table has been created in Supabase.`)
       }
-    } catch {
-      Alert.alert('Error', 'Could not submit. Please try again.')
+    } catch (e) {
+      Alert.alert('Connection error', 'Could not reach the server. Check that the API is running.')
     } finally {
       setSubmitting(false)
     }
@@ -272,7 +280,7 @@ export default function TimeClockScreen() {
           <SafeAreaView style={styles.modalSheet} edges={['bottom']}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Request Adjustment</Text>
-            <Text style={styles.modalDate}>{adjDate}</Text>
+            <Text style={styles.modalDate}>{adjDate ? formatUSDate(adjDate) : ''}</Text>
 
             {/* Type selector */}
             <Text style={styles.fieldLabel}>Type</Text>
@@ -294,7 +302,7 @@ export default function TimeClockScreen() {
             <Text style={styles.fieldLabel}>Notes</Text>
             <TextInput
               style={styles.notesInput}
-              placeholder="Describe what needs to be corrected…"
+              placeholder="Describe what needs to be corrected including the correct time…"
               placeholderTextColor="#bbb"
               multiline
               numberOfLines={3}
