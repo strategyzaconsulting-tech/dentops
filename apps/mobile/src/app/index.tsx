@@ -25,15 +25,6 @@ const TEST_LOCATIONS = [
   { id: 'test-loc-2', name: 'Uptown Branch', address: '456 Park Ave', city: 'New York', state: 'NY' },
 ]
 
-const SPECIALTIES = [
-  'General Dentistry',
-  'Orthodontics',
-  'Periodontics',
-  'Endodontics',
-  'Oral Surgery',
-  'Hygiene',
-  'Front Desk',
-]
 
 const PRESET_TIMER_MINS = [30, 60] as const
 
@@ -137,12 +128,10 @@ export default function HomeScreen() {
   // --- practice branding + settings ---
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [practiceName, setPracticeName] = useState<string | null>(null)
-  const [requireSpecialty, setRequireSpecialty] = useState(false)
 
   // --- idle state ---
   const [locations, setLocations] = useState<Location[]>([])
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
-  const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null)
   const [clockingIn, setClockingIn] = useState(false)
 
   // --- active state ---
@@ -181,7 +170,6 @@ export default function HomeScreen() {
       .then((data) => {
         if (data?.logoUrl) setLogoUrl(data.logoUrl)
         if (data?.name) setPracticeName(data.name)
-        if (typeof data?.requireSpecialty === 'boolean') setRequireSpecialty(data.requireSpecialty)
       })
       .catch(() => {})
   }, [])
@@ -271,7 +259,6 @@ export default function HomeScreen() {
           practiceId: PRACTICE_ID,
           userId: USER_ID,
           locationId: selectedLocation,
-          specialty: selectedSpecialty ?? undefined,
           punchIn: punchIn.toISOString(),
         }),
       })
@@ -290,7 +277,6 @@ export default function HomeScreen() {
         id: `local-${Date.now()}`,
         punchIn: punchIn.toISOString(),
         locationId: selectedLocation,
-        specialty: selectedSpecialty ?? undefined,
       })
       setBreakLog([{ event: 'clockIn', time: punchIn }])
     } finally {
@@ -351,7 +337,6 @@ export default function HomeScreen() {
     setTimerOption('none')
     setCustomInput('')
     setSelectedLocation(null)
-    setSelectedSpecialty(null)
     setClockingOut(false)
 
     if (!punch.id.startsWith('local-')) {
@@ -383,7 +368,6 @@ export default function HomeScreen() {
           <Text style={styles.elapsedText}>{elapsed}</Text>
           <Text style={styles.activeSubtitle}>
             {activeLocation?.name ?? ''}
-            {punch.specialty ? `  ·  ${punch.specialty}` : ''}
           </Text>
         </SafeAreaView>
 
@@ -585,30 +569,6 @@ export default function HomeScreen() {
               </ScrollView>
             )}
 
-            {requireSpecialty && (
-              <>
-                <Text style={[styles.cardLabel, { marginTop: 20 }]}>Specialty</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.chipScroll}
-                  contentContainerStyle={styles.chipContent}
-                >
-                  {SPECIALTIES.map((spec) => {
-                    const selected = selectedSpecialty === spec
-                    return (
-                      <TouchableOpacity
-                        key={spec}
-                        style={selected ? styles.chipSelected : styles.chip}
-                        onPress={() => setSelectedSpecialty(spec)}
-                      >
-                        <Text style={selected ? styles.chipTextSelected : styles.chipText}>{spec}</Text>
-                      </TouchableOpacity>
-                    )
-                  })}
-                </ScrollView>
-              </>
-            )}
           </View>
 
           <TouchableOpacity
