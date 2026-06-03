@@ -26,6 +26,7 @@ model Practice {
   clockAdjustments   ClockAdjustment[]
   openShifts         OpenShift[]
   openShiftClaims    OpenShiftClaim[]
+  announcements      Announcement[]
 
   @@map("practices")
 }
@@ -180,4 +181,16 @@ model BlackoutDate {
   practice Practice @relation(fields: [practiceId], references: [id])
 
   @@map("blackout_dates")
+}
+
+model Announcement {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String   @map("practice_id") @db.Uuid
+  title      String
+  body       String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  practice Practice @relation(fields: [practiceId], references: [id])
+
+  @@map("announcements")
 }

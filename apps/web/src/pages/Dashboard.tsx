@@ -53,6 +53,13 @@ export default function Dashboard() {
             <h3 className="font-semibold text-[#1D9E75]">Open Shifts</h3>
             <p className="mt-1 text-sm text-muted-foreground">Post &amp; manage unfilled shifts</p>
           </a>
+          <a
+            href="/announcements"
+            className="rounded-lg border bg-card p-6 shadow-sm hover:border-[#1D9E75] hover:shadow-md transition-all"
+          >
+            <h3 className="font-semibold text-[#1D9E75]">Announcements</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Broadcast messages to your staff</p>
+          </a>
         </div>
       </main>
     </div>
