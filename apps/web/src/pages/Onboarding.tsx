@@ -34,6 +34,8 @@ interface Checklist {
   emergencyContactCompletedAt: string | null
   directDepositCompletedAt: string | null
   i9Data: Record<string, unknown> | null
+  i9Section2Data: Record<string, unknown> | null
+  i9Section2CompletedAt: string | null
   w4Data: Record<string, unknown> | null
   personalInfoData: Record<string, unknown> | null
   emergencyContactData: Record<string, unknown> | null
@@ -202,6 +204,18 @@ export default function Onboarding() {
     userId: string; name: string; serial: string; notes: string
   } | null>(null)
 
+  // I-9 Section 2 form state
+  const [sec2UserId, setSec2UserId] = useState<string | null>(null)
+  const [sec2Form, setSec2Form] = useState({
+    listType: 'A',
+    listATitle: '', listAAuthority: '', listANumber: '', listAExpiry: '',
+    listBTitle: '', listBAuthority: '', listBNumber: '', listBExpiry: '',
+    listCTitle: '', listCAuthority: '', listCNumber: '', listCExpiry: '',
+    dateHire: '', employerName: '', employerTitle: '', employerOrg: '', employerAddress: '',
+    signatureName: '',
+  })
+  const [savingSec2, setSavingSec2] = useState(false)
+
   // Manual tab
   const [activeTab, setActiveTab] = useState<'manual' | 'training'>('manual')
   const [manualForm, setManualForm] = useState({ title: '', content: '', version: '' })
@@ -272,6 +286,38 @@ export default function Onboarding() {
   async function deleteEquipment(itemId: string) {
     await fetch(`${API_BASE}/api/onboarding/equipment/${itemId}`, { method: 'DELETE' })
     loadAll()
+  }
+
+  // ─── I-9 Section 2 handler ────────────────────────────────────────────────
+
+  async function submitSection2(userId: string) {
+    setSavingSec2(true)
+    try {
+      const payload: Record<string, unknown> = {
+        listType: sec2Form.listType,
+        dateHire: sec2Form.dateHire,
+        employerName: sec2Form.employerName,
+        employerTitle: sec2Form.employerTitle,
+        employerOrg: sec2Form.employerOrg,
+        employerAddress: sec2Form.employerAddress,
+        signatureName: sec2Form.signatureName,
+        signatureDate: new Date().toISOString(),
+      }
+      if (sec2Form.listType === 'A') {
+        payload.listA = { title: sec2Form.listATitle, authority: sec2Form.listAAuthority, number: sec2Form.listANumber, expiry: sec2Form.listAExpiry }
+      } else {
+        payload.listB = { title: sec2Form.listBTitle, authority: sec2Form.listBAuthority, number: sec2Form.listBNumber, expiry: sec2Form.listBExpiry }
+        payload.listC = { title: sec2Form.listCTitle, authority: sec2Form.listCAuthority, number: sec2Form.listCNumber, expiry: sec2Form.listCExpiry }
+      }
+      const res = await fetch(`${API_BASE}/api/onboarding/i9-section2?practiceId=${PRACTICE_ID}&userId=${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) { setSec2UserId(null); loadAll() }
+    } finally {
+      setSavingSec2(false)
+    }
   }
 
   // ─── Manual handlers ───────────────────────────────────────────────────────
@@ -413,12 +459,138 @@ export default function Onboarding() {
                           <tr key={`${c.id}-expanded`} className="border-t bg-muted/20">
                             <td colSpan={11} className="px-6 py-4">
                               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                                <FormDataPanel formKey="i9"                label="I-9"               data={c.i9Data}               date={c.i9CompletedAt} />
+                                <FormDataPanel formKey="i9"                label="I-9 — Section 1"   data={c.i9Data}               date={c.i9CompletedAt} />
                                 <FormDataPanel formKey="w4"                label="W-4"               data={c.w4Data}               date={c.w4CompletedAt} />
                                 <FormDataPanel formKey="personal-info"     label="Personal Info"     data={c.personalInfoData}     date={c.personalInfoCompletedAt} />
                                 <FormDataPanel formKey="emergency-contact" label="Emergency Contact" data={c.emergencyContactData} date={c.emergencyContactCompletedAt} />
                                 <FormDataPanel formKey="direct-deposit"    label="Direct Deposit"    data={c.directDepositData}    date={c.directDepositCompletedAt} />
                               </div>
+
+                              {/* I-9 Section 2 — Employer Attestation */}
+                              {c.i9CompletedAt && (
+                                <div className="mt-4 rounded-lg border-2 border-[#1D9E75] bg-white p-4">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                      <p className="font-bold text-[#1D9E75] text-sm">I-9 Section 2 — Employer Review & Attestation</p>
+                                      <p className="text-xs text-gray-500 mt-0.5">Employer or authorized representative must physically verify documents and sign.</p>
+                                    </div>
+                                    {c.i9Section2CompletedAt ? (
+                                      <span className="text-xs bg-green-100 text-green-700 font-semibold px-3 py-1 rounded-full">
+                                        ✓ Attested {fmtDate(c.i9Section2CompletedAt)}
+                                      </span>
+                                    ) : (
+                                      <button
+                                        onClick={() => setSec2UserId(sec2UserId === c.userId ? null : c.userId)}
+                                        className="text-sm bg-[#1D9E75] text-white rounded-lg px-4 py-1.5 hover:bg-[#178a65]"
+                                      >
+                                        {sec2UserId === c.userId ? 'Cancel' : '+ Complete Section 2'}
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* Show existing Section 2 data */}
+                                  {c.i9Section2Data && (
+                                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs mb-2">
+                                      {Object.entries(c.i9Section2Data).filter(([k]) => k !== 'listA' && k !== 'listB' && k !== 'listC' && k !== 'signatureDate' && k !== 'listType').map(([k, v]) => (
+                                        <div key={k} className="flex justify-between border-b border-gray-50 py-0.5">
+                                          <span className="text-gray-500 capitalize">{k.replace(/([A-Z])/g, ' $1')}</span>
+                                          <span className="font-medium text-gray-800">{String(v)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Section 2 form */}
+                                  {sec2UserId === c.userId && !c.i9Section2CompletedAt && (
+                                    <div className="mt-3 pt-3 border-t space-y-3">
+                                      {/* Document list selector */}
+                                      <div>
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Document(s) Examined</p>
+                                        <div className="flex gap-2 mb-3">
+                                          {['A', 'BC'].map((t) => (
+                                            <button key={t} onClick={() => setSec2Form({ ...sec2Form, listType: t })}
+                                              className={`text-xs rounded px-3 py-1.5 font-medium border ${sec2Form.listType === t ? 'bg-[#1D9E75] text-white border-[#1D9E75]' : 'border-gray-300 text-gray-600'}`}>
+                                              {t === 'A' ? 'List A (one document)' : 'List B + C (two documents)'}
+                                            </button>
+                                          ))}
+                                        </div>
+
+                                        {sec2Form.listType === 'A' && (
+                                          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                                            {[['listATitle','Document Title *'],['listAAuthority','Issuing Authority *'],['listANumber','Document Number *'],['listAExpiry','Expiration Date']].map(([k, lbl]) => (
+                                              <div key={k}>
+                                                <label className="text-xs text-gray-500 block mb-1">{lbl}</label>
+                                                <input value={(sec2Form as Record<string,string>)[k]} onChange={(e) => setSec2Form({ ...sec2Form, [k]: e.target.value })}
+                                                  placeholder={lbl.replace(' *','')} className="border rounded px-2 py-1.5 text-xs w-full" />
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {sec2Form.listType === 'BC' && (
+                                          <div className="space-y-2">
+                                            <p className="text-xs font-semibold text-gray-500">List B — Identity</p>
+                                            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                                              {[['listBTitle','Document Title *'],['listBAuthority','Issuing Authority *'],['listBNumber','Document Number *'],['listBExpiry','Expiration Date']].map(([k, lbl]) => (
+                                                <div key={k}>
+                                                  <label className="text-xs text-gray-500 block mb-1">{lbl}</label>
+                                                  <input value={(sec2Form as Record<string,string>)[k]} onChange={(e) => setSec2Form({ ...sec2Form, [k]: e.target.value })}
+                                                    placeholder={lbl.replace(' *','')} className="border rounded px-2 py-1.5 text-xs w-full" />
+                                                </div>
+                                              ))}
+                                            </div>
+                                            <p className="text-xs font-semibold text-gray-500">List C — Employment Authorization</p>
+                                            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                                              {[['listCTitle','Document Title *'],['listCAuthority','Issuing Authority *'],['listCNumber','Document Number *'],['listCExpiry','Expiration Date']].map(([k, lbl]) => (
+                                                <div key={k}>
+                                                  <label className="text-xs text-gray-500 block mb-1">{lbl}</label>
+                                                  <input value={(sec2Form as Record<string,string>)[k]} onChange={(e) => setSec2Form({ ...sec2Form, [k]: e.target.value })}
+                                                    placeholder={lbl.replace(' *','')} className="border rounded px-2 py-1.5 text-xs w-full" />
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Employer info */}
+                                      <div>
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Employer / Authorized Representative</p>
+                                        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                                          {[['employerName','Your Full Name *'],['employerTitle','Your Title *'],['employerOrg','Business / Organization Name *'],['employerAddress','Business Address'],['dateHire','Employee First Day of Employment *']].map(([k, lbl]) => (
+                                            <div key={k}>
+                                              <label className="text-xs text-gray-500 block mb-1">{lbl}</label>
+                                              <input value={(sec2Form as Record<string,string>)[k]} onChange={(e) => setSec2Form({ ...sec2Form, [k]: e.target.value })}
+                                                placeholder={lbl.replace(' *','')} className="border rounded px-2 py-1.5 text-xs w-full" />
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      {/* Attestation + signature */}
+                                      <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+                                        <strong>Certification:</strong> I attest, under penalty of perjury, that (1) I have examined the document(s) presented by the above-named employee, (2) the above-listed document(s) appear to be genuine and to relate to the employee named, and (3) to the best of my knowledge the employee is authorized to work in the United States.
+                                      </div>
+                                      <div>
+                                        <label className="text-xs font-semibold text-gray-600 uppercase block mb-1">Electronic Signature — Type your full legal name *</label>
+                                        <input
+                                          value={sec2Form.signatureName}
+                                          onChange={(e) => setSec2Form({ ...sec2Form, signatureName: e.target.value })}
+                                          placeholder="Full legal name"
+                                          className="border-2 border-[#1D9E75] rounded px-3 py-2 text-sm w-full max-w-sm italic"
+                                        />
+                                      </div>
+                                      <button
+                                        onClick={() => submitSection2(c.userId)}
+                                        disabled={savingSec2 || !sec2Form.signatureName.trim()}
+                                        className="bg-[#1D9E75] text-white text-sm font-semibold rounded-lg px-6 py-2 hover:bg-[#178a65] disabled:opacity-50"
+                                      >
+                                        {savingSec2 ? 'Saving…' : 'Submit Section 2 Attestation'}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
                             </td>
                           </tr>
                         )}

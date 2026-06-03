@@ -250,6 +250,8 @@ model OnboardingChecklist {
   directDepositCompletedAt    DateTime? @map("direct_deposit_completed_at") @db.Timestamptz()
 
   i9Data               Json? @map("i9_data")
+  i9Section2Data       Json? @map("i9_section2_data")
+  i9Section2CompletedAt DateTime? @map("i9_section2_completed_at")
   w4Data               Json? @map("w4_data")
   personalInfoData     Json? @map("personal_info_data")
   emergencyContactData Json? @map("emergency_contact_data")

@@ -111,6 +111,31 @@ export default async function onboardingRoutes(server: FastifyInstance) {
     }
   )
 
+  // PATCH /api/onboarding/i9-section2?practiceId=&userId= — admin attests Section 2
+  server.patch<{
+    Querystring: { practiceId: string; userId: string }
+    Body: Record<string, unknown>
+  }>(
+    '/onboarding/i9-section2',
+    async (request, reply) => {
+      const { practiceId, userId } = request.query
+      if (!practiceId || !userId) return reply.status(400).send({ error: 'practiceId and userId are required' })
+
+      const body = request.body
+      const required = ['signatureName', 'employerName', 'employerTitle', 'employerOrg', 'dateHire']
+      const missing = required.filter((f) => !body[f] || String(body[f]).trim() === '')
+      if (missing.length > 0) return reply.status(422).send({ error: `Missing: ${missing.join(', ')}` })
+
+      const checklist = await prisma.onboardingChecklist.upsert({
+        where: { practiceId_userId: { practiceId, userId } },
+        create: { practiceId, userId, i9Section2Data: body, i9Section2CompletedAt: new Date() },
+        update: { i9Section2Data: body, i9Section2CompletedAt: new Date() },
+        include: { equipmentItems: true },
+      })
+      return reply.send({ ...checklist, completionPct: completionPct(checklist) })
+    }
+  )
+
   // GET /api/onboarding/all?practiceId= — admin: all checklists with user names + completion %
   server.get<{ Querystring: { practiceId: string } }>(
     '/onboarding/all',
