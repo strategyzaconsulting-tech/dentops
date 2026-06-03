@@ -28,6 +28,14 @@ function isTardy(punchIn: Date, shiftDate: Date, startTime: string): boolean {
   return punchIn.getTime() > scheduled.getTime() + TARDY_GRACE_MS
 }
 
+function getMonday(date: Date): Date {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return d
+}
+
 export default async function timeclockRoutes(server: FastifyInstance) {
   // GET /api/locations?practiceId=...
   server.get<{ Querystring: { practiceId: string } }>('/locations', async (request, reply) => {
