@@ -45,6 +45,25 @@ interface LocationItem {
   name: string
 }
 
+interface AdjustmentRequest {
+  id: string
+  userId: string
+  user: { firstName: string; lastName: string }
+  punchId: string | null
+  date: string
+  type: string
+  notes: string
+  status: string
+  createdAt: string
+}
+
+const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
+  missed_clock_in: 'Missed Clock-In',
+  missed_clock_out: 'Missed Clock-Out',
+  wrong_time: 'Wrong Time',
+  other: 'Other',
+}
+
 interface EditState {
   punch: TodayPunch
   punchIn: string
@@ -114,6 +133,9 @@ export default function TimeClock() {
   const [saving, setSaving] = useState(false)
   const [requireSpecialty, setRequireSpecialty] = useState(false)
   const [togglingSpecialty, setTogglingSpecialty] = useState(false)
+  const [adjustments, setAdjustments] = useState<AdjustmentRequest[]>([])
+  const [adjFilter, setAdjFilter] = useState<'all' | 'pending' | 'approved' | 'denied'>('pending')
+  const [reviewingId, setReviewingId] = useState<string | null>(null)
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -150,6 +172,12 @@ export default function TimeClock() {
       .then((data: LocationItem[]) => setLocations(Array.isArray(data) ? data : []))
       .catch(() => {})
 
+    // fetch adjustment requests
+    fetch(`${API_BASE}/api/clock-adjustments?practiceId=${PRACTICE_ID}`)
+      .then((r) => r.json())
+      .then((data) => setAdjustments(Array.isArray(data) ? data : []))
+      .catch(() => {})
+
     // fetch practice settings
     fetch(`${API_BASE}/api/practice/${PRACTICE_ID}`)
       .then((r) => r.json())
@@ -170,6 +198,25 @@ export default function TimeClock() {
       locationId: punch.locationId,
       specialty: punch.specialty ?? '',
     })
+  }
+
+  async function reviewAdjustment(id: string, status: 'approved' | 'denied') {
+    setReviewingId(id)
+    try {
+      const res = await fetch(`${API_BASE}/api/clock-adjustments/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      if (res.ok) {
+        const updated: AdjustmentRequest = await res.json()
+        setAdjustments((prev) => prev.map((a) => (a.id === id ? updated : a)))
+      }
+    } catch {
+      // swallow
+    } finally {
+      setReviewingId(null)
+    }
   }
 
   async function toggleRequireSpecialty() {
@@ -402,6 +449,114 @@ export default function TimeClock() {
                       </td>
                     </tr>
                   ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Adjustment requests */}
+        <section>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-800">
+              Adjustment Requests
+              {adjustments.filter((a) => a.status === 'pending').length > 0 && (
+                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                  {adjustments.filter((a) => a.status === 'pending').length} pending
+                </span>
+              )}
+            </h2>
+            <div className="flex gap-1">
+              {(['pending', 'all', 'approved', 'denied'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setAdjFilter(f)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                    adjFilter === f
+                      ? 'bg-[#1D9E75] text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b bg-gray-50 text-xs uppercase text-gray-500">
+                  <th className="px-4 py-3 text-left font-semibold">Staff</th>
+                  <th className="px-4 py-3 text-left font-semibold">Date</th>
+                  <th className="px-4 py-3 text-left font-semibold">Type</th>
+                  <th className="px-4 py-3 text-left font-semibold">Notes</th>
+                  <th className="px-4 py-3 text-left font-semibold">Submitted</th>
+                  <th className="px-4 py-3 text-left font-semibold">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {adjustments.filter((a) => adjFilter === 'all' || a.status === adjFilter).length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-10 text-center text-gray-400">
+                      No {adjFilter === 'all' ? '' : adjFilter} requests
+                    </td>
+                  </tr>
+                ) : (
+                  adjustments
+                    .filter((a) => adjFilter === 'all' || a.status === adjFilter)
+                    .map((a) => (
+                      <tr key={a.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-900">
+                          {a.user.firstName} {a.user.lastName}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {new Date(a.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {ADJUSTMENT_TYPE_LABELS[a.type] ?? a.type}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 max-w-xs">
+                          <span className="line-clamp-2">{a.notes}</span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-400 text-xs">
+                          {new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}{' '}
+                          {new Date(a.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            a.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                            a.status === 'approved' ? 'bg-green-100 text-green-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {a.status === 'pending' ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => reviewAdjustment(a.id, 'approved')}
+                                disabled={reviewingId === a.id}
+                                className="rounded px-2.5 py-1 text-xs font-medium text-[#1D9E75] hover:bg-[#E1F5EE] disabled:opacity-50"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => reviewAdjustment(a.id, 'denied')}
+                                disabled={reviewingId === a.id}
+                                className="rounded px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                              >
+                                Deny
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
                 )}
               </tbody>
             </table>
