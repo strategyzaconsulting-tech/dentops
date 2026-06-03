@@ -673,6 +673,10 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.bottomNavItemLabel}>News</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/benefits')}>
+            <Text style={styles.bottomNavItemIcon}>🏥</Text>
+            <Text style={styles.bottomNavItemLabel}>Benefits</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     </View>
