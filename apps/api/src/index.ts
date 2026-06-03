@@ -3,7 +3,7 @@ import { createServer } from "./server.js";
 const start = async () => {
   const server = await createServer();
   const port = Number(process.env.PORT ?? 3000);
-  const host = process.env.HOST ?? "0.0.0.0";
+  const host = process.env.HOST ?? "::";
 
   await server.listen({ port, host });
 };
