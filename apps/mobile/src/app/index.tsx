@@ -285,17 +285,6 @@ export default function HomeScreen() {
     setClockingIn(true)
 
     const punchIn = new Date()
-    const localPunch: TimePunch = {
-      id: `local-${Date.now()}`,
-      punchIn: punchIn.toISOString(),
-      locationId: selectedLocation,
-      specialty: selectedSpecialty ?? undefined,
-    }
-
-    setPunch(localPunch)
-    setBreakLog([{ event: 'clockIn', time: punchIn }])
-    setClockingIn(false)
-
     try {
       const res = await fetch(`${API_BASE}/api/time-punches`, {
         method: 'POST',
@@ -308,12 +297,26 @@ export default function HomeScreen() {
           punchIn: punchIn.toISOString(),
         }),
       })
+      if (res.status === 409) {
+        Alert.alert('Already Clocked In', "You're already clocked in. Please clock out before starting a new shift.")
+        return
+      }
       if (res.ok) {
         const data: TimePunch = await res.json()
         setPunch(data)
+        setBreakLog([{ event: 'clockIn', time: punchIn }])
       }
     } catch {
-      // API unavailable — local state still shown
+      // Network unavailable — fall back to local punch
+      setPunch({
+        id: `local-${Date.now()}`,
+        punchIn: punchIn.toISOString(),
+        locationId: selectedLocation,
+        specialty: selectedSpecialty ?? undefined,
+      })
+      setBreakLog([{ event: 'clockIn', time: punchIn }])
+    } finally {
+      setClockingIn(false)
     }
   }
 

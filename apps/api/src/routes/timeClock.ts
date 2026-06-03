@@ -54,6 +54,13 @@ export default async function timeclockRoutes(server: FastifyInstance) {
     const { practiceId, userId, locationId, specialty, punchIn } = request.body
     const punchInDate = new Date(punchIn)
 
+    const activePunch = await prisma.timePunch.findFirst({
+      where: { userId, punchOut: null },
+    })
+    if (activePunch) {
+      return reply.status(409).send({ error: 'Already clocked in', punchId: activePunch.id })
+    }
+
     const [punch, shift, user] = await Promise.all([
       prisma.timePunch.create({
         data: { practiceId, userId, locationId, specialty: specialty ?? null, punchIn: punchInDate },
