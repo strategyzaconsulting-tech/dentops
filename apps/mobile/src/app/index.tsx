@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
   Alert,
@@ -12,10 +13,8 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router, useFocusEffect } from 'expo-router'
+import {} from 'expo-router'
 import { Audio, type AVPlaybackStatus } from 'expo-av'
-import { hasUnreadAnnouncements } from '../store/announcementStore'
-import { timeClockHasBadge, openShiftsHasBadge, timeOffHasBadge } from '../store/navBadgeStore'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2' // Daniel Quiroga (staff)
@@ -166,11 +165,6 @@ export default function HomeScreen() {
   const [alertSound, setAlertSound] = useState(true)
   const [alertVibrate, setAlertVibrate] = useState(true)
 
-  // --- nav badges ---
-  const [announcementsUnread, setAnnouncementsUnread] = useState(false)
-  const [timeClockBadge, setTimeClockBadge] = useState(false)
-  const [openShiftsBadge, setOpenShiftsBadge] = useState(false)
-  const [timeOffBadge, setTimeOffBadge] = useState(false)
 
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -203,22 +197,6 @@ export default function HomeScreen() {
       .catch(() => setLocations(TEST_LOCATIONS))
   }, [])
 
-  // Refresh all nav badges whenever home screen is focused
-  useFocusEffect(
-    useCallback(() => {
-      Promise.allSettled([
-        fetch(`${API_BASE}/api/announcements?practiceId=${PRACTICE_ID}`).then((r) => r.json()),
-        fetch(`${API_BASE}/api/clock-adjustments?practiceId=${PRACTICE_ID}&userId=${USER_ID}`).then((r) => r.json()),
-        fetch(`${API_BASE}/api/open-shifts?practiceId=${PRACTICE_ID}&status=open`).then((r) => r.json()),
-        fetch(`${API_BASE}/api/pto/requests?practiceId=${PRACTICE_ID}&userId=${USER_ID}`).then((r) => r.json()),
-      ]).then(([ann, adj, shifts, pto]) => {
-        if (ann.status === 'fulfilled' && Array.isArray(ann.value)) setAnnouncementsUnread(hasUnreadAnnouncements(ann.value))
-        if (adj.status === 'fulfilled' && Array.isArray(adj.value)) setTimeClockBadge(timeClockHasBadge(adj.value))
-        if (shifts.status === 'fulfilled' && Array.isArray(shifts.value)) setOpenShiftsBadge(openShiftsHasBadge(shifts.value))
-        if (pto.status === 'fulfilled' && Array.isArray(pto.value)) setTimeOffBadge(timeOffHasBadge(pto.value))
-      })
-    }, [])
-  )
 
   // Elapsed timer while clocked in
   useEffect(() => {
@@ -550,43 +528,7 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
 
-        {/* Bottom nav — also available while clocked in */}
-        <SafeAreaView style={styles.bottomNav} edges={['bottom']}>
-          <View style={styles.bottomNavInner}>
-            <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/time-clock')}>
-              <View style={styles.bottomNavIconWrap}>
-                <Text style={styles.bottomNavItemIcon}>🕐</Text>
-                {timeClockBadge && <View style={styles.badgeDot} />}
-              </View>
-              <Text style={styles.bottomNavItemLabel} numberOfLines={1}>Clock</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/open-shifts')}>
-              <View style={styles.bottomNavIconWrap}>
-                <Text style={styles.bottomNavItemIcon}>📋</Text>
-                {openShiftsBadge && <View style={styles.badgeDot} />}
-              </View>
-              <Text style={styles.bottomNavItemLabel} numberOfLines={1}>Shifts</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/pto')}>
-              <View style={styles.bottomNavIconWrap}>
-                <Text style={styles.bottomNavItemIcon}>📅</Text>
-                {timeOffBadge && <View style={styles.badgeDot} />}
-              </View>
-              <Text style={styles.bottomNavItemLabel}>Time Off</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/announcements')}>
-              <View style={styles.bottomNavIconWrap}>
-                <Text style={styles.bottomNavItemIcon}>📢</Text>
-                {announcementsUnread && <View style={styles.badgeDot} />}
-              </View>
-              <Text style={styles.bottomNavItemLabel}>News</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/benefits')}>
-              <Text style={styles.bottomNavItemIcon}>🏥</Text>
-              <Text style={styles.bottomNavItemLabel}>Benefits</Text>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
+        <BottomNav />
       </View>
     )
   }
@@ -683,43 +625,7 @@ export default function HomeScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Bottom module dock */}
-      <SafeAreaView style={styles.bottomNav} edges={['bottom']}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomNavInner}>
-          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/time-clock')}>
-            <View style={styles.bottomNavIconWrap}>
-              <Text style={styles.bottomNavItemIcon}>🕐</Text>
-              {timeClockBadge && <View style={styles.badgeDot} />}
-            </View>
-            <Text style={styles.bottomNavItemLabel} numberOfLines={1}>Clock</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/open-shifts')}>
-            <View style={styles.bottomNavIconWrap}>
-              <Text style={styles.bottomNavItemIcon}>📋</Text>
-              {openShiftsBadge && <View style={styles.badgeDot} />}
-            </View>
-            <Text style={styles.bottomNavItemLabel} numberOfLines={1}>Shifts</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/pto')}>
-            <View style={styles.bottomNavIconWrap}>
-              <Text style={styles.bottomNavItemIcon}>📅</Text>
-              {timeOffBadge && <View style={styles.badgeDot} />}
-            </View>
-            <Text style={styles.bottomNavItemLabel}>Time Off</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/announcements')}>
-            <View style={styles.bottomNavIconWrap}>
-              <Text style={styles.bottomNavItemIcon}>📢</Text>
-              {announcementsUnread && <View style={styles.badgeDot} />}
-            </View>
-            <Text style={styles.bottomNavItemLabel}>News</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/benefits')}>
-            <Text style={styles.bottomNavItemIcon}>🏥</Text>
-            <Text style={styles.bottomNavItemLabel}>Benefits</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
+      <BottomNav />
     </View>
   )
 }
@@ -729,37 +635,6 @@ const styles = StyleSheet.create({
   idleRoot: { flex: 1, backgroundColor: '#F1EFE8' },
   idleTopArea: { flex: 1 },
   idleScroll: { flexGrow: 1, paddingBottom: 24 },
-  bottomNav: {
-    backgroundColor: '#fff',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#D8D8D8',
-    shadowColor: '#000',
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: -2 },
-    elevation: 8,
-  },
-  bottomNavInner: {
-    flexDirection: 'row',
-    paddingHorizontal: 0,
-    paddingTop: 8,
-    paddingBottom: 8,
-  },
-  bottomNavItem: { flex: 1, alignItems: 'center', gap: 2 },
-  bottomNavIconWrap: { position: 'relative' },
-  bottomNavItemIcon: { fontSize: 20 },
-  bottomNavItemLabel: { fontSize: 10, fontWeight: '600', color: '#555', letterSpacing: 0.1 },
-  badgeDot: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: '#EF4444',
-    borderWidth: 1.5,
-    borderColor: '#fff',
-  },
   logoSection: { alignItems: 'center', paddingTop: 28, paddingBottom: 8 },
   logoImage: { width: 96, height: 96, borderRadius: 16 },
   logoPlaceholder: {

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
+import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
   Alert,
@@ -327,6 +328,7 @@ export default function TimeClockScreen() {
           </SafeAreaView>
         </KeyboardAvoidingView>
       </Modal>
+      <BottomNav activeRoute="time-clock" />
     </View>
   )
 }

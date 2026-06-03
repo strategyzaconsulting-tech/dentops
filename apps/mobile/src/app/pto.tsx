@@ -1,4 +1,5 @@
 import { useLayoutEffect, useState } from 'react'
+import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
   Alert,
@@ -348,7 +349,8 @@ export default function TimeOffScreen() {
     isValidUSDate(adjustmentDate) && adjustmentDescription.trim().length > 0 && !submittingAdjustment
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <View style={styles.root}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
 
@@ -518,6 +520,8 @@ export default function TimeOffScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+      <BottomNav activeRoute="pto" />
+    </View>
   )
 }
 

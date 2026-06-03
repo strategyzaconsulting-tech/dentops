@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
+import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
   RefreshControl,
@@ -91,6 +92,7 @@ export default function AnnouncementsScreen() {
           )}
         </ScrollView>
       )}
+      <BottomNav activeRoute="announcements" />
     </View>
   )
 }

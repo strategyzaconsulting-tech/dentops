@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
+import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
   Alert,
@@ -204,6 +205,7 @@ export default function OpenShiftsScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
+      <BottomNav activeRoute="open-shifts" />
     </View>
   )
 }
