@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -12,6 +12,14 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
+import * as WebBrowser from 'expo-web-browser'
+import SignatureScreen, { type SignatureViewRef } from 'react-native-signature-canvas'
+
+const PDF_URLS: Partial<Record<FormType, string>> = {
+  i9: 'https://www.uscis.gov/sites/default/files/document/forms/i-9.pdf',
+  w4: 'https://www.irs.gov/pub/irs-pdf/fw4.pdf',
+}
+const REQUIRES_SIGNATURE: FormType[] = ['i9', 'w4']
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
@@ -235,6 +243,9 @@ export default function OnboardingFormScreen() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [signature, setSignature] = useState<string | null>(null)
+  const signatureRef = useRef<SignatureViewRef>(null)
+  const needsSignature = REQUIRES_SIGNATURE.includes(formType)
 
   useFocusEffect(
     useCallback(() => {
@@ -258,10 +269,12 @@ export default function OnboardingFormScreen() {
       if (existing) {
         setExistingData(existing)
         setFormData(existing)
+        if (existing.signature) setSignature(existing.signature as string)
         setIsEditMode(false)
       } else {
         setExistingData(null)
         setFormData({})
+        setSignature(null)
         setIsEditMode(true)
       }
     } catch {
@@ -275,14 +288,19 @@ export default function OnboardingFormScreen() {
   }
 
   async function handleSubmit() {
+    if (needsSignature && !signature) {
+      Alert.alert('Signature Required', 'Please sign the form before submitting.')
+      return
+    }
     setSubmitting(true)
     try {
+      const payload = needsSignature ? { ...formData, signature } : formData
       const res = await fetch(
         `${API_BASE}/api/onboarding/forms?practiceId=${PRACTICE_ID}&userId=${USER_ID}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ formType, data: formData }),
+          body: JSON.stringify({ formType, data: payload }),
         }
       )
       if (res.ok) {
@@ -346,6 +364,11 @@ export default function OnboardingFormScreen() {
               )
             })}
           </View>
+          {needsSignature && !!existingData?.signature && (
+            <View style={[styles.signedBadge, { marginTop: 8 }]}>
+              <Text style={styles.signedBadgeText}>✓ Electronically Signed</Text>
+            </View>
+          )}
           <TouchableOpacity style={styles.editBtn} onPress={() => setIsEditMode(true)}>
             <Text style={styles.editBtnText}>Edit</Text>
           </TouchableOpacity>
@@ -407,10 +430,62 @@ export default function OnboardingFormScreen() {
           )}
         </View>
 
+        {needsSignature && (
+          <>
+            {/* PDF reference button */}
+            <TouchableOpacity
+              style={styles.pdfBtn}
+              onPress={() => WebBrowser.openBrowserAsync(PDF_URLS[formType]!)}
+            >
+              <Text style={styles.pdfBtnText}>📄 View Official {formType === 'i9' ? 'I-9' : 'W-4'} Form (PDF)</Text>
+            </TouchableOpacity>
+
+            {/* Signature pad */}
+            <View style={styles.signatureSection}>
+              <Text style={styles.signatureLabel}>Employee Signature</Text>
+              <Text style={styles.signatureSub}>Sign below using your finger</Text>
+
+              {signature ? (
+                <View style={styles.signedBadge}>
+                  <Text style={styles.signedBadgeText}>✓ Signed</Text>
+                  <TouchableOpacity
+                    onPress={() => { signatureRef.current?.clearSignature(); setSignature(null) }}
+                    style={styles.clearSigBtn}
+                  >
+                    <Text style={styles.clearSigText}>Clear & Re-sign</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.signaturePadWrap}>
+                  <SignatureScreen
+                    ref={signatureRef}
+                    onOK={(sig) => setSignature(sig)}
+                    onClear={() => setSignature(null)}
+                    webStyle={`
+                      .m-signature-pad { box-shadow: none; border: none; }
+                      .m-signature-pad--body { border: none; }
+                      .m-signature-pad--footer { display: none; }
+                      body { background: #FAFAFA; }
+                    `}
+                    style={{ height: 180 }}
+                    backgroundColor="#FAFAFA"
+                  />
+                  <TouchableOpacity
+                    style={styles.confirmSigBtn}
+                    onPress={() => signatureRef.current?.readSignature()}
+                  >
+                    <Text style={styles.confirmSigText}>Confirm Signature</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </>
+        )}
+
         <TouchableOpacity
-          style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
+          style={[styles.submitBtn, (submitting || (needsSignature && !signature)) && styles.submitBtnDisabled]}
           onPress={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || (needsSignature && !signature)}
         >
           {submitting ? (
             <ActivityIndicator color="#fff" />
@@ -498,6 +573,55 @@ const styles = StyleSheet.create({
   },
   readOnlyKey: { fontSize: 13, color: '#888', fontWeight: '500', textTransform: 'capitalize' },
   readOnlyValue: { fontSize: 13, color: '#2C2C2A', fontWeight: '600', maxWidth: '60%', textAlign: 'right' },
+  pdfBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#1D9E75',
+    borderRadius: 10,
+    paddingVertical: 13,
+    marginBottom: 12,
+    backgroundColor: '#F0FAF6',
+  },
+  pdfBtnText: { color: '#1D9E75', fontSize: 15, fontWeight: '600' },
+  signatureSection: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+    gap: 6,
+  },
+  signatureLabel: { fontSize: 13, fontWeight: '700', color: '#333', textTransform: 'uppercase', letterSpacing: 0.3 },
+  signatureSub: { fontSize: 12, color: '#999', marginBottom: 4 },
+  signaturePadWrap: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#FAFAFA',
+  },
+  confirmSigBtn: {
+    backgroundColor: '#1D9E75',
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  confirmSigText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  signedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#E8F7F1',
+    borderRadius: 8,
+    padding: 12,
+  },
+  signedBadgeText: { color: '#1D9E75', fontWeight: '700', fontSize: 14 },
+  clearSigBtn: { paddingHorizontal: 8 },
+  clearSigText: { color: '#EF4444', fontSize: 13, fontWeight: '500' },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
