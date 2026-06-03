@@ -24,6 +24,8 @@ model Practice {
   blackoutDates      BlackoutDate[]
   shifts             Shift[]
   clockAdjustments   ClockAdjustment[]
+  openShifts         OpenShift[]
+  openShiftClaims    OpenShiftClaim[]
 
   @@map("practices")
 }
@@ -44,6 +46,7 @@ model User {
   ptoRequests      PtoRequest[]
   shifts           Shift[]
   clockAdjustments ClockAdjustment[]
+  openShiftClaims  OpenShiftClaim[]
 
   @@map("users")
 }
@@ -57,9 +60,10 @@ model Location {
   state      String?
   zip        String?
 
-  practice    Practice    @relation(fields: [practiceId], references: [id])
+  practice    Practice     @relation(fields: [practiceId], references: [id])
   timePunches TimePunch[]
   shifts      Shift[]
+  openShifts  OpenShift[]
 
   @@map("locations")
 }
@@ -114,6 +118,40 @@ model Shift {
   location Location @relation(fields: [locationId], references: [id])
 
   @@map("shifts")
+}
+
+model OpenShift {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String   @map("practice_id") @db.Uuid
+  locationId String   @map("location_id") @db.Uuid
+  date       DateTime @db.Date
+  startTime  String   @map("start_time")
+  endTime    String   @map("end_time")
+  specialty  String?
+  notes      String?
+  status     String   @default("open")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  practice Practice         @relation(fields: [practiceId], references: [id])
+  location Location         @relation(fields: [locationId], references: [id])
+  claims   OpenShiftClaim[]
+
+  @@map("open_shifts")
+}
+
+model OpenShiftClaim {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  openShiftId String   @map("open_shift_id") @db.Uuid
+  practiceId  String   @map("practice_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  openShift OpenShift @relation(fields: [openShiftId], references: [id], onDelete: Cascade)
+  practice  Practice  @relation(fields: [practiceId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@map("open_shift_claims")
 }
 
 model ClockAdjustment {

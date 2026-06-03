@@ -46,6 +46,13 @@ export default function Dashboard() {
             <h3 className="font-semibold text-[#1D9E75]">PTO Manager</h3>
             <p className="mt-1 text-sm text-muted-foreground">Requests, team calendar &amp; blackout dates</p>
           </a>
+          <a
+            href="/open-shifts"
+            className="rounded-lg border bg-card p-6 shadow-sm hover:border-[#1D9E75] hover:shadow-md transition-all"
+          >
+            <h3 className="font-semibold text-[#1D9E75]">Open Shifts</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Post &amp; manage unfilled shifts</p>
+          </a>
         </div>
       </main>
     </div>

@@ -624,6 +624,10 @@ export default function HomeScreen() {
             <Text style={styles.bottomNavItemIcon}>🕐</Text>
             <Text style={styles.bottomNavItemLabel}>Time Clock</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/open-shifts')}>
+            <Text style={styles.bottomNavItemIcon}>📋</Text>
+            <Text style={styles.bottomNavItemLabel}>Open Shifts</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/pto')}>
             <Text style={styles.bottomNavItemIcon}>📅</Text>
             <Text style={styles.bottomNavItemLabel}>Time Off</Text>

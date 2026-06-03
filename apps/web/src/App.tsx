@@ -15,6 +15,7 @@ import TimeClock from './pages/TimeClock'
 import PtoAdmin from './pages/PtoAdmin'
 import Staff from './pages/Staff'
 import Schedules from './pages/Schedules'
+import OpenShifts from './pages/OpenShifts'
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/pto" element={<PtoAdmin />} />
         <Route path="/staff" element={<Staff />} />
         <Route path="/schedules" element={<Schedules />} />
+        <Route path="/open-shifts" element={<OpenShifts />} />
         <Route
           path="/setup"
           element={
