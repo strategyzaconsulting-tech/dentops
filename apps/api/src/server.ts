@@ -13,6 +13,7 @@ import practiceRoutes from "./routes/practice.js"
 import clockAdjustmentRoutes from "./routes/clockAdjustments.js";
 import openShiftRoutes from "./routes/openShifts.js";
 import announcementRoutes from "./routes/announcements.js";
+import benefitRoutes from "./routes/benefits.js";
 
 export async function createServer() {
   const server = Fastify({
@@ -54,6 +55,7 @@ export async function createServer() {
   await server.register(clockAdjustmentRoutes, { prefix: "/api" });
   await server.register(openShiftRoutes, { prefix: "/api" });
   await server.register(announcementRoutes, { prefix: "/api" });
+  await server.register(benefitRoutes, { prefix: "/api" });
 
   return server;
 }

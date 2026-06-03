@@ -71,6 +71,14 @@ function avatarColor(id: string) {
   return palette[h]
 }
 
+interface BenefitRow {
+  id: string
+  name: string
+  isDefault: boolean
+  sortOrder: number
+  enabled: boolean
+}
+
 export default function Staff() {
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -78,6 +86,12 @@ export default function Staff() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
+
+  // benefits state
+  const [benefits, setBenefits] = useState<BenefitRow[]>([])
+  const [newBenefitName, setNewBenefitName] = useState('')
+  const [addingBenefit, setAddingBenefit] = useState(false)
+  const [showNewBenefitInput, setShowNewBenefitInput] = useState(false)
 
   async function fetchStaff() {
     setLoading(true)
@@ -96,10 +110,13 @@ export default function Staff() {
 
   function openAdd() {
     setForm(emptyForm)
+    setBenefits([])
+    setShowNewBenefitInput(false)
+    setNewBenefitName('')
     setModal({ mode: 'add' })
   }
 
-  function openEdit(member: StaffMember) {
+  async function openEdit(member: StaffMember) {
     setForm({
       firstName: member.firstName,
       lastName: member.lastName,
@@ -109,7 +126,57 @@ export default function Staff() {
       shiftStart: member.shiftStart ?? '',
       shiftEnd: member.shiftEnd ?? '',
     })
+    setShowNewBenefitInput(false)
+    setNewBenefitName('')
     setModal({ mode: 'edit', member })
+
+    // Load benefits for this staff member
+    try {
+      const res = await fetch(`${API_BASE}/api/benefits/user?practiceId=${PRACTICE_ID}&userId=${member.id}`)
+      const data = await res.json()
+      if (Array.isArray(data)) setBenefits(data)
+    } catch {
+      // silent
+    }
+  }
+
+  async function handleToggleBenefit(benefitId: string, enabled: boolean, userId: string) {
+    setBenefits((prev) => prev.map((b) => b.id === benefitId ? { ...b, enabled } : b))
+    try {
+      await fetch(`${API_BASE}/api/benefits/user`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ practiceId: PRACTICE_ID, userId, benefitId, enabled }),
+      })
+    } catch {
+      // revert on failure
+      setBenefits((prev) => prev.map((b) => b.id === benefitId ? { ...b, enabled: !enabled } : b))
+    }
+  }
+
+  async function handleAddBenefit() {
+    if (!newBenefitName.trim()) return
+    setAddingBenefit(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/benefits`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ practiceId: PRACTICE_ID, name: newBenefitName.trim() }),
+      })
+      if (res.ok) {
+        const newB = await res.json()
+        setBenefits((prev) => [...prev, { ...newB, enabled: false }])
+        setNewBenefitName('')
+        setShowNewBenefitInput(false)
+      }
+    } catch { /* silent */ }
+    finally { setAddingBenefit(false) }
+  }
+
+  async function handleDeleteBenefit(benefitId: string) {
+    if (!confirm('Remove this benefit from the practice?')) return
+    await fetch(`${API_BASE}/api/benefits/${benefitId}`, { method: 'DELETE' })
+    setBenefits((prev) => prev.filter((b) => b.id !== benefitId))
   }
 
   async function handleSave() {
@@ -289,12 +356,14 @@ export default function Staff() {
           style={{ backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 50 }}
           onClick={(e) => { if (e.target === e.currentTarget) setModal(null) }}
         >
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="mb-5 text-base font-semibold text-gray-900">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh]">
+            <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+            <h3 className="text-base font-semibold text-gray-900">
               {modal.mode === 'add' ? 'Add staff member' : `Edit — ${modal.member?.firstName} ${modal.member?.lastName}`}
             </h3>
+            </div>
 
-            <div className="space-y-4">
+            <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-600">First name</label>
@@ -378,9 +447,86 @@ export default function Staff() {
                   </div>
                 </div>
               </div>
+
+              {/* Benefits — edit mode only */}
+              {modal.mode === 'edit' && (
+                <div>
+                  <div className="flex items-center justify-between mb-3 pt-2 border-t border-gray-100">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Benefits</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Activate after probationary period</p>
+                    </div>
+                    <button
+                      onClick={() => setShowNewBenefitInput((v) => !v)}
+                      className="flex items-center gap-1 rounded-lg border border-dashed border-[#1D9E75] px-2.5 py-1 text-xs font-semibold text-[#1D9E75] hover:bg-[#E8F5F0]"
+                    >
+                      + Add
+                    </button>
+                  </div>
+
+                  {/* New benefit input */}
+                  {showNewBenefitInput && (
+                    <div className="mb-3 flex gap-2">
+                      <input
+                        type="text"
+                        className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                        placeholder="e.g. Dental, Vision, Life Insurance…"
+                        value={newBenefitName}
+                        onChange={(e) => setNewBenefitName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleAddBenefit() }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleAddBenefit}
+                        disabled={addingBenefit || !newBenefitName.trim()}
+                        className="rounded-lg bg-[#1D9E75] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                      >
+                        {addingBenefit ? '…' : 'Add'}
+                      </button>
+                    </div>
+                  )}
+
+                  {benefits.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic py-2">Loading benefits…</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {benefits.map((b) => (
+                        <div key={b.id} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-800">{b.name}</span>
+                            {b.isDefault && (
+                              <span className="rounded-full bg-[#E8F5F0] px-2 py-0.5 text-xs font-medium text-[#1D9E75]">Standard</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {/* Toggle switch */}
+                            <button
+                              onClick={() => handleToggleBenefit(b.id, !b.enabled, modal.member!.id)}
+                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${b.enabled ? 'bg-[#1D9E75]' : 'bg-gray-300'}`}
+                            >
+                              <span
+                                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${b.enabled ? 'translate-x-[18px]' : 'translate-x-[3px]'}`}
+                              />
+                            </button>
+                            {!b.isDefault && (
+                              <button
+                                onClick={() => handleDeleteBenefit(b.id)}
+                                className="text-gray-300 hover:text-red-500 text-xs leading-none"
+                                title="Remove benefit"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="mt-6 flex gap-3">
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
               <button
                 onClick={() => setModal(null)}
                 className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"

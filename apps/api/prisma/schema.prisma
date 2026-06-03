@@ -27,6 +27,8 @@ model Practice {
   openShifts         OpenShift[]
   openShiftClaims    OpenShiftClaim[]
   announcements      Announcement[]
+  practiceBenefits   PracticeBenefit[]
+  userBenefits       UserBenefit[]
 
   @@map("practices")
 }
@@ -50,6 +52,7 @@ model User {
   shifts           Shift[]
   clockAdjustments ClockAdjustment[]
   openShiftClaims  OpenShiftClaim[]
+  userBenefits     UserBenefit[]
 
   @@map("users")
 }
@@ -183,6 +186,34 @@ model BlackoutDate {
   practice Practice @relation(fields: [practiceId], references: [id])
 
   @@map("blackout_dates")
+}
+
+model PracticeBenefit {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String  @map("practice_id") @db.Uuid
+  name       String
+  isDefault  Boolean @default(false) @map("is_default")
+  sortOrder  Int     @default(0) @map("sort_order")
+
+  practice     Practice      @relation(fields: [practiceId], references: [id])
+  userBenefits UserBenefit[]
+
+  @@map("practice_benefits")
+}
+
+model UserBenefit {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId String  @map("practice_id") @db.Uuid
+  userId     String  @map("user_id") @db.Uuid
+  benefitId  String  @map("benefit_id") @db.Uuid
+  enabled    Boolean @default(false)
+
+  practice Practice        @relation(fields: [practiceId], references: [id])
+  user     User            @relation(fields: [userId], references: [id])
+  benefit  PracticeBenefit @relation(fields: [benefitId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, benefitId])
+  @@map("user_benefits")
 }
 
 model Announcement {
