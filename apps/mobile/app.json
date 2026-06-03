@@ -39,6 +39,9 @@
         }
       ]
     ],
+    "updates": {
+      "checkAutomatically": "NEVER"
+    },
     "experiments": {
       "typedRoutes": true
     },

@@ -546,6 +546,44 @@ export default function HomeScreen() {
             ))}
           </View>
         </ScrollView>
+
+        {/* Bottom nav — also available while clocked in */}
+        <SafeAreaView style={styles.bottomNav} edges={['bottom']}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomNavInner}>
+            <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/time-clock')}>
+              <View style={styles.bottomNavIconWrap}>
+                <Text style={styles.bottomNavItemIcon}>🕐</Text>
+                {timeClockBadge && <View style={styles.badgeDot} />}
+              </View>
+              <Text style={styles.bottomNavItemLabel}>Time Clock</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/open-shifts')}>
+              <View style={styles.bottomNavIconWrap}>
+                <Text style={styles.bottomNavItemIcon}>📋</Text>
+                {openShiftsBadge && <View style={styles.badgeDot} />}
+              </View>
+              <Text style={styles.bottomNavItemLabel}>Open Shifts</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/pto')}>
+              <View style={styles.bottomNavIconWrap}>
+                <Text style={styles.bottomNavItemIcon}>📅</Text>
+                {timeOffBadge && <View style={styles.badgeDot} />}
+              </View>
+              <Text style={styles.bottomNavItemLabel}>Time Off</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/announcements')}>
+              <View style={styles.bottomNavIconWrap}>
+                <Text style={styles.bottomNavItemIcon}>📢</Text>
+                {announcementsUnread && <View style={styles.badgeDot} />}
+              </View>
+              <Text style={styles.bottomNavItemLabel}>News</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/benefits')}>
+              <Text style={styles.bottomNavItemIcon}>🏥</Text>
+              <Text style={styles.bottomNavItemLabel}>Benefits</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
       </View>
     )
   }
@@ -644,7 +682,7 @@ export default function HomeScreen() {
 
       {/* Bottom module dock */}
       <SafeAreaView style={styles.bottomNav} edges={['bottom']}>
-        <View style={styles.bottomNavInner}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomNavInner}>
           <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/time-clock')}>
             <View style={styles.bottomNavIconWrap}>
               <Text style={styles.bottomNavItemIcon}>🕐</Text>
@@ -677,7 +715,7 @@ export default function HomeScreen() {
             <Text style={styles.bottomNavItemIcon}>🏥</Text>
             <Text style={styles.bottomNavItemLabel}>Benefits</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   )
@@ -700,11 +738,13 @@ const styles = StyleSheet.create({
   },
   bottomNavInner: {
     flexDirection: 'row',
-    paddingHorizontal: 4,
+    alignItems: 'center',
+    paddingHorizontal: 8,
     paddingTop: 8,
     paddingBottom: 8,
+    gap: 4,
   },
-  bottomNavItem: { flex: 1, alignItems: 'center', gap: 3 },
+  bottomNavItem: { width: 72, alignItems: 'center', gap: 3 },
   bottomNavIconWrap: { position: 'relative' },
   bottomNavItemIcon: { fontSize: 20 },
   bottomNavItemLabel: { fontSize: 10, fontWeight: '600', color: '#555', letterSpacing: 0.1 },
