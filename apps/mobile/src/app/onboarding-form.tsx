@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -13,7 +13,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
-import SignatureScreen, { type SignatureViewRef } from 'react-native-signature-canvas'
 
 const PDF_URLS: Partial<Record<FormType, string>> = {
   i9: 'https://www.uscis.gov/sites/default/files/document/forms/i-9.pdf',
@@ -243,9 +242,10 @@ export default function OnboardingFormScreen() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [signature, setSignature] = useState<string | null>(null)
-  const signatureRef = useRef<SignatureViewRef>(null)
+  const [signatureName, setSignatureName] = useState('')
+  const [signatureAgreed, setSignatureAgreed] = useState(false)
   const needsSignature = REQUIRES_SIGNATURE.includes(formType)
+  const isSigned = needsSignature ? (signatureName.trim().length > 2 && signatureAgreed) : true
 
   useFocusEffect(
     useCallback(() => {
@@ -269,12 +269,13 @@ export default function OnboardingFormScreen() {
       if (existing) {
         setExistingData(existing)
         setFormData(existing)
-        if (existing.signature) setSignature(existing.signature as string)
+        if (existing.signatureName) setSignatureName(existing.signatureName as string)
         setIsEditMode(false)
       } else {
         setExistingData(null)
         setFormData({})
-        setSignature(null)
+        setSignatureName('')
+        setSignatureAgreed(false)
         setIsEditMode(true)
       }
     } catch {
@@ -288,13 +289,15 @@ export default function OnboardingFormScreen() {
   }
 
   async function handleSubmit() {
-    if (needsSignature && !signature) {
-      Alert.alert('Signature Required', 'Please sign the form before submitting.')
+    if (needsSignature && !isSigned) {
+      Alert.alert('Signature Required', 'Please type your full legal name and check the agreement box before submitting.')
       return
     }
     setSubmitting(true)
     try {
-      const payload = needsSignature ? { ...formData, signature } : formData
+      const payload = needsSignature
+        ? { ...formData, signatureName: signatureName.trim(), signatureDate: new Date().toISOString() }
+        : formData
       const res = await fetch(
         `${API_BASE}/api/onboarding/forms?practiceId=${PRACTICE_ID}&userId=${USER_ID}`,
         {
@@ -364,9 +367,9 @@ export default function OnboardingFormScreen() {
               )
             })}
           </View>
-          {needsSignature && !!existingData?.signature && (
+          {needsSignature && !!existingData?.signatureName && (
             <View style={[styles.signedBadge, { marginTop: 8 }]}>
-              <Text style={styles.signedBadgeText}>✓ Electronically Signed</Text>
+              <Text style={styles.signedBadgeText}>✓ Electronically signed by {String(existingData.signatureName)}</Text>
             </View>
           )}
           <TouchableOpacity style={styles.editBtn} onPress={() => setIsEditMode(true)}>
@@ -432,7 +435,6 @@ export default function OnboardingFormScreen() {
 
         {needsSignature && (
           <>
-            {/* PDF reference button */}
             <TouchableOpacity
               style={styles.pdfBtn}
               onPress={() => WebBrowser.openBrowserAsync(PDF_URLS[formType]!)}
@@ -440,42 +442,34 @@ export default function OnboardingFormScreen() {
               <Text style={styles.pdfBtnText}>📄 View Official {formType === 'i9' ? 'I-9' : 'W-4'} Form (PDF)</Text>
             </TouchableOpacity>
 
-            {/* Signature pad */}
             <View style={styles.signatureSection}>
-              <Text style={styles.signatureLabel}>Employee Signature</Text>
-              <Text style={styles.signatureSub}>Sign below using your finger</Text>
+              <Text style={styles.signatureLabel}>Electronic Signature</Text>
+              <Text style={styles.signatureSub}>
+                Type your full legal name exactly as it appears on your ID
+              </Text>
+              <Input
+                value={signatureName}
+                onChangeText={setSignatureName}
+                placeholder="Full legal name"
+                autoCapitalize="words"
+              />
 
-              {signature ? (
-                <View style={styles.signedBadge}>
-                  <Text style={styles.signedBadgeText}>✓ Signed</Text>
-                  <TouchableOpacity
-                    onPress={() => { signatureRef.current?.clearSignature(); setSignature(null) }}
-                    style={styles.clearSigBtn}
-                  >
-                    <Text style={styles.clearSigText}>Clear & Re-sign</Text>
-                  </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.agreementRow}
+                onPress={() => setSignatureAgreed((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, signatureAgreed && styles.checkboxChecked]}>
+                  {signatureAgreed && <Text style={styles.checkboxTick}>✓</Text>}
                 </View>
-              ) : (
-                <View style={styles.signaturePadWrap}>
-                  <SignatureScreen
-                    ref={signatureRef}
-                    onOK={(sig) => setSignature(sig)}
-                    onClear={() => setSignature(null)}
-                    webStyle={`
-                      .m-signature-pad { box-shadow: none; border: none; }
-                      .m-signature-pad--body { border: none; }
-                      .m-signature-pad--footer { display: none; }
-                      body { background: #FAFAFA; }
-                    `}
-                    style={{ height: 180 }}
-                    backgroundColor="#FAFAFA"
-                  />
-                  <TouchableOpacity
-                    style={styles.confirmSigBtn}
-                    onPress={() => signatureRef.current?.readSignature()}
-                  >
-                    <Text style={styles.confirmSigText}>Confirm Signature</Text>
-                  </TouchableOpacity>
+                <Text style={styles.agreementText}>
+                  I certify that the information I have provided is true and correct to the best of my knowledge, and I intend this to serve as my electronic signature.
+                </Text>
+              </TouchableOpacity>
+
+              {isSigned && (
+                <View style={styles.signedBadge}>
+                  <Text style={styles.signedBadgeText}>✓ Ready to submit — signed by {signatureName.trim()}</Text>
                 </View>
               )}
             </View>
@@ -483,9 +477,9 @@ export default function OnboardingFormScreen() {
         )}
 
         <TouchableOpacity
-          style={[styles.submitBtn, (submitting || (needsSignature && !signature)) && styles.submitBtnDisabled]}
+          style={[styles.submitBtn, (submitting || !isSigned) && styles.submitBtnDisabled]}
           onPress={handleSubmit}
-          disabled={submitting || (needsSignature && !signature)}
+          disabled={submitting || !isSigned}
         >
           {submitting ? (
             <ActivityIndicator color="#fff" />
@@ -594,34 +588,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 3,
-    gap: 6,
+    gap: 10,
   },
   signatureLabel: { fontSize: 13, fontWeight: '700', color: '#333', textTransform: 'uppercase', letterSpacing: 0.3 },
-  signatureSub: { fontSize: 12, color: '#999', marginBottom: 4 },
-  signaturePadWrap: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#FAFAFA',
+  signatureSub: { fontSize: 12, color: '#888' },
+  agreementRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  checkbox: {
+    width: 22, height: 22, borderRadius: 4,
+    borderWidth: 2, borderColor: '#D0D0D0',
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 1, flexShrink: 0,
   },
-  confirmSigBtn: {
-    backgroundColor: '#1D9E75',
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  confirmSigText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  checkboxChecked: { backgroundColor: '#1D9E75', borderColor: '#1D9E75' },
+  checkboxTick: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  agreementText: { flex: 1, fontSize: 12, color: '#555', lineHeight: 18 },
   signedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#E8F7F1',
     borderRadius: 8,
     padding: 12,
   },
-  signedBadgeText: { color: '#1D9E75', fontWeight: '700', fontSize: 14 },
-  clearSigBtn: { paddingHorizontal: 8 },
-  clearSigText: { color: '#EF4444', fontSize: 13, fontWeight: '500' },
+  signedBadgeText: { color: '#1D9E75', fontWeight: '700', fontSize: 13 },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
