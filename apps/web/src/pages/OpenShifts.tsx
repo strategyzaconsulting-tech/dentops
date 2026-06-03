@@ -30,6 +30,12 @@ interface Claim {
   createdAt: string
 }
 
+function formatClaimTime(iso: string) {
+  return new Date(iso).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+}
+
 interface OpenShift {
   id: string
   locationId: string
@@ -256,6 +262,7 @@ export default function OpenShifts() {
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-3">
+                                    <span className="text-xs text-gray-400">{formatClaimTime(claim.createdAt)}</span>
                                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${CLAIM_STATUS_STYLES[claim.status] ?? ''}`}>
                                       {claim.status}
                                     </span>

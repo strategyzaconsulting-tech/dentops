@@ -49,6 +49,12 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
+function formatTime12h(t: string): string {
+  const [h, m] = t.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  return `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${ampm}`
+}
+
 export default function OpenShiftsScreen() {
   const [shifts, setShifts] = useState<OpenShift[]>([])
   const [myClaims, setMyClaims] = useState<MyClaim[]>([])
@@ -140,7 +146,7 @@ export default function OpenShiftsScreen() {
                       <View style={styles.shiftTop}>
                         <View style={styles.shiftInfo}>
                           <Text style={styles.shiftDate}>{formatDate(shift.date)}</Text>
-                          <Text style={styles.shiftTime}>{shift.startTime} – {shift.endTime}</Text>
+                          <Text style={styles.shiftTime}>{formatTime12h(shift.startTime)} – {formatTime12h(shift.endTime)}</Text>
                           <Text style={styles.shiftLocation}>{shift.location.name}</Text>
                           {shift.specialty && <Text style={styles.shiftSpecialty}>{shift.specialty}</Text>}
                           {shift.notes && <Text style={styles.shiftNotes}>{shift.notes}</Text>}
@@ -179,7 +185,7 @@ export default function OpenShiftsScreen() {
                     <View key={claim.id} style={styles.claimRow}>
                       <View style={styles.claimRowLeft}>
                         <Text style={styles.claimRowDate}>{formatDate(claim.openShift.date)}</Text>
-                        <Text style={styles.claimRowTime}>{claim.openShift.startTime} – {claim.openShift.endTime}</Text>
+                        <Text style={styles.claimRowTime}>{formatTime12h(claim.openShift.startTime)} – {formatTime12h(claim.openShift.endTime)}</Text>
                         <Text style={styles.claimRowLocation}>{claim.openShift.location.name}</Text>
                       </View>
                       <View style={[styles.claimBadge, { backgroundColor: (CLAIM_STATUS_COLORS[claim.status] ?? '#888') + '20' }]}>
