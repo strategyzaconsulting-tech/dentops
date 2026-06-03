@@ -93,6 +93,90 @@ function fmtDate(iso: string | null) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+const FORM_FIELD_LABELS: Record<string, Record<string, string>> = {
+  i9: {
+    firstName: 'First Name', lastName: 'Last Name',
+    address: 'Street Address', city: 'City', state: 'State', zip: 'Zip',
+    dob: 'Date of Birth', ssn4: 'Last 4 of SSN', citizenshipStatus: 'Citizenship Status',
+    signatureName: 'Electronic Signature', signatureDate: 'Signed On',
+  },
+  w4: {
+    filingStatus: 'Filing Status', hasMultipleJobs: 'Multiple Jobs',
+    dependentsAmount: 'Dependents Amount', extraWithholding: 'Extra Withholding',
+    signatureName: 'Electronic Signature', signatureDate: 'Signed On',
+  },
+  'personal-info': {
+    firstName: 'First Name', lastName: 'Last Name',
+    phone: 'Phone', email: 'Email Address', address: 'Home Address',
+    city: 'City', state: 'State', zip: 'Zip',
+    dob: 'Date of Birth', birthdayPrivacy: 'Birthday Preference',
+  },
+  'emergency-contact': {
+    name: 'Contact Name', relationship: 'Relationship',
+    primaryPhone: 'Primary Phone', altPhone: 'Alternate Phone',
+  },
+  'direct-deposit': {
+    bankName: 'Bank Name', accountType: 'Account Type',
+    routingNumber: 'Routing Number', accountNumber: 'Account Number',
+  },
+}
+
+const MASKED_FIELDS = new Set(['ssn4', 'routingNumber', 'accountNumber'])
+
+function formatFieldValue(key: string, value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—'
+  if (MASKED_FIELDS.has(key)) {
+    const s = String(value)
+    return '•'.repeat(Math.max(0, s.length - 2)) + s.slice(-2)
+  }
+  if (key === 'signatureDate') return fmtDate(String(value)) ?? String(value)
+  if (key === 'birthdayPrivacy') return value === 'private' ? '🔒 Keep private' : '🎉 Celebrate with team'
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  return String(value)
+}
+
+function FormDataPanel({ formKey, label, data, date }: {
+  formKey: string
+  label: string
+  data: Record<string, unknown> | null
+  date: string | null
+}) {
+  const labelMap = FORM_FIELD_LABELS[formKey] ?? {}
+  const isSigned = data?.signatureName
+
+  return (
+    <div className="rounded-lg border bg-white p-4">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">{label}</p>
+        {date
+          ? <span className="text-xs text-[#1D9E75] font-medium">✓ {fmtDate(date)}</span>
+          : <span className="text-xs text-gray-400 italic">Not submitted</span>}
+      </div>
+      {data ? (
+        <dl className="space-y-1.5">
+          {Object.entries(labelMap).map(([key, fieldLabel]) => {
+            const val = data[key]
+            if (val === undefined) return null
+            return (
+              <div key={key} className="flex justify-between gap-2 text-xs border-b border-gray-50 pb-1 last:border-0">
+                <dt className="text-gray-500 shrink-0">{fieldLabel}</dt>
+                <dd className={`text-gray-800 font-medium text-right ${key === 'signatureName' ? 'italic' : ''}`}>
+                  {formatFieldValue(key, val)}
+                </dd>
+              </div>
+            )
+          })}
+          {isSigned && (
+            <p className="text-xs text-[#1D9E75] pt-1">✓ Electronically signed</p>
+          )}
+        </dl>
+      ) : (
+        <p className="text-xs text-gray-400 italic mt-1">No data submitted yet</p>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function Onboarding() {
@@ -320,26 +404,12 @@ export default function Onboarding() {
                         {isExpanded && (
                           <tr key={`${c.id}-expanded`} className="border-t bg-muted/20">
                             <td colSpan={11} className="px-6 py-4">
-                              <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-5">
-                                {[
-                                  { label: 'I-9', data: c.i9Data, date: c.i9CompletedAt },
-                                  { label: 'W-4', data: c.w4Data, date: c.w4CompletedAt },
-                                  { label: 'Personal Info', data: c.personalInfoData, date: c.personalInfoCompletedAt },
-                                  { label: 'Emergency Contact', data: c.emergencyContactData, date: c.emergencyContactCompletedAt },
-                                  { label: 'Direct Deposit', data: c.directDepositData, date: c.directDepositCompletedAt },
-                                ].map(({ label, data, date }) => (
-                                  <div key={label} className="rounded-lg border bg-white p-3">
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">{label}</p>
-                                    {date && <p className="text-xs text-[#1D9E75] mb-2">Completed {fmtDate(date)}</p>}
-                                    {data ? (
-                                      <pre className="text-xs text-gray-600 overflow-auto max-h-40 whitespace-pre-wrap">
-                                        {JSON.stringify(data, null, 2)}
-                                      </pre>
-                                    ) : (
-                                      <p className="text-xs text-muted-foreground italic">Not submitted</p>
-                                    )}
-                                  </div>
-                                ))}
+                              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                                <FormDataPanel formKey="i9"                label="I-9"               data={c.i9Data}               date={c.i9CompletedAt} />
+                                <FormDataPanel formKey="w4"                label="W-4"               data={c.w4Data}               date={c.w4CompletedAt} />
+                                <FormDataPanel formKey="personal-info"     label="Personal Info"     data={c.personalInfoData}     date={c.personalInfoCompletedAt} />
+                                <FormDataPanel formKey="emergency-contact" label="Emergency Contact" data={c.emergencyContactData} date={c.emergencyContactCompletedAt} />
+                                <FormDataPanel formKey="direct-deposit"    label="Direct Deposit"    data={c.directDepositData}    date={c.directDepositCompletedAt} />
                               </div>
                             </td>
                           </tr>
