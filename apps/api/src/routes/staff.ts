@@ -41,10 +41,12 @@ export default async function staffRoutes(server: FastifyInstance) {
       email?: string
       role?: string
       status?: string
+      shiftStart?: string | null
+      shiftEnd?: string | null
     }
   }>('/staff/:id', async (request, reply) => {
     const { id } = request.params
-    const { firstName, lastName, email, role, status } = request.body
+    const { firstName, lastName, email, role, status, shiftStart, shiftEnd } = request.body
 
     const data: Record<string, unknown> = {}
     if (firstName !== undefined) data.firstName = firstName
@@ -52,6 +54,8 @@ export default async function staffRoutes(server: FastifyInstance) {
     if (email !== undefined) data.email = email
     if (role !== undefined) data.role = role
     if (status !== undefined) data.status = status
+    if (shiftStart !== undefined) data.shiftStart = shiftStart || null
+    if (shiftEnd !== undefined) data.shiftEnd = shiftEnd || null
 
     const user = await prisma.user.update({ where: { id }, data })
     return reply.send(user)

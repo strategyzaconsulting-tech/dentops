@@ -54,7 +54,7 @@ export default async function timeclockRoutes(server: FastifyInstance) {
     const { practiceId, userId, locationId, specialty, punchIn } = request.body
     const punchInDate = new Date(punchIn)
 
-    const [punch, shift] = await Promise.all([
+    const [punch, shift, user] = await Promise.all([
       prisma.timePunch.create({
         data: { practiceId, userId, locationId, specialty: specialty ?? null, punchIn: punchInDate },
       }),
@@ -64,9 +64,11 @@ export default async function timeclockRoutes(server: FastifyInstance) {
           date: { gte: new Date(punchInDate.toDateString()), lt: new Date(new Date(punchInDate.toDateString()).getTime() + 86400000) },
         },
       }),
+      prisma.user.findUnique({ where: { id: userId }, select: { shiftStart: true } }),
     ])
 
-    const tardy = shift ? isTardy(punchInDate, shift.date, shift.startTime) : false
+    const effectiveStart = shift?.startTime ?? user?.shiftStart ?? null
+    const tardy = effectiveStart ? isTardy(punchInDate, shift?.date ?? punchInDate, effectiveStart) : false
     return reply.status(201).send({ ...punch, isTardy: tardy })
   })
 
@@ -114,7 +116,7 @@ export default async function timeclockRoutes(server: FastifyInstance) {
       end.setDate(end.getDate() + 7)
       end.setHours(23, 59, 59, 999)
 
-      const [punches, shifts] = await Promise.all([
+      const [punches, shifts, user] = await Promise.all([
         prisma.timePunch.findMany({
           where: { practiceId, userId, punchIn: { gte: start, lte: end } },
           select: {
@@ -125,18 +127,18 @@ export default async function timeclockRoutes(server: FastifyInstance) {
           orderBy: { punchIn: 'asc' },
         }),
         prisma.shift.findMany({ where: { practiceId, userId, date: { gte: start, lt: end } } }),
+        prisma.user.findUnique({ where: { id: userId }, select: { shiftStart: true } }),
       ])
 
-      const shiftMap = new Map(shifts.map((s) => [`${s.userId}:${s.locationId}`, s]))
       const result = punches.map((p) => {
         const s = shifts.find((sh) => {
           const shDate = new Date(sh.date)
           const pDate = new Date(p.punchIn)
           return shDate.toDateString() === pDate.toDateString()
         })
-        return { ...p, isTardy: s ? isTardy(new Date(p.punchIn), s.date, s.startTime) : false }
+        const effectiveStart = s?.startTime ?? user?.shiftStart ?? null
+        return { ...p, isTardy: effectiveStart ? isTardy(new Date(p.punchIn), s?.date ?? new Date(p.punchIn), effectiveStart) : false }
       })
-      void shiftMap
       return reply.send(result)
     }
   )
@@ -157,7 +159,7 @@ export default async function timeclockRoutes(server: FastifyInstance) {
         where: { practiceId, punchOut: null, punchIn: { gte: start, lte: end } },
         select: {
           id: true, userId: true,
-          user: { select: { firstName: true, lastName: true } },
+          user: { select: { firstName: true, lastName: true, shiftStart: true } },
           locationId: true,
           location: { select: { name: true } },
           specialty: true, punchIn: true, breakStart: true, breakEnd: true,
@@ -169,7 +171,8 @@ export default async function timeclockRoutes(server: FastifyInstance) {
     const shiftMap = new Map(shifts.map((s) => [`${s.userId}:${s.locationId}`, s]))
     const result = punches.map((p) => {
       const s = shiftMap.get(`${p.userId}:${p.locationId}`)
-      return { ...p, isTardy: s ? isTardy(new Date(p.punchIn), s.date, s.startTime) : false }
+      const effectiveStart = s?.startTime ?? p.user.shiftStart ?? null
+      return { ...p, isTardy: effectiveStart ? isTardy(new Date(p.punchIn), s?.date ?? new Date(p.punchIn), effectiveStart) : false }
     })
     return reply.send(result)
   })
@@ -190,7 +193,7 @@ export default async function timeclockRoutes(server: FastifyInstance) {
         where: { practiceId, punchIn: { gte: start, lte: end } },
         select: {
           id: true, userId: true,
-          user: { select: { firstName: true, lastName: true } },
+          user: { select: { firstName: true, lastName: true, shiftStart: true } },
           locationId: true,
           location: { select: { name: true } },
           specialty: true, punchIn: true, punchOut: true, breakStart: true, breakEnd: true,
@@ -203,7 +206,8 @@ export default async function timeclockRoutes(server: FastifyInstance) {
     const shiftMap = new Map(shifts.map((s) => [`${s.userId}:${s.locationId}`, s]))
     const result = punches.map((p) => {
       const s = shiftMap.get(`${p.userId}:${p.locationId}`)
-      return { ...p, isTardy: s ? isTardy(new Date(p.punchIn), s.date, s.startTime) : false }
+      const effectiveStart = s?.startTime ?? p.user.shiftStart ?? null
+      return { ...p, isTardy: effectiveStart ? isTardy(new Date(p.punchIn), s?.date ?? new Date(p.punchIn), effectiveStart) : false }
     })
     return reply.send(result)
   })

@@ -41,6 +41,8 @@ model User {
   status     String
 
   pushToken   String?      @map("push_token")
+  shiftStart  String?      @map("shift_start")
+  shiftEnd    String?      @map("shift_end")
 
   practice         Practice          @relation(fields: [practiceId], references: [id])
   timePunches      TimePunch[]

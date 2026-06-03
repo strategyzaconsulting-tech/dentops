@@ -27,6 +27,8 @@ interface StaffMember {
   email: string
   role: string
   status: string
+  shiftStart: string | null
+  shiftEnd: string | null
 }
 
 type ModalMode = 'add' | 'edit'
@@ -37,6 +39,8 @@ interface FormState {
   email: string
   role: string
   status: string
+  shiftStart: string
+  shiftEnd: string
 }
 
 const emptyForm: FormState = {
@@ -45,6 +49,15 @@ const emptyForm: FormState = {
   email: '',
   role: 'staff',
   status: 'active',
+  shiftStart: '',
+  shiftEnd: '',
+}
+
+function fmt12h(t: string | null) {
+  if (!t) return null
+  const [h, m] = t.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  return `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${ampm}`
 }
 
 function initials(f: string, l: string) {
@@ -93,6 +106,8 @@ export default function Staff() {
       email: member.email,
       role: member.role,
       status: member.status,
+      shiftStart: member.shiftStart ?? '',
+      shiftEnd: member.shiftEnd ?? '',
     })
     setModal({ mode: 'edit', member })
   }
@@ -100,17 +115,22 @@ export default function Staff() {
   async function handleSave() {
     setSaving(true)
     try {
+      const payload = {
+        ...form,
+        shiftStart: form.shiftStart || null,
+        shiftEnd: form.shiftEnd || null,
+      }
       if (modal?.mode === 'add') {
         await fetch(`${API_BASE}/api/staff`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ practiceId: PRACTICE_ID, ...form }),
+          body: JSON.stringify({ practiceId: PRACTICE_ID, ...payload }),
         })
       } else if (modal?.mode === 'edit' && modal.member) {
         await fetch(`${API_BASE}/api/staff/${modal.member.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         })
       }
       setModal(null)
@@ -185,6 +205,7 @@ export default function Staff() {
                   <th className="px-5 py-3 text-left font-semibold">Name</th>
                   <th className="px-5 py-3 text-left font-semibold">Email</th>
                   <th className="px-5 py-3 text-left font-semibold">Role</th>
+                  <th className="px-5 py-3 text-left font-semibold">Shift</th>
                   <th className="px-5 py-3 text-left font-semibold">Status</th>
                   <th className="px-5 py-3 text-left font-semibold">Actions</th>
                 </tr>
@@ -192,7 +213,7 @@ export default function Staff() {
               <tbody className="divide-y divide-gray-100">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-gray-400">
+                    <td colSpan={6} className="py-12 text-center text-gray-400">
                       {search ? 'No staff match your search.' : 'No staff members yet.'}
                     </td>
                   </tr>
@@ -221,6 +242,11 @@ export default function Staff() {
                         >
                           {member.role.replace('_', ' ')}
                         </span>
+                      </td>
+                      <td className="px-5 py-3 text-sm text-gray-500">
+                        {member.shiftStart
+                          ? <span>{fmt12h(member.shiftStart)}{member.shiftEnd ? ` – ${fmt12h(member.shiftEnd)}` : ''}</span>
+                          : <span className="text-gray-300 italic text-xs">—</span>}
                       </td>
                       <td className="px-5 py-3">
                         <span
@@ -324,6 +350,32 @@ export default function Staff() {
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Default shift hours <span className="text-gray-400 font-normal">(used for tardy detection)</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs text-gray-400">Start time</label>
+                    <input
+                      type="time"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      value={form.shiftStart}
+                      onChange={(e) => setForm((f) => ({ ...f, shiftStart: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-gray-400">End time</label>
+                    <input
+                      type="time"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      value={form.shiftEnd}
+                      onChange={(e) => setForm((f) => ({ ...f, shiftEnd: e.target.value }))}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
