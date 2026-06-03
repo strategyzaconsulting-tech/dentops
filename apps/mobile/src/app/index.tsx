@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -12,8 +12,9 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { Audio, type AVPlaybackStatus } from 'expo-av'
+import { hasUnreadAnnouncements } from '../store/announcementStore'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2' // Daniel Quiroga (staff)
@@ -164,6 +165,9 @@ export default function HomeScreen() {
   const [alertSound, setAlertSound] = useState(true)
   const [alertVibrate, setAlertVibrate] = useState(true)
 
+  // --- announcement badge ---
+  const [announcementsUnread, setAnnouncementsUnread] = useState(false)
+
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Wall clock tick
@@ -194,6 +198,18 @@ export default function HomeScreen() {
       })
       .catch(() => setLocations(TEST_LOCATIONS))
   }, [])
+
+  // Check announcement badge whenever screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      fetch(`${API_BASE}/api/announcements?practiceId=${PRACTICE_ID}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (Array.isArray(data)) setAnnouncementsUnread(hasUnreadAnnouncements(data))
+        })
+        .catch(() => {})
+    }, [])
+  )
 
   // Elapsed timer while clocked in
   useEffect(() => {
@@ -633,7 +649,10 @@ export default function HomeScreen() {
             <Text style={styles.bottomNavItemLabel}>Time Off</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push('/announcements')}>
-            <Text style={styles.bottomNavItemIcon}>📢</Text>
+            <View style={styles.bottomNavIconWrap}>
+              <Text style={styles.bottomNavItemIcon}>📢</Text>
+              {announcementsUnread && <View style={styles.badgeDot} />}
+            </View>
             <Text style={styles.bottomNavItemLabel}>News</Text>
           </TouchableOpacity>
         </View>
@@ -664,8 +683,20 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   bottomNavItem: { alignItems: 'center', paddingHorizontal: 16, gap: 3 },
+  bottomNavIconWrap: { position: 'relative' },
   bottomNavItemIcon: { fontSize: 22 },
   bottomNavItemLabel: { fontSize: 11, fontWeight: '600', color: '#555', letterSpacing: 0.2 },
+  badgeDot: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
   logoSection: { alignItems: 'center', paddingTop: 28, paddingBottom: 8 },
   logoImage: { width: 96, height: 96, borderRadius: 16 },
   logoPlaceholder: {
