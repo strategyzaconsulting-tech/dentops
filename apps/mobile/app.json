@@ -38,7 +38,8 @@
           "sounds": []
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ],
     "updates": {
       "checkAutomatically": "NEVER"

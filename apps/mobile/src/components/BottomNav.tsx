@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   item: { flex: 1, alignItems: 'center', gap: 2 },
   iconWrap: { position: 'relative' },
   icon: { fontSize: 20 },
-  label: { fontSize: 10, fontWeight: '600', color: '#6B6B68', letterSpacing: 0.1 },
+  label: { fontSize: 9, fontFamily: 'JosefinSans_100Thin', color: '#6B6B68', letterSpacing: 2, textTransform: 'uppercase' },
   labelActive: { color: '#1D9E75' },
   badgeDot: {
     position: 'absolute',

@@ -1,8 +1,11 @@
 import { useEffect } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
+import { useFonts, JosefinSans_100Thin } from '@expo-google-fonts/josefin-sans'
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({ JosefinSans_100Thin })
+
   useEffect(() => {
     // Push notifications are set up silently — any version mismatch is non-fatal
     void (async () => {

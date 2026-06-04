@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   logoMarkText: { fontSize: 20, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  brandName: { fontSize: 26, fontWeight: '800', color: '#2C2C2A', letterSpacing: -0.8 },
+  brandName: { fontSize: 28, fontFamily: 'JosefinSans_100Thin', color: '#2C2C2A', letterSpacing: 6 },
   logoImage: { width: 56, height: 56, borderRadius: 12 },
   practiceNameText: {
     fontSize: 13,
@@ -626,8 +626,8 @@ const styles = StyleSheet.create({
   },
 
   timeSection: { alignItems: 'center', paddingTop: 16, paddingBottom: 20 },
-  timeText: { fontSize: 44, fontWeight: '800', color: '#2C2C2A', letterSpacing: -1.5 },
-  dateText: { fontSize: 14, color: '#6B6B68', marginTop: 4 },
+  timeText: { fontSize: 44, fontFamily: 'JosefinSans_100Thin', color: '#2C2C2A', letterSpacing: 6 },
+  dateText: { fontSize: 13, fontFamily: 'JosefinSans_100Thin', color: '#6B6B68', marginTop: 6, letterSpacing: 3 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -640,12 +640,12 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   cardLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 11,
+    fontFamily: 'JosefinSans_100Thin',
     color: '#555',
     marginBottom: 10,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 4,
   },
   chipScroll: { flexGrow: 0 },
   chipContent: { gap: 8, paddingRight: 4 },
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   clockInBtnDisabled: { backgroundColor: '#B0B0B0' },
-  clockInBtnText: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  clockInBtnText: { color: '#fff', fontSize: 15, fontFamily: 'JosefinSans_100Thin', letterSpacing: 5 },
 
   // --- Active ---
   activeRoot: { flex: 1, backgroundColor: '#FAFAF8' },
@@ -687,14 +687,14 @@ const styles = StyleSheet.create({
   },
   clockedInLabel: {
     color: 'rgba(255,255,255,0.75)',
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 11,
+    fontFamily: 'JosefinSans_100Thin',
     marginBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 5,
   },
-  elapsedText: { color: '#fff', fontSize: 48, fontWeight: '700', letterSpacing: -1 },
-  activeSubtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 10 },
+  elapsedText: { color: '#fff', fontSize: 52, fontFamily: 'JosefinSans_100Thin', letterSpacing: 4 },
+  activeSubtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontFamily: 'JosefinSans_100Thin', letterSpacing: 3, marginTop: 10 },
   tardyText: { fontSize: 12, color: '#DC2626', fontStyle: 'italic', marginLeft: 4 },
   activeScroll: { paddingTop: 16, paddingBottom: 40 },
   activeCard: {
