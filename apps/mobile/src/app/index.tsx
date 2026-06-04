@@ -433,9 +433,9 @@ const styles = StyleSheet.create({
   practiceNameText: { fontSize: 13, fontWeight: '400', color: '#9A9A96', letterSpacing: 0.5 },
 
   // Time
-  timeSection: { alignItems: 'center', paddingTop: 16, paddingBottom: 28 },
+  timeSection: { alignItems: 'center', paddingTop: 64, paddingBottom: 28 },
   timeText: { fontSize: 44, fontWeight: '200', color: '#FAF6EF', letterSpacing: 4 },
-  dateText: { fontSize: 13, fontWeight: '300', color: '#9A9A96', marginTop: 6, letterSpacing: 2 },
+  dateText: { fontSize: 17, fontWeight: '300', color: '#9A9A96', marginTop: 8, letterSpacing: 2 },
 
   // Clock in button
   clockInBtn: { backgroundColor: '#1D9E75', borderRadius: 10, paddingVertical: 18, marginHorizontal: 90, alignItems: 'center' },
