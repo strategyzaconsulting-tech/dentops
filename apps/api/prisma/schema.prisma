@@ -34,6 +34,7 @@ model Practice {
   officeManuals      OfficeManual[]
   manualSignatures   ManualSignature[]
   trainingSessions   TrainingSession[]
+  w4AnnualReviews    W4AnnualReview[]
 
   @@map("practices")
 }
@@ -63,6 +64,7 @@ model User {
   manualSignatures ManualSignature[]
   trainingSessions TrainingSession[]
   trainerSessions  TrainingSession[] @relation("Trainer")
+  w4AnnualReviews  W4AnnualReview[]
 
   @@map("users")
 }
@@ -313,6 +315,21 @@ model ManualSignature {
 
   @@unique([manualId, userId])
   @@map("manual_signatures")
+}
+
+model W4AnnualReview {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId  String    @map("practice_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  year        Int
+  completedAt DateTime? @map("completed_at") @db.Timestamptz()
+  changed     Boolean   @default(false)
+
+  practice Practice @relation(fields: [practiceId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, year])
+  @@map("w4_annual_reviews")
 }
 
 model TrainingSession {

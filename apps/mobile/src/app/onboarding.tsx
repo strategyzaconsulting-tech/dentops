@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -47,6 +48,8 @@ export default function OnboardingScreen() {
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [training, setTraining] = useState<TrainingSession[]>([])
   const [loading, setLoading] = useState(true)
+  const [w4ReviewRequired, setW4ReviewRequired] = useState(false)
+  const [completingReview, setCompletingReview] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
@@ -57,14 +60,35 @@ export default function OnboardingScreen() {
   async function loadData() {
     setLoading(true)
     try {
-      const [cl, tr] = await Promise.allSettled([
+      const year = new Date().getFullYear()
+      const [cl, tr, rev] = await Promise.allSettled([
         fetch(`${API_BASE}/api/onboarding?practiceId=${PRACTICE_ID}&userId=${USER_ID}`).then((r) => r.json()),
         fetch(`${API_BASE}/api/training?practiceId=${PRACTICE_ID}&userId=${USER_ID}`).then((r) => r.json()),
+        fetch(`${API_BASE}/api/w4-review/status?practiceId=${PRACTICE_ID}&userId=${USER_ID}&year=${year}`).then((r) => r.json()),
       ])
       if (cl.status === 'fulfilled' && cl.value?.id) setChecklist(cl.value)
       if (tr.status === 'fulfilled' && Array.isArray(tr.value)) setTraining(tr.value)
+      if (rev.status === 'fulfilled' && rev.value?.required && !rev.value?.completed) {
+        setW4ReviewRequired(true)
+      }
     } catch { /* no-op */ }
     setLoading(false)
+  }
+
+  async function handleW4ReviewComplete(changed: boolean) {
+    setCompletingReview(true)
+    try {
+      await fetch(`${API_BASE}/api/w4-review/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ practiceId: PRACTICE_ID, userId: USER_ID, changed }),
+      })
+      setW4ReviewRequired(false)
+      if (changed) {
+        router.push({ pathname: '/onboarding-form', params: { type: 'w4' } })
+      }
+    } catch { /* no-op */ }
+    setCompletingReview(false)
   }
 
   const assignedTrainer = training.length > 0 && training[0].trainer ? training[0].trainer : null
@@ -211,6 +235,39 @@ export default function OnboardingScreen() {
       </ScrollView>
 
       <BottomNav activeRoute="onboarding" />
+
+      {/* Mandatory W-4 Annual Review Modal */}
+      <Modal visible={w4ReviewRequired} transparent animationType="fade" onRequestClose={() => {}}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalBadge}>
+              <Text style={styles.modalBadgeText}>Annual Review Required</Text>
+            </View>
+            <Text style={styles.modalTitle}>W-4 Withholding Review</Text>
+            <Text style={styles.modalBody}>
+              Federal guidelines recommend reviewing your W-4 withholding each year. Please confirm whether your information is still accurate or update it now.
+            </Text>
+            <TouchableOpacity
+              style={[styles.modalBtn, styles.modalBtnPrimary, completingReview && styles.modalBtnDisabled]}
+              onPress={() => handleW4ReviewComplete(false)}
+              disabled={completingReview}
+            >
+              {completingReview ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.modalBtnPrimaryText}>No Changes — Looks Good</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalBtn, styles.modalBtnSecondary, completingReview && styles.modalBtnDisabled]}
+              onPress={() => handleW4ReviewComplete(true)}
+              disabled={completingReview}
+            >
+              <Text style={styles.modalBtnSecondaryText}>Update My W-4</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -288,4 +345,35 @@ const styles = StyleSheet.create({
   subText: { fontSize: 12, color: '#888', marginTop: 2 },
   equipItem: { fontSize: 12, color: '#555', marginTop: 3 },
   equipEmpty: { fontSize: 12, color: '#999', fontStyle: 'italic', marginTop: 2 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    gap: 12,
+  },
+  modalBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FEF3C7',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  modalBadgeText: { fontSize: 11, fontWeight: '700', color: '#92400E', textTransform: 'uppercase', letterSpacing: 0.5 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  modalBody: { fontSize: 14, color: '#555', lineHeight: 20 },
+  modalBtn: { borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  modalBtnPrimary: { backgroundColor: '#1D9E75' },
+  modalBtnSecondary: { borderWidth: 1.5, borderColor: '#1D9E75' },
+  modalBtnDisabled: { opacity: 0.5 },
+  modalBtnPrimaryText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  modalBtnSecondaryText: { color: '#1D9E75', fontSize: 15, fontWeight: '600' },
 })

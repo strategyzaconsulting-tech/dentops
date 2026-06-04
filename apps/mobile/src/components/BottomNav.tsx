@@ -10,11 +10,11 @@ const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
 const API_BASE = 'http://192.168.0.137:3000'
 
 const TABS = [
-  { route: 'time-clock',    label: 'Clock',    icon: '🕐' },
+  { route: 'time-clock',    label: 'Clock',    icon: '⏱' },
   { route: 'open-shifts',   label: 'Shifts',   icon: '📋' },
-  { route: 'pto',           label: 'Time Off',  icon: '📅' },
+  { route: 'pto',           label: 'Time Off',  icon: '🌴' },
   { route: 'announcements', label: 'News',     icon: '📢' },
-  { route: 'benefits',      label: 'Benefits', icon: '🏥' },
+  { route: 'benefits',      label: 'Benefits', icon: '💼' },
   { route: 'onboarding',    label: 'Profile',  icon: '👤' },
 ] as const
 
@@ -84,12 +84,12 @@ export default function BottomNav({ activeRoute }: Props) {
 
 const styles = StyleSheet.create({
   nav: {
-    backgroundColor: '#fff',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#D8D8D8',
+    backgroundColor: '#FAFAF8',
+    borderTopWidth: 1,
+    borderTopColor: '#E4E4E1',
     shadowColor: '#000',
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: -2 },
     elevation: 8,
   },
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   item: { flex: 1, alignItems: 'center', gap: 2 },
   iconWrap: { position: 'relative' },
   icon: { fontSize: 20 },
-  label: { fontSize: 10, fontWeight: '600', color: '#555', letterSpacing: 0.1 },
+  label: { fontSize: 10, fontWeight: '600', color: '#6B6B68', letterSpacing: 0.1 },
   labelActive: { color: '#1D9E75' },
   badgeDot: {
     position: 'absolute',

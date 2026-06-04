@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { QRCodeSVG } from 'qrcode.react'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = 'http://localhost:3000'
@@ -137,8 +136,6 @@ export default function TimeClock() {
   const [adjustments, setAdjustments] = useState<AdjustmentRequest[]>([])
   const [adjFilter, setAdjFilter] = useState<'all' | 'pending' | 'approved' | 'denied'>('pending')
   const [reviewingId, setReviewingId] = useState<string | null>(null)
-  const [qrLocation, setQrLocation] = useState<LocationItem | null>(null)
-
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -319,35 +316,6 @@ export default function TimeClock() {
             </div>
           </div>
         </section>
-
-        {/* Location QR Codes */}
-        {locations.length > 0 && (
-          <section>
-            <h2 className="mb-4 text-lg font-semibold text-gray-800">Location QR Codes</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {locations.map((loc) => {
-                const qrValue = `dentops://clock-in?practiceId=${PRACTICE_ID}&locationId=${loc.id}`
-                return (
-                  <div
-                    key={loc.id}
-                    className="flex flex-col items-center gap-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm"
-                  >
-                    <p className="text-sm font-semibold text-gray-800">{loc.name}</p>
-                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                      <QRCodeSVG value={qrValue} size={120} />
-                    </div>
-                    <button
-                      onClick={() => setQrLocation(loc)}
-                      className="rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                    >
-                      Enlarge / Print
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-        )}
 
         {/* Live board */}
         <section>
@@ -594,40 +562,6 @@ export default function TimeClock() {
           </div>
         </section>
       </main>
-
-      {/* QR expand / print modal */}
-      {qrLocation && (
-        <div
-          className="fixed inset-0 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 50 }}
-          onClick={(e) => { if (e.target === e.currentTarget) setQrLocation(null) }}
-        >
-          <div className="flex flex-col items-center gap-5 rounded-2xl bg-white p-8 shadow-2xl">
-            <p className="text-lg font-bold text-gray-900">{qrLocation.name}</p>
-            <div id="qr-print-area" className="rounded-xl border border-gray-100 bg-white p-6">
-              <QRCodeSVG
-                value={`dentops://clock-in?practiceId=${PRACTICE_ID}&locationId=${qrLocation.id}`}
-                size={260}
-              />
-            </div>
-            <p className="text-xs text-gray-400">Scan with the DentOps mobile app to clock in</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => window.print()}
-                className="rounded-lg bg-[#1D9E75] px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
-              >
-                Print
-              </button>
-              <button
-                onClick={() => setQrLocation(null)}
-                className="rounded-lg border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Edit modal */}
       {editState && (

@@ -522,16 +522,19 @@ export default function HomeScreen() {
     <View style={styles.idleRoot}>
       <SafeAreaView style={styles.idleTopArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.idleScroll} keyboardShouldPersistTaps="handled">
-          {/* Logo section */}
-          <View style={styles.logoSection}>
-            {logoUrl ? (
-              <Image source={{ uri: logoUrl }} style={styles.logoImage} resizeMode="contain" />
-            ) : (
-              <View style={styles.logoPlaceholder}>
-                <View style={styles.logoPlaceholderInner} />
+          {/* Brisa brand header */}
+          <View style={styles.brandHeader}>
+            <View style={styles.brandRow}>
+              <View style={styles.logoMark}>
+                <Text style={styles.logoMarkText}>B</Text>
               </View>
-            )}
-            {practiceName && <Text style={styles.practiceNameText}>{practiceName}</Text>}
+              <Text style={styles.brandName}>Brisa</Text>
+            </View>
+            {practiceName ? (
+              <Text style={styles.practiceNameText}>{practiceName}</Text>
+            ) : logoUrl ? (
+              <Image source={{ uri: logoUrl }} style={styles.logoImage} resizeMode="contain" />
+            ) : null}
           </View>
 
           {/* Time + date */}
@@ -592,39 +595,39 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   // --- Idle ---
-  idleRoot: { flex: 1, backgroundColor: '#F1EFE8' },
+  idleRoot: { flex: 1, backgroundColor: '#FAFAF8' },
   idleTopArea: { flex: 1 },
   idleScroll: { flexGrow: 1, paddingBottom: 24 },
-  logoSection: { alignItems: 'center', paddingTop: 28, paddingBottom: 8 },
-  logoImage: { width: 96, height: 96, borderRadius: 16 },
-  logoPlaceholder: {
-    width: 96,
-    height: 96,
-    borderRadius: 16,
-    backgroundColor: '#E8F5F0',
-    borderWidth: 1.5,
-    borderColor: '#C5E8DE',
-    borderStyle: 'dashed',
+
+  // Brisa brand header
+  brandHeader: { alignItems: 'center', paddingTop: 32, paddingBottom: 12, gap: 8 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logoMark: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    backgroundColor: '#1D9E75',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#1D9E75',
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
-  logoPlaceholderInner: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#1D9E75',
-    opacity: 0.25,
-  },
+  logoMarkText: { fontSize: 20, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  brandName: { fontSize: 26, fontWeight: '800', color: '#2C2C2A', letterSpacing: -0.8 },
+  logoImage: { width: 56, height: 56, borderRadius: 12 },
   practiceNameText: {
-    marginTop: 10,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#2C2C2A',
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6B6B68',
     letterSpacing: 0.1,
   },
-  timeSection: { alignItems: 'center', paddingTop: 20, paddingBottom: 20 },
-  timeText: { fontSize: 44, fontWeight: '700', color: '#2C2C2A', letterSpacing: -1 },
-  dateText: { fontSize: 14, color: '#888', marginTop: 6 },
+
+  timeSection: { alignItems: 'center', paddingTop: 16, paddingBottom: 20 },
+  timeText: { fontSize: 44, fontWeight: '800', color: '#2C2C2A', letterSpacing: -1.5 },
+  dateText: { fontSize: 14, color: '#6B6B68', marginTop: 4 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -675,7 +678,7 @@ const styles = StyleSheet.create({
   clockInBtnText: { color: '#fff', fontSize: 18, fontWeight: '700' },
 
   // --- Active ---
-  activeRoot: { flex: 1, backgroundColor: '#F1EFE8' },
+  activeRoot: { flex: 1, backgroundColor: '#FAFAF8' },
   activeTealSection: {
     backgroundColor: '#1D9E75',
     paddingBottom: 32,

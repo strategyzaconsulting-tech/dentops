@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brisa — HR Built for Dental Practices</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal:       #1D9E75;
+      --teal-dark:  #085041;
+      --teal-mid:   #157a5a;
+      --teal-light: #E1F5EE;
+      --teal-pale:  #F0FAF6;
+      --ink:        #2C2C2A;
+      --ink-muted:  #6B6B68;
+      --border:     #E4E4E1;
+      --white:      #ffffff;
+      --bg:         #FAFAF8;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--white);
+      color: var(--ink);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { text-decoration: none; color: inherit; }
+
+    /* ── NAV ────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      background: var(--teal);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-mark svg { width: 20px; height: 20px; fill: white; }
+
+    .logo-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.3px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink-muted);
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--ink); }
+
+    .nav-cta {
+      background: var(--teal);
+      color: white !important;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: opacity 0.15s;
+    }
+
+    .nav-cta:hover { opacity: 0.88; }
+
+    /* ── HERO ───────────────────────────────── */
+    .hero {
+      background: linear-gradient(160deg, var(--teal-pale) 0%, var(--white) 60%);
+      padding: 96px 24px 80px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--teal-light);
+      color: var(--teal-dark);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 20px;
+      margin-bottom: 28px;
+    }
+
+    .hero-badge span { font-size: 14px; }
+
+    .hero h1 {
+      font-size: clamp(40px, 6vw, 64px);
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      max-width: 780px;
+      margin: 0 auto 24px;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--teal);
+    }
+
+    .hero p {
+      font-size: clamp(16px, 2vw, 20px);
+      color: var(--ink-muted);
+      max-width: 540px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 64px;
+    }
+
+    .btn-primary {
+      background: var(--teal);
+      color: white;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      transition: opacity 0.15s, transform 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    .btn-secondary {
+      background: white;
+      color: var(--ink);
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      border: 1.5px solid var(--border);
+      transition: border-color 0.15s, transform 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-secondary:hover { border-color: var(--teal); transform: translateY(-1px); }
+
+    /* ── APP MOCKUP ─────────────────────────── */
+    .mockup-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .mockup-browser {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+
+    .browser-bar {
+      background: #F5F5F3;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #E8E8E5;
+    }
+
+    .browser-dots { display: flex; gap: 6px; }
+    .browser-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .dot-red   { background: #FF5F57; }
+    .dot-amber { background: #FFBD2E; }
+    .dot-green { background: #28CA41; }
+
+    .browser-address {
+      flex: 1;
+      background: white;
+      border: 1px solid #E0E0DE;
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: var(--ink-muted);
+    }
+
+    .mockup-screen {
+      background: var(--bg);
+      padding: 24px;
+      min-height: 340px;
+      display: grid;
+      grid-template-columns: 200px 1fr 1fr;
+      gap: 16px;
+    }
+
+    .mock-sidebar {
+      background: var(--ink);
+      border-radius: 12px;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .mock-sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      margin-bottom: 12px;
+    }
+
+    .mock-sidebar-logo-dot {
+      width: 28px;
+      height: 28px;
+      background: var(--teal);
+      border-radius: 7px;
+    }
+
+    .mock-sidebar-logo-text {
+      color: white;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .mock-nav-item {
+      padding: 8px 10px;
+      border-radius: 7px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mock-nav-item.active {
+      background: rgba(29, 158, 117, 0.2);
+      color: var(--teal);
+    }
+
+    .mock-nav-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.6;
+    }
+
+    .mock-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .mock-card-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    .mock-stat { font-size: 28px; font-weight: 800; color: var(--ink); }
+    .mock-stat-sub { font-size: 11px; color: var(--ink-muted); margin-top: 2px; }
+
+    .mock-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 0;
+      border-bottom: 1px solid #F0F0EE;
+    }
+
+    .mock-row:last-child { border-bottom: none; }
+
+    .mock-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .mock-row-name { font-size: 11px; font-weight: 600; color: var(--ink); flex: 1; }
+
+    .mock-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-green { background: var(--teal-light); color: var(--teal-dark); }
+    .badge-amber { background: #FEF3C7; color: #92400E; }
+    .badge-gray  { background: #F3F3F1; color: #888; }
+
+    /* ── SOCIAL PROOF ───────────────────────── */
+    .proof {
+      padding: 24px;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .proof-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+      flex-wrap: wrap;
+    }
+
+    .proof-stat {
+      text-align: center;
+    }
+
+    .proof-number {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--teal);
+      letter-spacing: -0.5px;
+    }
+
+    .proof-label {
+      font-size: 13px;
+      color: var(--ink-muted);
+      margin-top: 2px;
+    }
+
+    .proof-divider {
+      width: 1px;
+      height: 40px;
+      background: var(--border);
+    }
+
+    /* ── FEATURES ───────────────────────────── */
+    .features {
+      padding: 96px 24px;
+      background: var(--bg);
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--teal);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: -0.8px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .section-sub {
+      font-size: 18px;
+      color: var(--ink-muted);
+      text-align: center;
+      max-width: 520px;
+      margin: 0 auto 64px;
+      line-height: 1.65;
+    }
+
+    .features-grid {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+
+    .feature-card:hover {
+      box-shadow: 0 8px 32px rgba(29, 158, 117, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--teal-light);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: 16px;
+    }
+
+    .feature-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+
+    .feature-card p {
+      font-size: 14px;
+      color: var(--ink-muted);
+      line-height: 1.65;
+    }
+
+    /* ── HOW IT WORKS ───────────────────────── */
+    .how {
+      padding: 96px 24px;
+      background: var(--white);
+    }
+
+    .steps {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      gap: 24px;
+      padding: 32px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .step:last-child { border-bottom: none; }
+
+    .step-num {
+      width: 48px;
+      height: 48px;
+      background: var(--teal);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .step-content h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+      padding-top: 10px;
+    }
+
+    .step-content p {
+      font-size: 15px;
+      color: var(--ink-muted);
+      line-height: 1.7;
+    }
+
+    /* ── TESTIMONIAL ────────────────────────── */
+    .testimonial {
+      padding: 96px 24px;
+      background: var(--teal);
+    }
+
+    .testimonial-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .quote-mark {
+      font-size: 80px;
+      line-height: 0.8;
+      color: rgba(255,255,255,0.25);
+      font-family: Georgia, serif;
+      margin-bottom: 24px;
+    }
+
+    .testimonial blockquote {
+      font-size: clamp(20px, 3vw, 28px);
+      font-weight: 600;
+      color: white;
+      line-height: 1.5;
+      letter-spacing: -0.3px;
+      margin-bottom: 32px;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .author-avatar {
+      width: 48px;
+      height: 48px;
+      background: rgba(255,255,255,0.25);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .author-info { text-align: left; }
+    .author-name { font-size: 15px; font-weight: 700; color: white; }
+    .author-title { font-size: 13px; color: rgba(255,255,255,0.7); }
+
+    /* ── CTA BANNER ─────────────────────────── */
+    .cta-banner {
+      padding: 96px 24px;
+      background: var(--bg);
+      text-align: center;
+    }
+
+    .cta-banner h2 {
+      font-size: clamp(28px, 4vw, 48px);
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: -0.8px;
+      margin-bottom: 16px;
+    }
+
+    .cta-banner p {
+      font-size: 18px;
+      color: var(--ink-muted);
+      margin-bottom: 40px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ── FOOTER ─────────────────────────────── */
+    footer {
+      background: var(--ink);
+      padding: 48px 24px;
+    }
+
+    .footer-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+
+    .footer-logo { display: flex; align-items: center; gap: 10px; }
+
+    .footer-logo-mark {
+      width: 32px;
+      height: 32px;
+      background: var(--teal);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .footer-logo-mark svg { width: 18px; height: 18px; fill: white; }
+
+    .footer-logo-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .footer-copy {
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover { color: white; }
+
+    /* ── RESPONSIVE ─────────────────────────── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .mockup-screen { grid-template-columns: 1fr; }
+      .mock-sidebar { display: none; }
+      .proof-divider { display: none; }
+      .footer-inner { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+        </svg>
+      </div>
+      <span class="logo-name">Brisa</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#" class="nav-cta">Get started free</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge"><span>✦</span> Purpose-built for dental practices</div>
+  <h1>HR that works as hard as <em>your team</em></h1>
+  <p>Brisa handles time tracking, PTO, onboarding, and scheduling — so you can focus on patient care.</p>
+  <div class="hero-actions">
+    <a href="#" class="btn-primary">Start free trial →</a>
+    <a href="#how" class="btn-secondary">See how it works</a>
+  </div>
+
+  <!-- App mockup -->
+  <div class="mockup-wrap">
+    <div class="mockup-browser">
+      <div class="browser-bar">
+        <div class="browser-dots">
+          <div class="browser-dot dot-red"></div>
+          <div class="browser-dot dot-amber"></div>
+          <div class="browser-dot dot-green"></div>
+        </div>
+        <div class="browser-address">app.brisahr.com/time-clock</div>
+      </div>
+      <div class="mockup-screen">
+        <!-- Sidebar -->
+        <div class="mock-sidebar">
+          <div class="mock-sidebar-logo">
+            <div class="mock-sidebar-logo-dot"></div>
+            <span class="mock-sidebar-logo-text">Brisa</span>
+          </div>
+          <div class="mock-nav-item active"><div class="mock-nav-dot"></div> Time Clock</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> Schedule</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> Time Off</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> Staff</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> Onboarding</div>
+        </div>
+
+        <!-- Live board card -->
+        <div class="mock-card">
+          <div class="mock-card-label">Currently clocked in — 4</div>
+          <div class="mock-row">
+            <div class="mock-avatar" style="background:#3B82F6">TT</div>
+            <span class="mock-row-name">Dr. T. Torres</span>
+            <span class="mock-badge badge-green">4h 12m</span>
+          </div>
+          <div class="mock-row">
+            <div class="mock-avatar" style="background:#8B5CF6">FF</div>
+            <span class="mock-row-name">Fern Flossy</span>
+            <span class="mock-badge badge-green">2h 05m</span>
+          </div>
+          <div class="mock-row">
+            <div class="mock-avatar" style="background:#1D9E75">DQ</div>
+            <span class="mock-row-name">Daniel Quiroga</span>
+            <span class="mock-badge badge-amber">Break</span>
+          </div>
+          <div class="mock-row">
+            <div class="mock-avatar" style="background:#EC4899">MR</div>
+            <span class="mock-row-name">M. Rivera</span>
+            <span class="mock-badge badge-green">1h 48m</span>
+          </div>
+        </div>
+
+        <!-- Stats card -->
+        <div class="mock-card">
+          <div class="mock-card-label">Today at a glance</div>
+          <div style="display:flex;gap:16px;margin-bottom:16px">
+            <div>
+              <div class="mock-stat">8</div>
+              <div class="mock-stat-sub">Shifts scheduled</div>
+            </div>
+            <div>
+              <div class="mock-stat" style="color:#1D9E75">4</div>
+              <div class="mock-stat-sub">Clocked in</div>
+            </div>
+          </div>
+          <div class="mock-card-label" style="margin-top:8px">PTO Requests</div>
+          <div class="mock-row">
+            <span class="mock-row-name">J. Navarro</span>
+            <span class="mock-badge badge-amber">Pending</span>
+          </div>
+          <div class="mock-row">
+            <span class="mock-row-name">C. Morales</span>
+            <span class="mock-badge badge-green">Approved</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<div class="proof">
+  <div class="proof-inner">
+    <div class="proof-stat">
+      <div class="proof-number">500+</div>
+      <div class="proof-label">Dental practices</div>
+    </div>
+    <div class="proof-divider"></div>
+    <div class="proof-stat">
+      <div class="proof-number">12k+</div>
+      <div class="proof-label">Staff members managed</div>
+    </div>
+    <div class="proof-divider"></div>
+    <div class="proof-stat">
+      <div class="proof-number">98%</div>
+      <div class="proof-label">Customer retention</div>
+    </div>
+    <div class="proof-divider"></div>
+    <div class="proof-stat">
+      <div class="proof-number">4.9★</div>
+      <div class="proof-label">Average rating</div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="section-label">Features</div>
+  <h2 class="section-title">Everything your practice needs</h2>
+  <p class="section-sub">One platform replaces the spreadsheets, paper forms, and disconnected tools your team has outgrown.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">⏱</div>
+      <h3>Real-Time Time Clock</h3>
+      <p>Staff clock in from the mobile app or a location QR code. See who's on the floor live, track breaks, and flag tardiness automatically.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌴</div>
+      <h3>PTO Management</h3>
+      <p>Staff request time off from their phone. You approve or deny with one tap. Visual team calendar and blackout date blocking keeps coverage gaps out.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📋</div>
+      <h3>Digital Onboarding</h3>
+      <p>New hires complete I-9, W-4, direct deposit, and emergency contact forms in the app — with e-signature and automatic W-4 annual review reminders.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📅</div>
+      <h3>Shift Scheduling</h3>
+      <p>Build weekly schedules, post open shifts, and let staff claim available hours. Integrated with the time clock for instant attendance tracking.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📢</div>
+      <h3>Staff Announcements</h3>
+      <p>Push office news and policy updates directly to every staff member's phone. Unread badges ensure nothing gets missed.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💼</div>
+      <h3>Benefits & Compliance</h3>
+      <p>Manage benefit elections per employee, track equipment assignments, and stay ahead of federal requirements with automated annual review workflows.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="section-label">How it works</div>
+  <h2 class="section-title">Up and running in minutes</h2>
+  <p class="section-sub">No IT department required. No training day needed.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Set up your practice</h3>
+        <p>Walk through a 9-step wizard to add your practice info, logo, locations, doctors, and staff. The whole thing takes under 10 minutes.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Staff download the app</h3>
+        <p>Each team member gets the Brisa mobile app. They can clock in, request PTO, complete onboarding forms, and view their schedule — all from their phone.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>You manage from the web</h3>
+        <p>The admin portal gives you a live view of who's in, pending approvals, onboarding progress, and scheduling — across all your locations.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3>Brisa handles the rest</h3>
+        <p>Automatic W-4 annual reviews, tardiness alerts, PTO balance tracking, and compliance reminders run in the background so you don't have to think about them.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIAL -->
+<section class="testimonial">
+  <div class="testimonial-inner">
+    <div class="quote-mark">"</div>
+    <blockquote>We used to track everything in a shared Google Sheet. Brisa replaced it all — time clock, PTO requests, new hire paperwork. Our front desk manager said it cut her admin time in half.</blockquote>
+    <div class="testimonial-author">
+      <div class="author-avatar">SR</div>
+      <div class="author-info">
+        <div class="author-name">Dr. Sofia Reyes</div>
+        <div class="author-title">Owner, Reyes Family Dentistry</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BANNER -->
+<section class="cta-banner" id="pricing">
+  <h2>Start free. No credit card needed.</h2>
+  <p>Full access for 30 days. Cancel any time. Onboarding support included.</p>
+  <a href="#" class="btn-primary" style="font-size:18px;padding:16px 36px">Create your free account →</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">
+      <div class="footer-logo-mark">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+        </svg>
+      </div>
+      <span class="footer-logo-name">Brisa</span>
+    </div>
+    <div class="footer-links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Support</a>
+      <a href="#">Contact</a>
+    </div>
+    <div class="footer-copy">© 2026 Brisa HR, Inc. All rights reserved.</div>
+  </div>
+</footer>
+
+</body>
+</html>

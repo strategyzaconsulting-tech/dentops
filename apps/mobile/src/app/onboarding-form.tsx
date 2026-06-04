@@ -14,6 +14,13 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 
+function formatDob(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 8)
+  if (digits.length <= 2) return digits
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+}
+
 const PDF_URLS: Partial<Record<FormType, string>> = {
   i9: 'https://www.uscis.gov/sites/default/files/document/forms/i-9.pdf',
   w4: 'https://www.irs.gov/pub/irs-pdf/fw4.pdf',
@@ -149,7 +156,7 @@ function I9Form({ data, onChange }: { data: Record<string, string>; onChange: (k
       {/* DOB + SSN + Contact */}
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
-          <Field label="Date of Birth" required><Input value={data.dob ?? ''} onChangeText={(v) => onChange('dob', v)} placeholder="MM/DD/YYYY" keyboardType="number-pad" maxLength={10} /></Field>
+          <Field label="Date of Birth" required><Input value={data.dob ?? ''} onChangeText={(v) => onChange('dob', formatDob(v))} placeholder="MM/DD/YYYY" keyboardType="number-pad" maxLength={10} /></Field>
         </View>
         <View style={{ flex: 1 }}>
           <Field label="Last 4 of SSN" required><Input value={data.ssn4 ?? ''} onChangeText={(v) => onChange('ssn4', v)} placeholder="1234" keyboardType="number-pad" maxLength={4} secureTextEntry /></Field>
@@ -332,7 +339,7 @@ function PersonalInfoForm({ data, onChange }: { data: Record<string, string>; on
         <View style={{ flex: 1 }}><Field label="Zip"><Input value={data.zip ?? ''} onChangeText={(v) => onChange('zip', v)} placeholder="10001" keyboardType="number-pad" maxLength={5} /></Field></View>
       </View>
       <Field label="Date of Birth">
-        <Input value={data.dob ?? ''} onChangeText={(v) => onChange('dob', v)} placeholder="MM/DD/YYYY" keyboardType="number-pad" maxLength={10} />
+        <Input value={data.dob ?? ''} onChangeText={(v) => onChange('dob', formatDob(v))} placeholder="MM/DD/YYYY" keyboardType="number-pad" maxLength={10} />
       </Field>
       <Field label="Birthday Preference">
         <View style={styles.toggleRow}>
