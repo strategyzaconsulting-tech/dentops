@@ -10,7 +10,7 @@ const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
 const API_BASE = 'http://192.168.0.137:3000'
 
 const TABS = [
-  { route: 'time-clock',    label: 'Clock',    icon: '⏱' },
+  { route: 'time-clock',    label: 'Clock',    icon: '🕐' },
   { route: 'open-shifts',   label: 'Shifts',   icon: '📋' },
   { route: 'pto',           label: 'Time Off',  icon: '🌴' },
   { route: 'announcements', label: 'News',     icon: '📢' },
@@ -84,9 +84,9 @@ export default function BottomNav({ activeRoute }: Props) {
 
 const styles = StyleSheet.create({
   nav: {
-    backgroundColor: '#FAFAF8',
+    backgroundColor: '#1E1E1C',
     borderTopWidth: 1,
-    borderTopColor: '#E4E4E1',
+    borderTopColor: '#2A2A27',
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   item: { flex: 1, alignItems: 'center', gap: 2 },
   iconWrap: { position: 'relative' },
   icon: { fontSize: 20 },
-  label: { fontSize: 9, fontFamily: 'JosefinSans_100Thin', color: '#6B6B68', letterSpacing: 2, textTransform: 'uppercase' },
+  label: { fontSize: 9, fontWeight: '300', color: '#9A9A96', letterSpacing: 2, textTransform: 'uppercase' },
   labelActive: { color: '#1D9E75' },
   badgeDot: {
     position: 'absolute',

@@ -30,16 +30,7 @@
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/icon.png",
-          "color": "#1D9E75",
-          "sounds": []
-        }
-      ],
-      "expo-web-browser",
-      "expo-font"
+      "expo-web-browser"
     ],
     "updates": {
       "checkAutomatically": "NEVER"
