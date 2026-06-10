@@ -71,38 +71,62 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Body — matches mobile's weight 300 Light with moderate tracking */
   body {
     @apply bg-background text-foreground;
     font-family: 'Josefin Sans', system-ui, sans-serif;
-    font-weight: 400;
-    letter-spacing: 0.02em;
-  }
-
-  /* Headings — slightly wider tracking, lighter weight */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Josefin Sans', system-ui, sans-serif;
     font-weight: 300;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;   /* mobile letterSpacing ~2-3 mapped to em */
   }
 
-  /* Uppercase labels get generous tracking like the mobile app */
+  /* Page headings — thin weight with generous tracking like mobile brandName */
+  h1 {
+    font-weight: 300;
+    letter-spacing: 0.2em;    /* mobile letterSpacing ~6-8 */
+  }
+  h2 {
+    font-weight: 300;
+    letter-spacing: 0.15em;
+  }
+  h3, h4 {
+    font-weight: 300;
+    letter-spacing: 0.1em;
+  }
+  h5, h6 {
+    font-weight: 300;
+    letter-spacing: 0.08em;
+  }
+
+  /* Uppercase labels — extra wide tracking, matching mobile ALL-CAPS labels */
   .uppercase {
-    letter-spacing: 0.12em;
+    letter-spacing: 0.2em;
+    font-weight: 300;
   }
 
-  /* Buttons — keep readable weight */
+  /* Buttons */
   button {
     font-family: 'Josefin Sans', system-ui, sans-serif;
-    letter-spacing: 0.04em;
+    font-weight: 400;
+    letter-spacing: 0.1em;
   }
 
   input, select, textarea {
     font-family: 'Josefin Sans', system-ui, sans-serif;
-    letter-spacing: 0.02em;
+    font-weight: 300;
+    letter-spacing: 0.05em;
   }
 
-  /* Table cells */
   td, th {
     font-family: 'Josefin Sans', system-ui, sans-serif;
+    letter-spacing: 0.05em;
+  }
+
+  /* Bold/semibold stays readable at appropriate weight */
+  .font-bold, .font-semibold {
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+  .font-medium {
+    font-weight: 400;
   }
 }
