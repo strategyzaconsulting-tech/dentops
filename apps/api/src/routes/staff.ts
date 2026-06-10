@@ -55,6 +55,7 @@ export default async function staffRoutes(server: FastifyInstance) {
       probationCompletedAt?: string | null
       probationAlertDays?: number | null
       benefitsEligibleAt?: string | null
+      ptoDaysPerYear?: number | null
     }
   }>('/staff/:id', async (request, reply) => {
     const { id } = request.params
@@ -63,6 +64,7 @@ export default async function staffRoutes(server: FastifyInstance) {
       hireDate, managerId, separationDate, phone, address,
       probationDays, probationEndDate, probationStatus, probationNotes,
       probationCompletedAt, probationAlertDays, benefitsEligibleAt,
+      ptoDaysPerYear,
     } = request.body
 
     const data: Record<string, unknown> = {}
@@ -85,6 +87,7 @@ export default async function staffRoutes(server: FastifyInstance) {
     if (probationCompletedAt !== undefined) data.probationCompletedAt = probationCompletedAt ? new Date(probationCompletedAt) : null
     if (probationAlertDays !== undefined) data.probationAlertDays = probationAlertDays ?? null
     if (benefitsEligibleAt !== undefined) data.benefitsEligibleAt = benefitsEligibleAt ? new Date(benefitsEligibleAt) : null
+    if (ptoDaysPerYear !== undefined) data.ptoDaysPerYear = ptoDaysPerYear ?? null
 
     const user = await prisma.user.update({ where: { id }, data })
     return reply.send(user)

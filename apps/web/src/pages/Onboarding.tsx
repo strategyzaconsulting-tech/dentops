@@ -1,7 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const API_BASE = 'http://localhost:3000'
+import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/apiFetch'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -195,6 +194,8 @@ function FormDataPanel({ formKey, label, data, date }: {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function Onboarding() {
+  const { user } = useAuth()
+  const PRACTICE_ID = user!.practiceId
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [manual, setManual] = useState<OfficeManual | null>(null)
   const [training, setTraining] = useState<TrainingSession[]>([])
@@ -241,10 +242,10 @@ export default function Onboarding() {
     setLoading(true)
     try {
       const [cl, man, tr, st] = await Promise.allSettled([
-        fetch(`${API_BASE}/api/onboarding/all?practiceId=${PRACTICE_ID}`).then((r) => r.json()),
-        fetch(`${API_BASE}/api/office-manual?practiceId=${PRACTICE_ID}`).then((r) => r.json()),
-        fetch(`${API_BASE}/api/training/all?practiceId=${PRACTICE_ID}`).then((r) => r.json()),
-        fetch(`${API_BASE}/api/staff?practiceId=${PRACTICE_ID}`).then((r) => r.json()),
+        apiFetch(`/api/onboarding/all?practiceId=${PRACTICE_ID}`).then((r) => r.json()),
+        apiFetch(`/api/office-manual?practiceId=${PRACTICE_ID}`).then((r) => r.json()),
+        apiFetch(`/api/training/all?practiceId=${PRACTICE_ID}`).then((r) => r.json()),
+        apiFetch(`/api/staff?practiceId=${PRACTICE_ID}`).then((r) => r.json()),
       ])
       if (cl.status === 'fulfilled' && Array.isArray(cl.value)) setChecklists(cl.value)
       if (man.status === 'fulfilled' && man.value?.id) {
@@ -262,7 +263,7 @@ export default function Onboarding() {
 
   async function addEquipment(userId: string, _onboardingId: string) {
     if (!equipForm || !equipForm.name.trim()) return
-    const res = await fetch(`${API_BASE}/api/onboarding/equipment`, {
+    const res = await apiFetch(`/api/onboarding/equipment`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -280,7 +281,7 @@ export default function Onboarding() {
   }
 
   async function markReturned(itemId: string) {
-    await fetch(`${API_BASE}/api/onboarding/equipment/${itemId}`, {
+    await apiFetch(`/api/onboarding/equipment/${itemId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ returnedAt: new Date().toISOString() }),
@@ -289,7 +290,7 @@ export default function Onboarding() {
   }
 
   async function deleteEquipment(itemId: string) {
-    await fetch(`${API_BASE}/api/onboarding/equipment/${itemId}`, { method: 'DELETE' })
+    await apiFetch(`/api/onboarding/equipment/${itemId}`, { method: 'DELETE' })
     loadAll()
   }
 
@@ -314,7 +315,7 @@ export default function Onboarding() {
         payload.listB = { title: sec2Form.listBTitle, authority: sec2Form.listBAuthority, number: sec2Form.listBNumber, expiry: sec2Form.listBExpiry }
         payload.listC = { title: sec2Form.listCTitle, authority: sec2Form.listCAuthority, number: sec2Form.listCNumber, expiry: sec2Form.listCExpiry }
       }
-      const res = await fetch(`${API_BASE}/api/onboarding/i9-section2?practiceId=${PRACTICE_ID}&userId=${userId}`, {
+      const res = await apiFetch(`/api/onboarding/i9-section2?practiceId=${PRACTICE_ID}&userId=${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -331,7 +332,7 @@ export default function Onboarding() {
     if (!manualForm.title.trim() || !manualForm.content.trim()) return
     setSavingManual(true)
     try {
-      await fetch(`${API_BASE}/api/office-manual`, {
+      await apiFetch(`/api/office-manual`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ practiceId: PRACTICE_ID, ...manualForm }),
@@ -350,7 +351,7 @@ export default function Onboarding() {
     if (!trainingForm.userId || !trainingForm.topic || !trainingForm.scheduledAt) return
     setSavingTraining(true)
     try {
-      await fetch(`${API_BASE}/api/training`, {
+      await apiFetch(`/api/training`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -369,12 +370,12 @@ export default function Onboarding() {
   }
 
   async function deleteTraining(id: string) {
-    await fetch(`${API_BASE}/api/training/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/training/${id}`, { method: 'DELETE' })
     loadAll()
   }
 
   async function markTrainingComplete(id: string) {
-    await fetch(`${API_BASE}/api/training/${id}`, {
+    await apiFetch(`/api/training/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ completedAt: new Date().toISOString() }),

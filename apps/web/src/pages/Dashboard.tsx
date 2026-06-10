@@ -243,9 +243,8 @@ function ComplianceIllustration() {
 // ─── Probation alert fetch ────────────────────────────────────────────────────
 
 import { useEffect, useState } from 'react'
-
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
+import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/apiFetch'
 
 // ─── Module data ──────────────────────────────────────────────────────────────
 
@@ -345,10 +344,12 @@ const MODULES = [
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
+  const { user, logout } = useAuth()
+  const PRACTICE_ID = user!.practiceId
   const [probationCount, setProbationCount] = useState(0)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/staff/probation-alerts?practiceId=${PRACTICE_ID}`)
+    apiFetch(`/api/staff/probation-alerts?practiceId=${PRACTICE_ID}`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setProbationCount(data.length) })
       .catch(() => {})
@@ -370,9 +371,15 @@ export default function Dashboard() {
               <p className="text-[10px] text-[#8BAF9A] uppercase leading-tight" style={{ letterSpacing: '0.25em' }}>Admin Portal</p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-[#1D9E75]" />
-            <span className="text-xs text-[#8BAF9A]">Live</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full bg-[#1D9E75]" />
+              <span className="text-xs text-[#8BAF9A]">Live</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[#8BAF9A]">{user?.firstName} {user?.lastName}</span>
+              <button onClick={logout} className="text-xs text-[#4A5C52] hover:text-white transition-colors">Sign out</button>
+            </div>
           </div>
         </div>
       </header>
@@ -387,7 +394,7 @@ export default function Dashboard() {
               <Tag
                 key={mod.title}
                 {...(mod.active && mod.href !== '#' ? { href: mod.href } : {})}
-                className={`group relative overflow-hidden rounded-2xl border-2 p-5 transition-all ${
+                className={`group flex flex-col items-center overflow-hidden rounded-2xl border-2 pt-4 pb-5 px-5 transition-all ${
                   mod.active && mod.href !== '#'
                     ? 'cursor-pointer hover:shadow-lg hover:-translate-y-0.5'
                     : 'cursor-default opacity-75'
@@ -397,13 +404,13 @@ export default function Dashboard() {
                   borderColor: mod.border,
                 }}
               >
-                {/* Illustration — top right */}
-                <div className="absolute -top-1 -right-2 opacity-90 transition-transform group-hover:scale-105 group-hover:-rotate-2">
+                {/* Illustration — centered top */}
+                <div className="opacity-90 transition-transform group-hover:scale-105 group-hover:-rotate-2 mb-3">
                   {mod.illustration}
                 </div>
 
-                {/* Text — centered bottom */}
-                <div className="relative mt-16 text-center">
+                {/* Text — centered */}
+                <div className="text-center">
                   <div className="flex items-center justify-center gap-2">
                     <h3
                       className="text-lg font-bold leading-tight"
@@ -419,16 +426,6 @@ export default function Dashboard() {
                   </div>
                   <p className="mt-1 text-sm text-gray-500 leading-snug">{mod.desc}</p>
                 </div>
-
-                {/* Active arrow hint */}
-                {mod.active && mod.href !== '#' && (
-                  <div
-                    className="absolute bottom-4 right-4 text-xs font-bold opacity-0 transition-opacity group-hover:opacity-100"
-                    style={{ color: mod.accent }}
-                  >
-                    →
-                  </div>
-                )}
               </Tag>
             )
           })}

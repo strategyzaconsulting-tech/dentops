@@ -1,7 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const API_BASE = 'http://localhost:3000'
+import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/apiFetch'
 
 const SPECIALTIES = [
   'General Dentistry', 'Orthodontics', 'Periodontics',
@@ -75,6 +74,8 @@ function formatTime12h(t: string) {
 }
 
 export default function OpenShifts() {
+  const { user } = useAuth()
+  const PRACTICE_ID = user!.practiceId
   const [shifts, setShifts] = useState<OpenShift[]>([])
   const [locations, setLocations] = useState<Location[]>([])
   const [statusFilter, setStatusFilter] = useState<'open' | 'filled' | 'cancelled' | 'all'>('open')
@@ -86,7 +87,7 @@ export default function OpenShifts() {
 
   async function fetchShifts() {
     try {
-      const res = await fetch(`${API_BASE}/api/open-shifts?practiceId=${PRACTICE_ID}`)
+      const res = await apiFetch(`/api/open-shifts?practiceId=${PRACTICE_ID}`)
       const data = await res.json()
       if (Array.isArray(data)) setShifts(data)
     } catch { /* silent */ }
@@ -94,7 +95,7 @@ export default function OpenShifts() {
 
   useEffect(() => {
     fetchShifts()
-    fetch(`${API_BASE}/api/locations?practiceId=${PRACTICE_ID}`)
+    apiFetch(`/api/locations?practiceId=${PRACTICE_ID}`)
       .then((r) => r.json())
       .then((d) => setLocations(Array.isArray(d) ? d : []))
       .catch(() => {})
@@ -104,7 +105,7 @@ export default function OpenShifts() {
     if (!form.locationId || !form.date) return
     setPosting(true)
     try {
-      const res = await fetch(`${API_BASE}/api/open-shifts`, {
+      const res = await apiFetch(`/api/open-shifts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ practiceId: PRACTICE_ID, ...form, specialty: form.specialty || undefined, notes: form.notes || undefined }),
@@ -121,7 +122,7 @@ export default function OpenShifts() {
 
   async function cancelShift(id: string) {
     if (!confirm('Cancel this open shift?')) return
-    const res = await fetch(`${API_BASE}/api/open-shifts/${id}`, {
+    const res = await apiFetch(`/api/open-shifts/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'cancelled' }),
@@ -135,7 +136,7 @@ export default function OpenShifts() {
   async function reviewClaim(claimId: string, shiftId: string, status: 'approved' | 'denied') {
     setReviewingId(claimId)
     try {
-      const res = await fetch(`${API_BASE}/api/open-shifts/claims/${claimId}`, {
+      const res = await apiFetch(`/api/open-shifts/claims/${claimId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),

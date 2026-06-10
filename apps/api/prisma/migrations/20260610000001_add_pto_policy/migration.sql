@@ -1,0 +1,3 @@
+ALTER TABLE "practices" ADD COLUMN IF NOT EXISTS "default_pto_days" INTEGER NOT NULL DEFAULT 15;
+ALTER TABLE "practices" ADD COLUMN IF NOT EXISTS "pto_custom_allowed" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "pto_days_per_year" INTEGER;

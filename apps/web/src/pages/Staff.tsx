@@ -1,8 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import StaffFilePanel from './StaffFilePanel'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/apiFetch'
 
 const ROLES = ['doctor', 'staff', 'hygienist', 'front_desk', 'manager']
 const STATUSES = ['active', 'on_leave', 'terminated', 'resigned']
@@ -47,6 +46,35 @@ interface StaffMember {
   probationCompletedAt: string | null
   probationAlertDays: number | null
   benefitsEligibleAt: string | null
+  ptoDaysPerYear: number | null
+}
+
+interface PtoItem {
+  date: string
+  dayOfWeek: string
+  type: string
+  status: string
+  bucket: 'used' | 'pending'
+  requestId: string
+  requestStart: string
+  requestEnd: string
+  notes: string | null
+}
+
+interface PtoSummary {
+  userId: string
+  allocation: number
+  used: number
+  requested: number
+  remaining: number
+  isProrated: boolean
+  proratedFrom: string | null
+  items: PtoItem[]
+}
+
+interface PtoPolicy {
+  defaultPtoDays: number
+  ptoCustomAllowed: boolean
 }
 
 type ModalMode = 'add' | 'edit'
@@ -67,6 +95,7 @@ interface FormState {
   probationPreset: string   // '30' | '60' | '90' | 'custom' | ''
   probationEndDate: string
   probationAlertDays: string
+  ptoDaysPerYear: string
 }
 
 const emptyForm: FormState = {
@@ -85,6 +114,7 @@ const emptyForm: FormState = {
   probationPreset: '',
   probationEndDate: '',
   probationAlertDays: '14',
+  ptoDaysPerYear: '',
 }
 
 function fmt12h(t: string | null) {
@@ -128,6 +158,18 @@ interface ProbationAlert {
   alertDays: number
 }
 
+interface LicenseAlert {
+  id: string
+  type: string
+  label: string | null
+  licenseNumber: string | null
+  state: string | null
+  expirationDate: string
+  alertDays: number
+  daysLeft: number
+  user: { id: string; firstName: string; lastName: string; role: string }
+}
+
 const STATUS_GROUPS = [
   { key: 'active',     label: 'Active' },
   { key: 'on_leave',   label: 'On Leave' },
@@ -137,6 +179,8 @@ const STATUS_GROUPS = [
 ]
 
 export default function Staff() {
+  const { user } = useAuth()
+  const PRACTICE_ID = user!.practiceId
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<{ mode: ModalMode; member?: StaffMember } | null>(null)
@@ -149,6 +193,13 @@ export default function Staff() {
     (localStorage.getItem('staff-view') as 'grid' | 'list') ?? 'grid'
   )
   const [probationAlerts, setProbationAlerts] = useState<ProbationAlert[]>([])
+  const [licenseAlerts, setLicenseAlerts] = useState<LicenseAlert[]>([])
+  const [malpracticeGap, setMalpracticeGap] = useState<{ id: string; firstName: string; lastName: string; role: string }[]>([])
+  const [ptoSummaries, setPtoSummaries] = useState<Record<string, PtoSummary>>({})
+  const [ptoPolicy, setPtoPolicy] = useState<PtoPolicy>({ defaultPtoDays: 15, ptoCustomAllowed: false })
+  const [ptoModal, setPtoModal] = useState(false)
+  const [ptoForm, setPtoForm] = useState({ defaultPtoDays: '15', ptoCustomAllowed: false })
+  const [savingPolicy, setSavingPolicy] = useState(false)
 
   function toggleView(v: 'grid' | 'list') {
     setView(v)
@@ -163,18 +214,52 @@ export default function Staff() {
   async function fetchStaff() {
     setLoading(true)
     try {
-      const [staffRes, alertRes] = await Promise.all([
-        fetch(`${API_BASE}/api/staff?practiceId=${PRACTICE_ID}`),
-        fetch(`${API_BASE}/api/staff/probation-alerts?practiceId=${PRACTICE_ID}`),
+      const [staffRes, alertRes, ptoRes, policyRes, licAlertRes, complianceRes] = await Promise.all([
+        apiFetch(`/api/staff?practiceId=${PRACTICE_ID}`),
+        apiFetch(`/api/staff/probation-alerts?practiceId=${PRACTICE_ID}`),
+        apiFetch(`/api/pto/staff-summary`),
+        apiFetch(`/api/pto/policy`),
+        apiFetch(`/api/licenses/expiring?days=60`),
+        apiFetch(`/api/licenses/compliance`),
       ])
       const staffData = await staffRes.json()
       const alertData = await alertRes.json().catch(() => [])
+      const ptoData: PtoSummary[] = await ptoRes.json().catch(() => [])
+      const policy: PtoPolicy = await policyRes.json().catch(() => ({ defaultPtoDays: 15, ptoCustomAllowed: false }))
       setStaff(Array.isArray(staffData) ? staffData : [])
       setProbationAlerts(Array.isArray(alertData) ? alertData : [])
+      const byUser: Record<string, PtoSummary> = {}
+      if (Array.isArray(ptoData)) ptoData.forEach((s) => { byUser[s.userId] = s })
+      setPtoSummaries(byUser)
+      setPtoPolicy(policy)
+      setPtoForm({ defaultPtoDays: String(policy.defaultPtoDays), ptoCustomAllowed: policy.ptoCustomAllowed })
+      const licAlertData = await licAlertRes.json().catch(() => [])
+      setLicenseAlerts(Array.isArray(licAlertData) ? licAlertData : [])
+      const complianceData = await complianceRes.json().catch(() => [])
+      setMalpracticeGap(Array.isArray(complianceData) ? complianceData : [])
     } catch {
       // silent
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function savePtoPolicy() {
+    setSavingPolicy(true)
+    try {
+      const res = await apiFetch(`/api/pto/policy`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          defaultPtoDays: parseInt(ptoForm.defaultPtoDays) || 15,
+          ptoCustomAllowed: ptoForm.ptoCustomAllowed,
+        }),
+      })
+      const updated = await res.json()
+      setPtoPolicy(updated)
+      setPtoModal(false)
+      await fetchStaff()
+    } finally {
+      setSavingPolicy(false)
     }
   }
 
@@ -205,13 +290,14 @@ export default function Staff() {
       probationPreset: member.probationDays ? String(member.probationDays) : (member.probationEndDate ? 'custom' : ''),
       probationEndDate: member.probationEndDate ? member.probationEndDate.split('T')[0] : '',
       probationAlertDays: String(member.probationAlertDays ?? 14),
+      ptoDaysPerYear: member.ptoDaysPerYear != null ? String(member.ptoDaysPerYear) : '',
     })
     setShowNewBenefitInput(false)
     setNewBenefitName('')
     setModal({ mode: 'edit', member })
 
     try {
-      const res = await fetch(`${API_BASE}/api/benefits/user?practiceId=${PRACTICE_ID}&userId=${member.id}`)
+      const res = await apiFetch(`/api/benefits/user?practiceId=${PRACTICE_ID}&userId=${member.id}`)
       const data = await res.json()
       if (Array.isArray(data)) setBenefits(data)
     } catch { /* silent */ }
@@ -220,7 +306,7 @@ export default function Staff() {
   async function handleToggleBenefit(benefitId: string, enabled: boolean, userId: string) {
     setBenefits((prev) => prev.map((b) => b.id === benefitId ? { ...b, enabled } : b))
     try {
-      await fetch(`${API_BASE}/api/benefits/user`, {
+      await apiFetch(`/api/benefits/user`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ practiceId: PRACTICE_ID, userId, benefitId, enabled }),
@@ -234,7 +320,7 @@ export default function Staff() {
     if (!newBenefitName.trim()) return
     setAddingBenefit(true)
     try {
-      const res = await fetch(`${API_BASE}/api/benefits`, {
+      const res = await apiFetch(`/api/benefits`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ practiceId: PRACTICE_ID, name: newBenefitName.trim() }),
@@ -251,7 +337,7 @@ export default function Staff() {
 
   async function handleDeleteBenefit(benefitId: string) {
     if (!confirm('Remove this benefit from the practice?')) return
-    await fetch(`${API_BASE}/api/benefits/${benefitId}`, { method: 'DELETE' })
+    await apiFetch(`/api/benefits/${benefitId}`, { method: 'DELETE' })
     setBenefits((prev) => prev.filter((b) => b.id !== benefitId))
   }
 
@@ -271,15 +357,16 @@ export default function Staff() {
         probationEndDate: form.probationEndDate || null,
         probationStatus: (form.probationPreset || form.probationEndDate) ? 'active' : null,
         probationAlertDays: form.probationAlertDays ? parseInt(form.probationAlertDays) : 14,
+        ptoDaysPerYear: form.ptoDaysPerYear ? parseInt(form.ptoDaysPerYear) : null,
       }
       if (modal?.mode === 'add') {
-        await fetch(`${API_BASE}/api/staff`, {
+        await apiFetch(`/api/staff`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ practiceId: PRACTICE_ID, ...payload }),
         })
       } else if (modal?.mode === 'edit' && modal.member) {
-        await fetch(`${API_BASE}/api/staff/${modal.member.id}`, {
+        await apiFetch(`/api/staff/${modal.member.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -329,12 +416,21 @@ export default function Staff() {
               </span>
             )}
           </div>
-          <button
-            onClick={openAdd}
-            className="rounded-lg bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-          >
-            + Add Staff
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPtoModal(true)}
+              className="rounded-lg border border-[#4A5C52] px-3 py-2 text-xs font-semibold text-[#8BAF9A] hover:border-[#8BAF9A] hover:text-white transition-colors"
+              title={`Default: ${ptoPolicy.defaultPtoDays} PTO days/yr`}
+            >
+              PTO Policy
+            </button>
+            <button
+              onClick={openAdd}
+              className="rounded-lg bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+            >
+              + Add Staff
+            </button>
+          </div>
         </div>
       </header>
 
@@ -440,6 +536,73 @@ export default function Staff() {
           </div>
         )}
 
+        {/* License expiration alerts */}
+        {licenseAlerts.length > 0 && (
+          <div className="mb-5 rounded-xl border border-red-200 bg-red-50 divide-y divide-red-100 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-red-100">
+              <span className="text-red-600 font-bold text-sm">🪪</span>
+              <p className="text-xs font-bold text-red-800 uppercase tracking-wide">
+                {licenseAlerts.length} License{licenseAlerts.length > 1 ? 's' : ''} Expiring or Expired
+              </p>
+            </div>
+            {licenseAlerts.map(a => {
+              const isExpired = a.daysLeft < 0
+              const licName = a.label ?? (() => {
+                const types: Record<string, string> = { dental_license: 'Dental License', da_certification: 'DA Cert', rdh_license: 'RDH License', dea: 'DEA', caqh: 'CAQH', npi: 'NPI', cpr: 'CPR/BLS', xray: 'X-Ray Cert', other: 'License' }
+                return types[a.type] ?? a.type
+              })()
+              return (
+                <div key={a.id} className="flex items-center justify-between px-4 py-2.5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={`shrink-0 inline-block h-2 w-2 rounded-full ${isExpired ? 'bg-red-500' : 'bg-amber-400'}`} />
+                    <span className="text-sm font-semibold text-gray-800 truncate">{a.user.firstName} {a.user.lastName}</span>
+                    <span className="text-xs text-gray-500 truncate">{licName}{a.state ? ` · ${a.state}` : ''}</span>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 ml-3">
+                    <span className="text-xs text-gray-400">Exp {new Date(a.expirationDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${isExpired ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {isExpired ? `${Math.abs(a.daysLeft)}d expired` : `${a.daysLeft}d left`}
+                    </span>
+                    <button
+                      onClick={() => { const m = staff.find(s => s.id === a.user.id); if (m) setFilePanel(m) }}
+                      className="text-xs font-semibold text-[#1D9E75] hover:underline"
+                    >
+                      Open File →
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Malpractice compliance — doctors without active insurance */}
+        {malpracticeGap.length > 0 && (
+          <div className="mb-5 rounded-xl border border-orange-200 bg-orange-50 divide-y divide-orange-100 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-orange-100">
+              <span className="text-orange-600 font-bold text-sm">⚠</span>
+              <p className="text-xs font-bold text-orange-800 uppercase tracking-wide">
+                {malpracticeGap.length} Doctor{malpracticeGap.length > 1 ? 's' : ''} Missing Malpractice Insurance
+              </p>
+            </div>
+            {malpracticeGap.map(doc => (
+              <div key={doc.id} className="flex items-center justify-between px-4 py-2.5">
+                <div className="flex items-center gap-3">
+                  <span className="inline-block h-2 w-2 rounded-full bg-orange-400 shrink-0" />
+                  <span className="text-sm font-semibold text-gray-800">Dr. {doc.firstName} {doc.lastName}</span>
+                  <span className="text-xs text-orange-600 font-medium">No active malpractice on file</span>
+                </div>
+                <button
+                  onClick={() => { const m = staff.find(s => s.id === doc.id); if (m) setFilePanel(m) }}
+                  className="text-xs font-semibold text-[#1D9E75] hover:underline"
+                >
+                  Open File →
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="py-20 text-center text-sm text-gray-400">Loading…</div>
         ) : displayed.length === 0 ? (
@@ -512,6 +675,43 @@ export default function Staff() {
                     )}
                   </div>
 
+                  {/* PTO summary bar — active/on_leave only */}
+                  {!isSeparated && ptoSummaries[member.id] && (() => {
+                    const s = ptoSummaries[member.id]
+                    const total = s.allocation || 1
+                    const usedPct = Math.min(100, (s.used / total) * 100)
+                    const reqPct = Math.min(100 - usedPct, (s.requested / total) * 100)
+                    const remPct = Math.max(0, 100 - usedPct - reqPct)
+                    return (
+                      <div className="px-5 pb-3 pt-1 border-t border-gray-50">
+                        <div className="flex items-center justify-between mb-1.5 mt-2">
+                          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">PTO {new Date().getFullYear()}</span>
+                          <span className="text-[10px] text-gray-400">
+                            {s.allocation} day{s.allocation !== 1 ? 's' : ''}{s.isProrated ? ' (prorated)' : ''}
+                          </span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden flex">
+                          <div className="h-full bg-[#1D9E75] rounded-l-full transition-all" style={{ width: `${usedPct}%` }} />
+                          <div className="h-full bg-amber-400 transition-all" style={{ width: `${reqPct}%` }} />
+                          <div className="h-full bg-gray-200 transition-all" style={{ width: `${remPct}%`, borderRadius: usedPct + reqPct === 0 ? '9999px' : '0 9999px 9999px 0' }} />
+                        </div>
+                        <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+                          <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#1D9E75]" />{s.used} used
+                          </span>
+                          {s.requested > 0 && (
+                            <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />{s.requested} pending
+                            </span>
+                          )}
+                          <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-300" />{s.remaining} left
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })()}
+
                   <div className="flex items-center justify-between border-t border-gray-50 px-5 py-3">
                     <button
                       onClick={() => setFilePanel(member)}
@@ -578,6 +778,26 @@ export default function Staff() {
                     ) : (
                       <p className="text-xs text-gray-300">—</p>
                     )}
+                  </div>
+
+                  {/* PTO mini-bar */}
+                  <div className="w-32 shrink-0 hidden xl:block">
+                    {!isSeparated && ptoSummaries[member.id] ? (() => {
+                      const s = ptoSummaries[member.id]
+                      const total = s.allocation || 1
+                      const usedPct = Math.min(100, (s.used / total) * 100)
+                      const reqPct = Math.min(100 - usedPct, (s.requested / total) * 100)
+                      return (
+                        <div>
+                          <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden flex mb-1">
+                            <div className="h-full bg-[#1D9E75]" style={{ width: `${usedPct}%` }} />
+                            <div className="h-full bg-amber-400" style={{ width: `${reqPct}%` }} />
+                            <div className="h-full bg-gray-200 flex-1" />
+                          </div>
+                          <p className="text-[10px] text-gray-400">{s.remaining}/{s.allocation} left{s.isProrated ? '*' : ''}</p>
+                        </div>
+                      )
+                    })() : <p className="text-xs text-gray-300">—</p>}
                   </div>
 
                   {/* Status */}
@@ -815,6 +1035,25 @@ export default function Staff() {
                 )}
               </div>
 
+              {/* Custom PTO — only shown when practice allows it */}
+              {ptoPolicy.ptoCustomAllowed && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    Custom PTO days/year{' '}
+                    <span className="text-gray-400 font-normal">(blank = practice default of {ptoPolicy.defaultPtoDays})</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="365"
+                    placeholder={String(ptoPolicy.defaultPtoDays)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                    value={form.ptoDaysPerYear}
+                    onChange={(e) => setForm((f) => ({ ...f, ptoDaysPerYear: e.target.value }))}
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-600">
                   Default shift hours <span className="text-gray-400 font-normal">(used for tardy detection)</span>
@@ -927,6 +1166,81 @@ export default function Staff() {
                 className="flex-1 rounded-lg bg-[#1D9E75] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
                 {saving ? 'Saving…' : modal.mode === 'add' ? 'Add Member' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* PTO Policy Modal */}
+      {ptoModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 50 }}
+          onClick={(e) => { if (e.target === e.currentTarget) setPtoModal(false) }}
+        >
+          <div className="w-full max-w-sm rounded-xl bg-white shadow-xl">
+            <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-900">PTO Policy</h3>
+              <p className="text-xs text-gray-500 mt-1">Sets the default annual PTO for all staff</p>
+            </div>
+            <div className="px-6 py-5 space-y-5">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                  Default Annual PTO Days
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="0"
+                    max="30"
+                    step="1"
+                    className="flex-1 accent-[#1D9E75]"
+                    value={ptoForm.defaultPtoDays}
+                    onChange={(e) => setPtoForm((f) => ({ ...f, defaultPtoDays: e.target.value }))}
+                  />
+                  <div className="w-14 text-center">
+                    <input
+                      type="number"
+                      min="0"
+                      max="365"
+                      className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      value={ptoForm.defaultPtoDays}
+                      onChange={(e) => setPtoForm((f) => ({ ...f, defaultPtoDays: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  New employees completing probation mid-year receive a prorated amount
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">Allow per-employee custom amounts</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Override default for individual staff in their edit form</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPtoForm((f) => ({ ...f, ptoCustomAllowed: !f.ptoCustomAllowed }))}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${ptoForm.ptoCustomAllowed ? 'bg-[#1D9E75]' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${ptoForm.ptoCustomAllowed ? 'translate-x-[18px]' : 'translate-x-[3px]'}`} />
+                </button>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => setPtoModal(false)}
+                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={savePtoPolicy}
+                disabled={savingPolicy}
+                className="flex-1 rounded-lg bg-[#1D9E75] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {savingPolicy ? 'Saving…' : 'Save Policy'}
               </button>
             </div>
           </div>

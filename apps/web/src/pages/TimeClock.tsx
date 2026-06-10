@@ -1,7 +1,6 @@
 ﻿import { useEffect, useRef, useState } from 'react'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const API_BASE = 'http://localhost:3000'
+import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/apiFetch'
 
 const SPECIALTIES = [
   'General Dentistry',
@@ -127,6 +126,8 @@ function toDatetimeLocal(iso: string | null): string {
 }
 
 export default function TimeClock() {
+  const { user } = useAuth()
+  const PRACTICE_ID = user!.practiceId
   const [livePunches, setLivePunches] = useState<LivePunch[]>([])
   const [todayPunches, setTodayPunches] = useState<TodayPunch[]>([])
   const [locations, setLocations] = useState<LocationItem[]>([])
@@ -148,8 +149,8 @@ export default function TimeClock() {
   async function fetchData() {
     try {
       const [liveRes, todayRes] = await Promise.all([
-        fetch(`${API_BASE}/api/time-punches/live?practiceId=${PRACTICE_ID}`),
-        fetch(`${API_BASE}/api/time-punches/today?practiceId=${PRACTICE_ID}`),
+        apiFetch(`/api/time-punches/live?practiceId=${PRACTICE_ID}`),
+        apiFetch(`/api/time-punches/today?practiceId=${PRACTICE_ID}`),
       ])
       const [liveData, todayData] = await Promise.all([liveRes.json(), todayRes.json()])
       setLivePunches(Array.isArray(liveData) ? liveData : [])
@@ -172,19 +173,19 @@ export default function TimeClock() {
     }, 1000)
 
     // fetch locations for edit modal
-    fetch(`${API_BASE}/api/locations?practiceId=${PRACTICE_ID}`)
+    apiFetch(`/api/locations?practiceId=${PRACTICE_ID}`)
       .then((r) => r.json())
       .then((data: LocationItem[]) => setLocations(Array.isArray(data) ? data : []))
       .catch(() => {})
 
     // fetch adjustment requests
-    fetch(`${API_BASE}/api/clock-adjustments?practiceId=${PRACTICE_ID}`)
+    apiFetch(`/api/clock-adjustments?practiceId=${PRACTICE_ID}`)
       .then((r) => r.json())
       .then((data) => setAdjustments(Array.isArray(data) ? data : []))
       .catch(() => {})
 
     // fetch practice settings
-    fetch(`${API_BASE}/api/practice/${PRACTICE_ID}`)
+    apiFetch(`/api/practice/${PRACTICE_ID}`)
       .then((r) => r.json())
       .then((data) => { if (typeof data?.requireSpecialty === 'boolean') setRequireSpecialty(data.requireSpecialty) })
       .catch(() => {})
@@ -208,7 +209,7 @@ export default function TimeClock() {
   async function reviewAdjustment(id: string, status: 'approved' | 'denied', note?: string) {
     setReviewingId(id)
     try {
-      const res = await fetch(`${API_BASE}/api/clock-adjustments/${id}`, {
+      const res = await apiFetch(`/api/clock-adjustments/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, reviewNotes: note?.trim() || undefined }),
@@ -231,7 +232,7 @@ export default function TimeClock() {
     setTogglingSpecialty(true)
     try {
       const next = !requireSpecialty
-      await fetch(`${API_BASE}/api/practice/${PRACTICE_ID}`, {
+      await apiFetch(`/api/practice/${PRACTICE_ID}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requireSpecialty: next }),
@@ -257,7 +258,7 @@ export default function TimeClock() {
       // remove undefined keys
       Object.keys(body).forEach((k) => body[k] === undefined && delete body[k])
 
-      await fetch(`${API_BASE}/api/time-punches/${editState.punch.id}`, {
+      await apiFetch(`/api/time-punches/${editState.punch.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

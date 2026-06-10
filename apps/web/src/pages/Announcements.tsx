@@ -1,7 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const API_BASE = 'http://localhost:3000'
+import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/apiFetch'
 
 interface Announcement {
   id: string
@@ -18,6 +17,8 @@ function formatDate(iso: string) {
 }
 
 export default function Announcements() {
+  const { user } = useAuth()
+  const PRACTICE_ID = user!.practiceId
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
@@ -27,7 +28,7 @@ export default function Announcements() {
 
   async function fetchAnnouncements() {
     try {
-      const res = await fetch(`${API_BASE}/api/announcements?practiceId=${PRACTICE_ID}`)
+      const res = await apiFetch(`/api/announcements?practiceId=${PRACTICE_ID}`)
       const data = await res.json()
       if (Array.isArray(data)) setAnnouncements(data)
     } catch { /* silent */ }
@@ -39,7 +40,7 @@ export default function Announcements() {
     if (!title.trim() || !body.trim()) return
     setPosting(true)
     try {
-      const res = await fetch(`${API_BASE}/api/announcements`, {
+      const res = await apiFetch(`/api/announcements`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ practiceId: PRACTICE_ID, title: title.trim(), body: body.trim() }),
@@ -59,7 +60,7 @@ export default function Announcements() {
     if (!confirm('Delete this announcement?')) return
     setDeletingId(id)
     try {
-      const res = await fetch(`${API_BASE}/api/announcements/${id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/announcements/${id}`, { method: 'DELETE' })
       if (res.ok) setAnnouncements((prev) => prev.filter((a) => a.id !== id))
     } catch { /* silent */ }
     finally { setDeletingId(null) }

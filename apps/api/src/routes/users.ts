@@ -2,17 +2,18 @@ import type { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
 
 export default async function userRoutes(server: FastifyInstance) {
-  // PATCH /api/users/push-token — register or update a device push token
+  // PATCH /api/users/push-token — register or update your own device push token
   server.patch<{
-    Body: { userId: string; practiceId: string; token: string }
+    Body: { token: string }
   }>('/users/push-token', async (request, reply) => {
-    const { userId, practiceId, token } = request.body
-    if (!userId || !practiceId || !token) {
-      return reply.status(400).send({ error: 'userId, practiceId, and token are required' })
+    const { token } = request.body
+    if (!token) {
+      return reply.status(400).send({ error: 'token is required' })
     }
 
+    // userId and practiceId come from the verified JWT — cannot be spoofed
     await prisma.user.update({
-      where: { id: userId },
+      where: { id: request.user.userId, practiceId: request.user.practiceId },
       data: { pushToken: token },
     })
 

@@ -1,7 +1,6 @@
 ﻿import { useEffect, useState, useMemo } from 'react'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/apiFetch'
 
 const SPECIALTIES = [
   'General Dentistry', 'Orthodontics', 'Periodontics',
@@ -105,6 +104,8 @@ type ModalState =
   | null
 
 export default function Schedules() {
+  const { user } = useAuth()
+  const PRACTICE_ID = user!.practiceId
   const [monday, setMonday] = useState<Date>(() => getMonday(new Date()))
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [locations, setLocations] = useState<Location[]>([])
@@ -126,9 +127,9 @@ export default function Schedules() {
     setLoading(true)
     try {
       const [staffRes, locRes, shiftRes] = await Promise.all([
-        fetch(`${API_BASE}/api/staff?practiceId=${PRACTICE_ID}`),
-        fetch(`${API_BASE}/api/locations?practiceId=${PRACTICE_ID}`),
-        fetch(`${API_BASE}/api/shifts?practiceId=${PRACTICE_ID}&weekStart=${weekStart}`),
+        apiFetch(`/api/staff?practiceId=${PRACTICE_ID}`),
+        apiFetch(`/api/locations?practiceId=${PRACTICE_ID}`),
+        apiFetch(`/api/shifts?practiceId=${PRACTICE_ID}&weekStart=${weekStart}`),
       ])
       const [staffData, locData, shiftData] = await Promise.all([
         staffRes.json(), locRes.json(), shiftRes.json(),
@@ -181,7 +182,7 @@ export default function Schedules() {
     setSaving(true)
     try {
       if (modal?.mode === 'add') {
-        await fetch(`${API_BASE}/api/shifts`, {
+        await apiFetch(`/api/shifts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -196,7 +197,7 @@ export default function Schedules() {
           }),
         })
       } else if (modal?.mode === 'edit') {
-        await fetch(`${API_BASE}/api/shifts/${modal.shift.id}`, {
+        await apiFetch(`/api/shifts/${modal.shift.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -219,7 +220,7 @@ export default function Schedules() {
     if (modal?.mode !== 'edit') return
     setDeleting(true)
     try {
-      await fetch(`${API_BASE}/api/shifts/${modal.shift.id}`, { method: 'DELETE' })
+      await apiFetch(`/api/shifts/${modal.shift.id}`, { method: 'DELETE' })
       setModal(null)
       await fetchAll()
     } finally {

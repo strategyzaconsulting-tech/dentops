@@ -1,7 +1,6 @@
 ﻿import { useEffect, useState, useMemo } from 'react'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/apiFetch'
 
 const TYPE_COLORS: Record<string, string> = {
   vacation: 'bg-blue-100 text-blue-700',
@@ -55,6 +54,8 @@ function dayKey(d: Date): string {
 }
 
 export default function PtoAdmin() {
+  const { user } = useAuth()
+  const PRACTICE_ID = user!.practiceId
   const [tab, setTab] = useState<Tab>('pending')
   const [pendingRequests, setPendingRequests] = useState<PtoRequest[]>([])
   const [approvedRequests, setApprovedRequests] = useState<PtoRequest[]>([])
@@ -74,9 +75,9 @@ export default function PtoAdmin() {
     setLoading(true)
     try {
       const [pendRes, appRes, boutRes] = await Promise.all([
-        fetch(`${API_BASE}/api/pto/requests?practiceId=${PRACTICE_ID}&status=pending`),
-        fetch(`${API_BASE}/api/pto/requests?practiceId=${PRACTICE_ID}&status=approved`),
-        fetch(`${API_BASE}/api/pto/blackout-dates?practiceId=${PRACTICE_ID}`),
+        apiFetch(`/api/pto/requests?practiceId=${PRACTICE_ID}&status=pending`),
+        apiFetch(`/api/pto/requests?practiceId=${PRACTICE_ID}&status=approved`),
+        apiFetch(`/api/pto/blackout-dates?practiceId=${PRACTICE_ID}`),
       ])
       const [pend, app, bouts] = await Promise.all([
         pendRes.json(), appRes.json(), boutRes.json(),
@@ -96,7 +97,7 @@ export default function PtoAdmin() {
   async function handleAction(id: string, status: 'approved' | 'denied') {
     setActioningId(id)
     try {
-      await fetch(`${API_BASE}/api/pto/requests/${id}`, {
+      await apiFetch(`/api/pto/requests/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -111,7 +112,7 @@ export default function PtoAdmin() {
     if (!newDate) return
     setAddingBlackout(true)
     try {
-      await fetch(`${API_BASE}/api/pto/blackout-dates`, {
+      await apiFetch(`/api/pto/blackout-dates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -129,7 +130,7 @@ export default function PtoAdmin() {
   }
 
   async function handleDeleteBlackout(id: string) {
-    await fetch(`${API_BASE}/api/pto/blackout-dates/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/pto/blackout-dates/${id}`, { method: 'DELETE' })
     await fetchAll()
   }
 

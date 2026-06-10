@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma.js'
 
 interface Doctor {
@@ -39,19 +40,22 @@ interface SetupBody {
   doctors: Doctor[]
   staff: StaffMember[]
   locations: LocationInput[]
+  adminPassword: string
 }
 
 export default async function setupRoutes(server: FastifyInstance) {
   server.post<{ Body: SetupBody }>('/setup', async (request, reply) => {
-    const { practice, brandColor, doctors, staff, locations } = request.body
+    const { practice, brandColor, doctors, staff, locations, adminPassword } = request.body
+
+    if (!adminPassword || adminPassword.length < 8) {
+      return reply.status(400).send({ error: 'adminPassword must be at least 8 characters' })
+    }
+
+    const passwordHash = await bcrypt.hash(adminPassword, 12)
 
     // 1. Create the practice
     const createdPractice = await prisma.practice.create({
-      data: {
-        name: practice.name,
-        type: practice.type,
-        brandColor,
-      },
+      data: { name: practice.name, type: practice.type, brandColor },
     })
 
     const practiceId = createdPractice.id
@@ -60,46 +64,51 @@ export default async function setupRoutes(server: FastifyInstance) {
     if (locations && locations.length > 0) {
       await prisma.location.createMany({
         data: locations.map((loc) => ({
-          practiceId,
-          name: loc.name,
-          address: loc.address,
-          city: loc.city,
-          state: loc.state,
-          zip: loc.zip,
+          practiceId, name: loc.name, address: loc.address,
+          city: loc.city, state: loc.state, zip: loc.zip,
         })),
       })
     }
 
-    // 3. Create doctors as users with role 'doctor'
+    // 3. Create admin/owner user with password
+    const ownerEmail = practice.email.toLowerCase().trim()
+    const [ownerFirst, ...rest] = practice.ownerName.trim().split(' ')
+    const ownerLast = rest.join(' ') || ownerFirst
+    const owner = await prisma.user.create({
+      data: {
+        practiceId, firstName: ownerFirst, lastName: ownerLast,
+        email: ownerEmail, role: 'manager', status: 'active', passwordHash,
+      },
+    })
+
+    // 4. Create doctors
     if (doctors && doctors.length > 0) {
       await prisma.user.createMany({
         data: doctors.map((doc) => ({
-          practiceId,
-          firstName: doc.firstName,
-          lastName: doc.lastName,
-          email: doc.email,
-          role: 'doctor',
-          status: 'invited',
+          practiceId, firstName: doc.firstName, lastName: doc.lastName,
+          email: doc.email, role: 'doctor', status: 'invited',
         })),
         skipDuplicates: true,
       })
     }
 
-    // 4. Create staff members as users with role 'staff'
+    // 5. Create staff
     if (staff && staff.length > 0) {
       await prisma.user.createMany({
         data: staff.map((member) => ({
-          practiceId,
-          firstName: member.firstName,
-          lastName: member.lastName,
-          email: member.email,
-          role: 'staff',
-          status: 'invited',
+          practiceId, firstName: member.firstName, lastName: member.lastName,
+          email: member.email, role: 'staff', status: 'invited',
         })),
         skipDuplicates: true,
       })
     }
 
-    return reply.status(201).send({ practiceId })
+    // Return JWT so the admin is immediately logged in after setup
+    const token = server.jwt.sign(
+      { userId: owner.id, practiceId, role: owner.role, email: owner.email },
+      { expiresIn: '8h' }
+    )
+
+    return reply.status(201).send({ practiceId, token, userId: owner.id })
   })
 }

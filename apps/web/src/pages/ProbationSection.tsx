@@ -1,7 +1,6 @@
 ﻿import { useState } from 'react'
-
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
+import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/apiFetch'
 
 const NEXT_STEPS_OPTIONS = [
   { key: 'benefits', label: 'Eligible for benefits' },
@@ -38,6 +37,8 @@ interface Props {
 }
 
 export default function ProbationSection({ member, onUpdated }: Props) {
+  const { user } = useAuth()
+  const PRACTICE_ID = user!.practiceId
   const [showReview, setShowReview] = useState(false)
   const [reviewOutcome, setReviewOutcome] = useState<'passed' | 'failed'>('passed')
   const [nextSteps, setNextSteps] = useState<string[]>(['benefits', 'permanent'])
@@ -85,14 +86,14 @@ export default function ProbationSection({ member, onUpdated }: Props) {
         benefitsEligibleAt: benefitsDate,
       }
 
-      await fetch(`${API_BASE}/api/staff/${member.id}`, {
+      await apiFetch(`/api/staff/${member.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
 
       // Log an occurrence note
-      await fetch(`${API_BASE}/api/occurrences`, {
+      await apiFetch(`/api/occurrences`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

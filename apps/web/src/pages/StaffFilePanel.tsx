@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import EmployeeReportModal from './EmployeeReportModal'
 import StaffOnboardingTab from './StaffOnboardingTab'
 import ProbationSection from './ProbationSection'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+import LicenseVaultTab from './LicenseVaultTab'
+import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/apiFetch'
 
 const TYPE_STYLE: Record<string, string> = {
   tardy: 'bg-amber-100 text-amber-700',
@@ -120,6 +120,29 @@ interface Occurrence {
   createdAt: string
 }
 
+interface PtoDayItem {
+  date: string
+  dayOfWeek: string
+  type: string
+  status: string
+  bucket: 'used' | 'pending'
+  requestId: string
+  requestStart: string
+  requestEnd: string
+  notes: string | null
+}
+
+interface PtoSummary {
+  userId: string
+  allocation: number
+  used: number
+  requested: number
+  remaining: number
+  isProrated: boolean
+  proratedFrom: string | null
+  items: PtoDayItem[]
+}
+
 interface Props {
   member: StaffMember
   onClose: () => void
@@ -128,6 +151,8 @@ interface Props {
 }
 
 export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: Props) {
+  const { user } = useAuth()
+  const PRACTICE_ID = user!.practiceId
   const [occurrences, setOccurrences] = useState<Occurrence[]>([])
   const [scheduledDays, setScheduledDays] = useState<number | null>(null)
   const [loadingOcc, setLoadingOcc] = useState(true)
@@ -140,7 +165,14 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
   const [reportData, setReportData] = useState<unknown>(null)
   const [generatingReport, setGeneratingReport] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'onboarding'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'pto' | 'licenses' | 'onboarding'>('overview')
+  const [ptoSummary, setPtoSummary] = useState<PtoSummary | null>(null)
+  const [loadingPto, setLoadingPto] = useState(false)
+  const [ptoYear, setPtoYear] = useState(new Date().getFullYear())
+  const [editingRequest, setEditingRequest] = useState<{ id: string; startDate: string; endDate: string; type: string; status: string; notes: string } | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const today = new Date()
   today.setHours(23, 59, 59, 999)
@@ -149,7 +181,7 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
 
   useEffect(() => {
     setLoadingOcc(true)
-    fetch(`${API_BASE}/api/occurrences?practiceId=${PRACTICE_ID}&userId=${member.id}`)
+    apiFetch(`/api/occurrences?practiceId=${PRACTICE_ID}&userId=${member.id}`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setOccurrences(data) })
       .catch(() => {})
@@ -160,12 +192,27 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
     setLoadingShifts(true)
     const fromStr = toISODate(from)
     const toStr = toISODate(today)
-    fetch(`${API_BASE}/api/shifts?practiceId=${PRACTICE_ID}&userId=${member.id}&from=${fromStr}&to=${toStr}`)
+    apiFetch(`/api/shifts?practiceId=${PRACTICE_ID}&userId=${member.id}&from=${fromStr}&to=${toStr}`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setScheduledDays(data.length) })
       .catch(() => {})
       .finally(() => setLoadingShifts(false))
   }, [member.id, dateRange])
+
+  useEffect(() => {
+    if (activeTab !== 'pto') return
+    setLoadingPto(true)
+    apiFetch(`/api/pto/staff-summary?year=${ptoYear}`)
+      .then(r => r.json())
+      .then((data: PtoSummary[]) => {
+        if (Array.isArray(data)) {
+          const mine = data.find(s => s.userId === member.id) ?? null
+          setPtoSummary(mine)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingPto(false))
+  }, [member.id, activeTab, ptoYear])
 
   const inRange = occurrences.filter(o => {
     const d = new Date(o.date)
@@ -185,7 +232,7 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
     setGeneratingReport(true)
     setReportError(null)
     try {
-      const res = await fetch(`${API_BASE}/api/staff/${member.id}/report?practiceId=${PRACTICE_ID}&days=365`)
+      const res = await apiFetch(`/api/staff/${member.id}/report?practiceId=${PRACTICE_ID}&days=365`)
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { error?: string }
         setReportError(err.error ?? `Server error (${res.status})`)
@@ -203,7 +250,7 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
   async function handleAddEntry() {
     setAdding(true)
     try {
-      const res = await fetch(`${API_BASE}/api/occurrences`, {
+      const res = await apiFetch(`/api/occurrences`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -349,13 +396,15 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
         {/* Tab bar */}
         <div className="flex border-b border-gray-100 bg-white shrink-0">
           {[
-            { key: 'overview', label: 'Overview' },
+            { key: 'overview',   label: 'Overview'   },
+            { key: 'pto',        label: 'PTO'        },
+            { key: 'licenses',   label: 'Licenses'   },
             { key: 'onboarding', label: 'Onboarding' },
           ].map(tab => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key as 'overview' | 'onboarding')}
-              className={`px-5 py-3 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+              onClick={() => setActiveTab(tab.key as 'overview' | 'pto' | 'licenses' | 'onboarding')}
+              className={`px-4 py-3 text-sm font-semibold border-b-2 -mb-px transition-colors ${
                 activeTab === tab.key
                   ? 'border-[#1D9E75] text-[#1D9E75]'
                   : 'border-transparent text-gray-400 hover:text-gray-700'
@@ -367,6 +416,307 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
         </div>
 
         <div className="flex-1 overflow-y-auto">
+          {/* PTO tab */}
+          {activeTab === 'pto' && (
+            <div className="px-6 py-5">
+              {/* Year selector + summary bar */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">PTO</h3>
+                <div className="flex items-center gap-1 bg-gray-100 rounded-full p-0.5">
+                  {[new Date().getFullYear() - 1, new Date().getFullYear()].map(y => (
+                    <button
+                      key={y}
+                      onClick={() => setPtoYear(y)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${ptoYear === y ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      {y}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {loadingPto ? (
+                <p className="text-sm text-gray-400 py-8 text-center">Loading…</p>
+              ) : !ptoSummary ? (
+                <p className="text-sm text-gray-400 py-8 text-center">No PTO data for this employee.</p>
+              ) : (
+                <>
+                  {/* Summary bar */}
+                  {(() => {
+                    const s = ptoSummary
+                    const total = s.allocation || 1
+                    const usedPct = Math.min(100, (s.used / total) * 100)
+                    const reqPct = Math.min(100 - usedPct, (s.requested / total) * 100)
+                    const remPct = Math.max(0, 100 - usedPct - reqPct)
+                    return (
+                      <div className="mb-5 rounded-xl border border-gray-100 bg-gray-50 p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-gray-600">
+                            {s.allocation} day{s.allocation !== 1 ? 's' : ''} annual allocation
+                            {s.isProrated && s.proratedFrom && (
+                              <span className="ml-1.5 font-normal text-gray-400">
+                                (prorated from {new Date(s.proratedFrom).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-xs font-semibold text-[#1D9E75]">{s.remaining} remaining</span>
+                        </div>
+                        <div className="h-2.5 w-full rounded-full bg-gray-200 overflow-hidden flex">
+                          <div className="h-full bg-[#1D9E75] rounded-l-full" style={{ width: `${usedPct}%` }} />
+                          <div className="h-full bg-amber-400" style={{ width: `${reqPct}%` }} />
+                          <div className="h-full bg-gray-200 flex-1" style={{ borderRadius: usedPct + reqPct === 0 ? '9999px' : '0 9999px 9999px 0' }} />
+                        </div>
+                        <div className="flex gap-4 mt-2">
+                          <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                            <span className="inline-block h-2 w-2 rounded-full bg-[#1D9E75]" />{s.used} used
+                          </span>
+                          <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                            <span className="inline-block h-2 w-2 rounded-full bg-amber-400" />{s.requested} pending
+                          </span>
+                          <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                            <span className="inline-block h-2 w-2 rounded-full bg-gray-300" />{s.remaining} remaining
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })()}
+
+                  {/* Day-by-day list grouped by request */}
+                  {ptoSummary.items.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-6">No PTO days recorded for {ptoYear}.</p>
+                  ) : (() => {
+                    // Group consecutive items by requestId (preserving sort order)
+                    const groups: PtoDayItem[][] = []
+                    for (const item of ptoSummary.items) {
+                      const last = groups[groups.length - 1]
+                      if (last && last[0].requestId === item.requestId) last.push(item)
+                      else groups.push([item])
+                    }
+
+                    return (
+                      <div className="space-y-3">
+                        {groups.map((group) => {
+                          const first = group[0]
+                          const isUsed = first.bucket === 'used'
+                          const typeLabel = first.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                          const isDeleting = deletingId === first.requestId
+                          const isConfirmingDelete = confirmDeleteId === first.requestId
+
+                          return (
+                            <div key={first.requestId} className="rounded-xl border border-gray-100 overflow-hidden">
+                              {/* Request header */}
+                              <div className={`flex items-center justify-between px-3 py-2 ${isUsed ? 'bg-green-50' : 'bg-amber-50'}`}>
+                                <div className="flex items-center gap-2">
+                                  <span className={`h-2 w-2 rounded-full shrink-0 ${isUsed ? 'bg-[#1D9E75]' : 'bg-amber-400'}`} />
+                                  <span className="text-xs font-semibold text-gray-700">{typeLabel}</span>
+                                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                    isUsed ? 'bg-green-100 text-green-700'
+                                    : first.status === 'pending' ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    {isUsed ? 'used' : first.status}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400">{group.length} day{group.length !== 1 ? 's' : ''}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {isConfirmingDelete ? (
+                                    <>
+                                      <span className="text-xs text-red-600 font-medium">Delete this request?</span>
+                                      <button
+                                        onClick={async () => {
+                                          setDeletingId(first.requestId)
+                                          setConfirmDeleteId(null)
+                                          await apiFetch(`/api/pto/requests/${first.requestId}`, { method: 'DELETE' })
+                                          setDeletingId(null)
+                                          // Refresh
+                                          setLoadingPto(true)
+                                          const res = await apiFetch(`/api/pto/staff-summary?year=${ptoYear}`)
+                                          const data: PtoSummary[] = await res.json()
+                                          if (Array.isArray(data)) setPtoSummary(data.find(s => s.userId === member.id) ?? null)
+                                          setLoadingPto(false)
+                                          if (onUpdated) onUpdated()
+                                        }}
+                                        disabled={isDeleting}
+                                        className="text-[11px] font-semibold text-white bg-red-500 hover:bg-red-600 rounded px-2 py-0.5 disabled:opacity-50"
+                                      >
+                                        {isDeleting ? '…' : 'Yes, delete'}
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmDeleteId(null)}
+                                        className="text-[11px] text-gray-500 hover:text-gray-700"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() => setEditingRequest({
+                                          id: first.requestId,
+                                          startDate: first.requestStart,
+                                          endDate: first.requestEnd,
+                                          type: first.type,
+                                          status: first.status,
+                                          notes: first.notes ?? '',
+                                        })}
+                                        className="text-[11px] font-medium text-[#1D9E75] hover:underline"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmDeleteId(first.requestId)}
+                                        className="text-[11px] font-medium text-red-400 hover:text-red-600"
+                                      >
+                                        Delete
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Individual days */}
+                              <div className="divide-y divide-gray-50">
+                                {group.map((item) => {
+                                  const d = new Date(item.date + 'T12:00:00')
+                                  const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                  return (
+                                    <div key={item.date} className="flex items-center gap-3 px-3 py-2 bg-white">
+                                      <span className="text-[10px] font-semibold text-gray-300 w-8 shrink-0 uppercase">
+                                        {item.dayOfWeek.slice(0, 3)}
+                                      </span>
+                                      <span className="text-sm text-gray-700">{dateLabel}</span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                              {first.notes && (
+                                <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
+                                  <p className="text-xs text-gray-400 italic">"{first.notes}"</p>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* PTO edit modal */}
+          {editingRequest && (
+            <div
+              className="fixed inset-0 flex items-center justify-center p-4"
+              style={{ backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 100 }}
+              onClick={(e) => { if (e.target === e.currentTarget) setEditingRequest(null) }}
+            >
+              <div className="w-full max-w-sm rounded-xl bg-white shadow-xl">
+                <div className="px-6 pt-5 pb-4 border-b border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900">Edit PTO Request</h3>
+                </div>
+                <div className="px-6 py-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Start date</label>
+                      <input
+                        type="date"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                        value={editingRequest.startDate}
+                        onChange={e => setEditingRequest(r => r ? { ...r, startDate: e.target.value } : r)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">End date</label>
+                      <input
+                        type="date"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                        value={editingRequest.endDate}
+                        onChange={e => setEditingRequest(r => r ? { ...r, endDate: e.target.value } : r)}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
+                    <select
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      value={editingRequest.type}
+                      onChange={e => setEditingRequest(r => r ? { ...r, type: e.target.value } : r)}
+                    >
+                      {['vacation', 'sick', 'personal', 'pto', 'unpaid'].map(t => (
+                        <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                    <select
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      value={editingRequest.status}
+                      onChange={e => setEditingRequest(r => r ? { ...r, status: e.target.value } : r)}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="denied">Denied</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+                    <input
+                      type="text"
+                      placeholder="Optional note"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      value={editingRequest.notes}
+                      onChange={e => setEditingRequest(r => r ? { ...r, notes: e.target.value } : r)}
+                    />
+                  </div>
+                </div>
+                <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+                  <button
+                    onClick={() => setEditingRequest(null)}
+                    className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={savingEdit}
+                    onClick={async () => {
+                      if (!editingRequest) return
+                      setSavingEdit(true)
+                      await apiFetch(`/api/pto/requests/${editingRequest.id}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({
+                          startDate: editingRequest.startDate,
+                          endDate: editingRequest.endDate,
+                          type: editingRequest.type,
+                          status: editingRequest.status,
+                          notes: editingRequest.notes || null,
+                        }),
+                      })
+                      setEditingRequest(null)
+                      setSavingEdit(false)
+                      setLoadingPto(true)
+                      const res = await apiFetch(`/api/pto/staff-summary?year=${ptoYear}`)
+                      const data: PtoSummary[] = await res.json()
+                      if (Array.isArray(data)) setPtoSummary(data.find(s => s.userId === member.id) ?? null)
+                      setLoadingPto(false)
+                      if (onUpdated) onUpdated()
+                    }}
+                    className="flex-1 rounded-lg bg-[#1D9E75] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    {savingEdit ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Licenses tab */}
+          {activeTab === 'licenses' && (
+            <LicenseVaultTab userId={member.id} role={member.role} />
+          )}
+
           {/* Onboarding tab */}
           {activeTab === 'onboarding' && (
             <div className="px-6 py-5">

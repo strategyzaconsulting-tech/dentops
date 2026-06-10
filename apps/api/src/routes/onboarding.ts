@@ -27,6 +27,15 @@ function completionPct(checklist: {
   return Math.round((completed / 6) * 100)
 }
 
+function redactSensitive(data: unknown): unknown {
+  if (!data || typeof data !== 'object') return data
+  const d = { ...(data as Record<string, unknown>) }
+  if ('ssn4' in d) d.ssn4 = '***'
+  if ('accountNumber' in d) d.accountNumber = '****' + String(d.accountNumber).slice(-4)
+  if ('routingNumber' in d) d.routingNumber = '***'
+  return d
+}
+
 export default async function onboardingRoutes(server: FastifyInstance) {
   // ─── Onboarding Checklist ───────────────────────────────────────────────
 
@@ -34,9 +43,10 @@ export default async function onboardingRoutes(server: FastifyInstance) {
   server.get<{ Querystring: { practiceId: string; userId: string } }>(
     '/onboarding',
     async (request, reply) => {
-      const { practiceId, userId } = request.query
-      if (!practiceId || !userId)
-        return reply.status(400).send({ error: 'practiceId and userId are required' })
+      const practiceId = request.user.practiceId
+      const { userId } = request.query
+      if (!userId)
+        return reply.status(400).send({ error: 'userId is required' })
 
       let checklist = await prisma.onboardingChecklist.findUnique({
         where: { practiceId_userId: { practiceId, userId } },
@@ -50,7 +60,13 @@ export default async function onboardingRoutes(server: FastifyInstance) {
         })
       }
 
-      return reply.send({ ...checklist, completionPct: completionPct(checklist) })
+      return reply.send({
+        ...checklist,
+        directDepositData: redactSensitive(checklist.directDepositData),
+        i9Data: redactSensitive(checklist.i9Data),
+        w4Data: redactSensitive(checklist.w4Data),
+        completionPct: completionPct(checklist),
+      })
     }
   )
 
