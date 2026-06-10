@@ -174,7 +174,7 @@ export default function OpenShifts() {
               key={f}
               onClick={() => setStatusFilter(f)}
               className={`rounded-full px-3 py-1 text-xs font-semibold capitalize transition-colors ${
-                statusFilter === f ? 'bg-[#1D9E75] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                statusFilter === f ? 'bg-[#1D9E75] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-[#F0EDE5]'
               }`}
             >
               {f}
@@ -189,7 +189,7 @@ export default function OpenShifts() {
         <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b bg-gray-50 text-xs uppercase text-gray-500">
+              <tr className="border-b bg-[#EFECE4] text-xs uppercase text-[#4A5C52]">
                 <th className="px-4 py-3 text-left font-semibold">Date</th>
                 <th className="px-4 py-3 text-left font-semibold">Time</th>
                 <th className="px-4 py-3 text-left font-semibold">Location</th>
@@ -207,7 +207,7 @@ export default function OpenShifts() {
               ) : (
                 filtered.map((shift) => (
                   <>
-                    <tr key={shift.id} className="hover:bg-gray-50">
+                    <tr key={shift.id} className="hover:bg-[#F0EDE5]">
                       <td className="px-4 py-3 font-medium text-gray-900">{formatDate(shift.date)}</td>
                       <td className="px-4 py-3 text-gray-600">{formatTime12h(shift.startTime)} – {formatTime12h(shift.endTime)}</td>
                       <td className="px-4 py-3 text-gray-600">{shift.location.name}</td>
@@ -381,7 +381,7 @@ export default function OpenShifts() {
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => { setShowForm(false); setForm(emptyForm) }}
-                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-[#F0EDE5]"
               >
                 Cancel
               </button>

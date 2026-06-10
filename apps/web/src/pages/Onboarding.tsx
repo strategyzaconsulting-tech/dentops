@@ -387,7 +387,7 @@ export default function Onboarding() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F5F0E8] flex items-center justify-center">
-        <p className="text-muted-foreground">Loading onboarding data…</p>
+        <p className="text-[#6B7A72]">Loading onboarding data…</p>
       </div>
     )
   }
@@ -399,7 +399,7 @@ export default function Onboarding() {
         <div className="container flex h-16 items-center gap-4">
           <a href="/" className="text-sm text-[#8BAF9A] hover:text-white">← Back</a>
           <h1 className="text-xl font-bold text-[#1D9E75]">Onboarding</h1>
-          <span className="text-sm text-muted-foreground">Staff HR Forms, Training &amp; Manual</span>
+          <span className="text-sm text-[#6B7A72]">Staff HR Forms, Training &amp; Manual</span>
         </div>
       </header>
 
@@ -409,11 +409,11 @@ export default function Onboarding() {
         <section>
           <h2 className="text-lg font-semibold mb-4">Staff Onboarding Progress</h2>
           {checklists.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No onboarding records yet. Records are created when staff open the mobile app.</p>
+            <p className="text-sm text-[#6B7A72]">No onboarding records yet. Records are created when staff open the mobile app.</p>
           ) : (
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50">
+                <thead className="bg-[#F0EDE5]">
                   <tr>
                     <th className="text-left px-4 py-3 font-semibold">Name</th>
                     <th className="text-left px-4 py-3 font-semibold">Role</th>
@@ -437,14 +437,14 @@ export default function Onboarding() {
                       <>
                         <tr
                           key={c.id}
-                          className="border-t hover:bg-muted/30 cursor-pointer"
+                          className="border-t hover:bg-[#F3F0EA] cursor-pointer"
                           onClick={() => setExpandedId(isExpanded ? null : c.id)}
                         >
                           <td className="px-4 py-3 font-medium">
                             {c.user.firstName} {c.user.lastName}
-                            <span className="ml-2 text-xs text-muted-foreground">{isExpanded ? '▲' : '▼'}</span>
+                            <span className="ml-2 text-xs text-[#6B7A72]">{isExpanded ? '▲' : '▼'}</span>
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground capitalize">{c.user.role}</td>
+                          <td className="px-4 py-3 text-[#6B7A72] capitalize">{c.user.role}</td>
                           <td className="px-3 py-3 text-center">{c.i9CompletedAt && c.i9Data?.signatureName ? <Check /> : <Dash />}</td>
                           <td className="px-3 py-3 text-center">{c.w4CompletedAt && c.w4Data?.signatureName ? <Check /> : <Dash />}</td>
                           <td className="px-3 py-3 text-center">{c.personalInfoCompletedAt && c.personalInfoData && Object.keys(c.personalInfoData).length > 0 ? <Check /> : <Dash />}</td>
@@ -613,10 +613,10 @@ export default function Onboarding() {
           <h2 className="text-lg font-semibold mb-4">Equipment Log</h2>
           <div className="space-y-4">
             {checklists.length === 0 && (
-              <p className="text-sm text-muted-foreground">No staff records yet.</p>
+              <p className="text-sm text-[#6B7A72]">No staff records yet.</p>
             )}
             {checklists.map((c) => (
-              <div key={c.id} className="rounded-lg border bg-card p-4">
+              <div key={c.id} className="rounded-lg border bg-white p-4">
                 <div className="flex items-center justify-between mb-3">
                   <p className="font-semibold">{c.user.firstName} {c.user.lastName}</p>
                   <button
@@ -628,11 +628,11 @@ export default function Onboarding() {
                 </div>
 
                 {c.equipmentItems.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">No equipment assigned</p>
+                  <p className="text-sm text-[#6B7A72] italic">No equipment assigned</p>
                 ) : (
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-muted-foreground text-xs uppercase">
+                      <tr className="text-[#6B7A72] text-xs uppercase">
                         <th className="text-left py-1">Item</th>
                         <th className="text-left py-1">Serial #</th>
                         <th className="text-left py-1">Assigned</th>
@@ -645,14 +645,14 @@ export default function Onboarding() {
                       {c.equipmentItems.map((item) => (
                         <tr key={item.id} className="border-t">
                           <td className="py-2 font-medium">{item.name}</td>
-                          <td className="py-2 text-muted-foreground">{item.serialNumber ?? '–'}</td>
-                          <td className="py-2 text-muted-foreground">{fmtDate(item.assignedAt)}</td>
+                          <td className="py-2 text-[#6B7A72]">{item.serialNumber ?? '–'}</td>
+                          <td className="py-2 text-[#6B7A72]">{fmtDate(item.assignedAt)}</td>
                           <td className="py-2">
                             {item.returnedAt
                               ? <span className="text-xs text-amber-600">Returned {fmtDate(item.returnedAt)}</span>
                               : <span className="text-xs text-[#1D9E75]">Active</span>}
                           </td>
-                          <td className="py-2 text-muted-foreground text-xs">{item.notes ?? ''}</td>
+                          <td className="py-2 text-[#6B7A72] text-xs">{item.notes ?? ''}</td>
                           <td className="py-2 text-right space-x-2">
                             {!item.returnedAt && (
                               <button onClick={() => markReturned(item.id)} className="text-xs text-amber-600 hover:underline">
@@ -673,7 +673,7 @@ export default function Onboarding() {
                 {equipForm?.userId === c.userId && (
                   <div className="mt-3 pt-3 border-t flex flex-wrap gap-2 items-end">
                     <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Item Name *</label>
+                      <label className="text-xs text-[#6B7A72] block mb-1">Item Name *</label>
                       <input
                         type="text"
                         value={equipForm.name}
@@ -683,7 +683,7 @@ export default function Onboarding() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Serial #</label>
+                      <label className="text-xs text-[#6B7A72] block mb-1">Serial #</label>
                       <input
                         type="text"
                         value={equipForm.serial}
@@ -693,7 +693,7 @@ export default function Onboarding() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Notes</label>
+                      <label className="text-xs text-[#6B7A72] block mb-1">Notes</label>
                       <input
                         type="text"
                         value={equipForm.notes}
@@ -710,7 +710,7 @@ export default function Onboarding() {
                     </button>
                     <button
                       onClick={() => setEquipForm(null)}
-                      className="text-sm text-muted-foreground hover:underline"
+                      className="text-sm text-[#6B7A72] hover:underline"
                     >
                       Cancel
                     </button>
@@ -726,13 +726,13 @@ export default function Onboarding() {
           <div className="flex gap-1 mb-4 border-b">
             <button
               onClick={() => setActiveTab('manual')}
-              className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${activeTab === 'manual' ? 'border-[#1D9E75] text-[#1D9E75]' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+              className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${activeTab === 'manual' ? 'border-[#1D9E75] text-[#1D9E75]' : 'border-transparent text-[#6B7A72] hover:text-foreground'}`}
             >
               Office Manual
             </button>
             <button
               onClick={() => setActiveTab('training')}
-              className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${activeTab === 'training' ? 'border-[#1D9E75] text-[#1D9E75]' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+              className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${activeTab === 'training' ? 'border-[#1D9E75] text-[#1D9E75]' : 'border-transparent text-[#6B7A72] hover:text-foreground'}`}
             >
               Training
             </button>
@@ -741,12 +741,12 @@ export default function Onboarding() {
           {/* Office Manual Tab */}
           {activeTab === 'manual' && (
             <div className="space-y-6">
-              <div className="rounded-lg border bg-card p-6">
+              <div className="rounded-lg border bg-white p-6">
                 <h3 className="font-semibold mb-4">Edit Office Manual</h3>
                 <div className="space-y-3">
                   <div className="flex gap-4">
                     <div className="flex-1">
-                      <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Title</label>
+                      <label className="text-xs font-semibold text-[#6B7A72] uppercase block mb-1">Title</label>
                       <input
                         type="text"
                         value={manualForm.title}
@@ -756,7 +756,7 @@ export default function Onboarding() {
                       />
                     </div>
                     <div className="w-28">
-                      <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Version</label>
+                      <label className="text-xs font-semibold text-[#6B7A72] uppercase block mb-1">Version</label>
                       <input
                         type="text"
                         value={manualForm.version}
@@ -767,7 +767,7 @@ export default function Onboarding() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Content</label>
+                    <label className="text-xs font-semibold text-[#6B7A72] uppercase block mb-1">Content</label>
                     <textarea
                       value={manualForm.content}
                       onChange={(e) => setManualForm({ ...manualForm, content: e.target.value })}
@@ -790,14 +790,14 @@ export default function Onboarding() {
               </div>
 
               {/* Signatures */}
-              <div className="rounded-lg border bg-card p-6">
+              <div className="rounded-lg border bg-white p-6">
                 <h3 className="font-semibold mb-3">Signatures</h3>
                 {!manual || manual.signatures.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">No one has signed the manual yet.</p>
+                  <p className="text-sm text-[#6B7A72] italic">No one has signed the manual yet.</p>
                 ) : (
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-muted-foreground text-xs uppercase">
+                      <tr className="text-[#6B7A72] text-xs uppercase">
                         <th className="text-left py-1">Name</th>
                         <th className="text-left py-1">Signed</th>
                       </tr>
@@ -806,7 +806,7 @@ export default function Onboarding() {
                       {manual.signatures.map((sig) => (
                         <tr key={sig.id} className="border-t">
                           <td className="py-2">{sig.user.firstName} {sig.user.lastName}</td>
-                          <td className="py-2 text-muted-foreground">{fmtDate(sig.signedAt)}</td>
+                          <td className="py-2 text-[#6B7A72]">{fmtDate(sig.signedAt)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -820,11 +820,11 @@ export default function Onboarding() {
           {activeTab === 'training' && (
             <div className="space-y-6">
               {/* Add session form */}
-              <div className="rounded-lg border bg-card p-6">
+              <div className="rounded-lg border bg-white p-6">
                 <h3 className="font-semibold mb-4">Add Training Session</h3>
                 <div className="flex flex-wrap gap-3 items-end">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Staff Member *</label>
+                    <label className="text-xs font-semibold text-[#6B7A72] uppercase block mb-1">Staff Member *</label>
                     <select
                       value={trainingForm.userId}
                       onChange={(e) => setTrainingForm({ ...trainingForm, userId: e.target.value })}
@@ -837,7 +837,7 @@ export default function Onboarding() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Trainer</label>
+                    <label className="text-xs font-semibold text-[#6B7A72] uppercase block mb-1">Trainer</label>
                     <select
                       value={trainingForm.trainerId}
                       onChange={(e) => setTrainingForm({ ...trainingForm, trainerId: e.target.value })}
@@ -850,7 +850,7 @@ export default function Onboarding() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Topic *</label>
+                    <label className="text-xs font-semibold text-[#6B7A72] uppercase block mb-1">Topic *</label>
                     <input
                       type="text"
                       value={trainingForm.topic}
@@ -860,7 +860,7 @@ export default function Onboarding() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Scheduled At *</label>
+                    <label className="text-xs font-semibold text-[#6B7A72] uppercase block mb-1">Scheduled At *</label>
                     <input
                       type="datetime-local"
                       value={trainingForm.scheduledAt}
@@ -879,9 +879,9 @@ export default function Onboarding() {
               </div>
 
               {/* Sessions table */}
-              <div className="rounded-lg border bg-card overflow-hidden">
+              <div className="rounded-lg border bg-white overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted/50">
+                  <thead className="bg-[#F0EDE5]">
                     <tr>
                       <th className="text-left px-4 py-3 font-semibold">Staff</th>
                       <th className="text-left px-4 py-3 font-semibold">Topic</th>
@@ -894,7 +894,7 @@ export default function Onboarding() {
                   <tbody>
                     {training.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground italic text-sm">
+                        <td colSpan={6} className="px-4 py-6 text-center text-[#6B7A72] italic text-sm">
                           No training sessions yet. Add one above.
                         </td>
                       </tr>
@@ -903,10 +903,10 @@ export default function Onboarding() {
                         <tr key={t.id} className="border-t">
                           <td className="px-4 py-3">{t.user.firstName} {t.user.lastName}</td>
                           <td className="px-4 py-3">{t.topic}</td>
-                          <td className="px-4 py-3 text-muted-foreground">
+                          <td className="px-4 py-3 text-[#6B7A72]">
                             {t.trainer ? `${t.trainer.firstName} ${t.trainer.lastName}` : '–'}
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground">{fmtDate(t.scheduledAt)}</td>
+                          <td className="px-4 py-3 text-[#6B7A72]">{fmtDate(t.scheduledAt)}</td>
                           <td className="px-4 py-3">
                             {t.completedAt
                               ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Completed {fmtDate(t.completedAt)}</span>

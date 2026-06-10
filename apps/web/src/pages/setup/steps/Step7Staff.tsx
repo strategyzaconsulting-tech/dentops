@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSetup, StaffMember } from '../../../context/SetupContext'
 
@@ -53,7 +53,7 @@ export default function Step7Staff() {
         Add your staff
       </h1>
       <p className="text-sm text-gray-500 mb-8">
-        They'll receive an email invite to join DentOps.
+        They'll receive an email invite to join Brisa.
       </p>
 
       {/* Staff list */}
@@ -166,7 +166,7 @@ export default function Step7Staff() {
                 setForm(emptyForm)
                 setShowForm(false)
               }}
-              className="px-4 py-2 rounded-md text-sm text-gray-500 border border-gray-200 hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 rounded-md text-sm text-gray-500 border border-gray-200 hover:bg-[#F0EDE5] transition-colors"
             >
               Cancel
             </button>

@@ -242,7 +242,7 @@ export default function Schedules() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMonday((m) => addDays(m, -7))}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-[#F0EDE5]"
             >
               ←
             </button>
@@ -251,13 +251,13 @@ export default function Schedules() {
             </span>
             <button
               onClick={() => setMonday((m) => addDays(m, 7))}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-[#F0EDE5]"
             >
               →
             </button>
             <button
               onClick={() => setMonday(getMonday(new Date()))}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-[#F0EDE5]"
             >
               Today
             </button>
@@ -277,7 +277,7 @@ export default function Schedules() {
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
             <table className="min-w-full border-collapse">
               <thead>
-                <tr className="border-b bg-gray-50">
+                <tr className="border-b bg-[#EFECE4]">
                   {/* Staff column header */}
                   <th className="w-48 border-r px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
                     Staff
@@ -306,7 +306,7 @@ export default function Schedules() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {staff.map((member) => (
-                  <tr key={member.id} className="group hover:bg-gray-50/50">
+                  <tr key={member.id} className="group hover:bg-[#F0EDE5]/50">
                     {/* Staff name cell */}
                     <td className="border-r px-4 py-3">
                       <div className="flex items-center gap-2.5">
@@ -478,7 +478,7 @@ export default function Schedules() {
               )}
               <button
                 onClick={() => setModal(null)}
-                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-[#F0EDE5]"
               >
                 Cancel
               </button>

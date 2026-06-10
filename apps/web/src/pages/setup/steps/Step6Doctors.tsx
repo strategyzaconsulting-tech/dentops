@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSetup, Doctor } from '../../../context/SetupContext'
 
@@ -62,7 +62,7 @@ export default function Step6Doctors() {
         Add your doctors
       </h1>
       <p className="text-sm text-gray-500 mb-8">
-        They'll receive an email invite to join DentOps.
+        They'll receive an email invite to join Brisa.
       </p>
 
       {/* Doctor list */}
@@ -175,7 +175,7 @@ export default function Step6Doctors() {
                 setForm(emptyForm)
                 setShowForm(false)
               }}
-              className="px-4 py-2 rounded-md text-sm text-gray-500 border border-gray-200 hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 rounded-md text-sm text-gray-500 border border-gray-200 hover:bg-[#F0EDE5] transition-colors"
             >
               Cancel
             </button>

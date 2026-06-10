@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
@@ -287,7 +287,7 @@ export default function ProbationSection({ member, onUpdated }: Props) {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowReview(false)}
-                  className="flex-1 rounded-lg border border-gray-300 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                  className="flex-1 rounded-lg border border-gray-300 py-2 text-sm text-gray-600 hover:bg-[#F0EDE5]"
                 >
                   Cancel
                 </button>

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+﻿import { useNavigate } from 'react-router-dom'
 
 export default function Step1Welcome() {
   const navigate = useNavigate()
@@ -17,7 +17,7 @@ export default function Step1Welcome() {
         </div>
 
         <h1 className="text-3xl font-semibold text-[#2C2C2A] mb-3">
-          Welcome to DentOps
+          Welcome to Brisa
         </h1>
         <p className="text-sm text-gray-500 mb-10">
           Let's get your practice set up. This takes about 5 minutes.

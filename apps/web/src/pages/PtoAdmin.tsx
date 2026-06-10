@@ -279,7 +279,7 @@ export default function PtoAdmin() {
                           <button
                             onClick={() => handleAction(req.id, 'denied')}
                             disabled={actioningId === req.id}
-                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-[#F0EDE5] disabled:opacity-50"
                           >
                             Deny
                           </button>
@@ -304,7 +304,7 @@ export default function PtoAdmin() {
                 <div className="mb-6 flex items-center gap-4">
                   <button
                     onClick={prevMonth}
-                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
+                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-[#F0EDE5]"
                   >
                     ←
                   </button>
@@ -313,7 +313,7 @@ export default function PtoAdmin() {
                   </h2>
                   <button
                     onClick={nextMonth}
-                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
+                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-[#F0EDE5]"
                   >
                     →
                   </button>
@@ -321,7 +321,7 @@ export default function PtoAdmin() {
 
                 <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                   {/* Day-of-week header */}
-                  <div className="grid grid-cols-7 border-b bg-gray-50">
+                  <div className="grid grid-cols-7 border-b bg-[#EFECE4]">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
                       <div
                         key={d}
@@ -339,7 +339,7 @@ export default function PtoAdmin() {
                         return (
                           <div
                             key={`empty-${idx}`}
-                            className="h-28 border-r border-b bg-gray-50 last:border-r-0"
+                            className="h-28 border-r border-b bg-[#EFECE4] last:border-r-0"
                           />
                         )
                       }

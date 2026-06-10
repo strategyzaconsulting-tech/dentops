@@ -401,7 +401,7 @@ export default function TimeClock() {
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b bg-gray-50 text-xs uppercase text-gray-500">
+                <tr className="border-b bg-[#EFECE4] text-xs uppercase text-[#4A5C52]">
                   <th className="px-4 py-3 text-left font-semibold">Staff</th>
                   <th className="px-4 py-3 text-left font-semibold">Location</th>
                   <th className="px-4 py-3 text-left font-semibold">Specialty</th>
@@ -421,7 +421,7 @@ export default function TimeClock() {
                   </tr>
                 ) : (
                   todayPunches.map((p) => (
-                    <tr key={p.id} className="hover:bg-gray-50">
+                    <tr key={p.id} className="hover:bg-[#F0EDE5]">
                       <td className="px-4 py-3 font-medium text-gray-900">
                         {p.user.firstName} {p.user.lastName}
                       </td>
@@ -481,7 +481,7 @@ export default function TimeClock() {
                   className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors ${
                     adjFilter === f
                       ? 'bg-[#1D9E75] text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-[#E8E4DB] text-[#4A5C52] hover:bg-[#DDD9D0]'
                   }`}
                 >
                   {f}
@@ -645,7 +645,7 @@ export default function TimeClock() {
                             <div className="flex gap-2">
                               <button
                                 onClick={() => { setExpandedAdjId(null); setManagerNote('') }}
-                                className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50"
+                                className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-[#F0EDE5]"
                               >
                                 Cancel
                               </button>
@@ -748,7 +748,7 @@ export default function TimeClock() {
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => setEditState(null)}
-                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-[#F0EDE5]"
               >
                 Cancel
               </button>

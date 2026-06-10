@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSetup } from '../../../context/SetupContext'
 import { submitSetup } from '../../../services/api'
@@ -210,7 +210,7 @@ export default function Step9Launch() {
               Setting up your practice...
             </>
           ) : (
-            'Launch DentOps →'
+            'Launch Brisa →'
           )}
         </button>
 

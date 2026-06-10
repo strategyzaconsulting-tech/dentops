@@ -147,7 +147,7 @@ export default function Announcements() {
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => { setShowForm(false); setTitle(''); setBody('') }}
-                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-[#F0EDE5]"
               >
                 Cancel
               </button>

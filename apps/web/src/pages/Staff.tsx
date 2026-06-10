@@ -539,7 +539,7 @@ export default function Staff() {
               return (
                 <div
                   key={member.id}
-                  className={`flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors ${
+                  className={`flex items-center gap-4 px-5 py-3.5 hover:bg-[#F0EDE5] transition-colors ${
                     idx > 0 ? 'border-t border-gray-100' : ''
                   } ${isSeparated ? 'opacity-75' : ''}`}
                 >
@@ -917,7 +917,7 @@ export default function Staff() {
             <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
               <button
                 onClick={() => setModal(null)}
-                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-[#F0EDE5]"
               >
                 Cancel
               </button>

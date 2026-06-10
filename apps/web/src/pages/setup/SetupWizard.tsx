@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+﻿import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 const STEPS = [
   'welcome',
@@ -49,7 +49,7 @@ export default function SetupWizard() {
             >
               D
             </div>
-            <span className="font-semibold text-[#2C2C2A] text-base">DentOps</span>
+            <span className="font-semibold text-[#2C2C2A] text-base">Brisa</span>
           </div>
 
           {/* Step indicator */}
