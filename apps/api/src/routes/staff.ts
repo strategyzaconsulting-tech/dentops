@@ -104,8 +104,8 @@ export default async function staffRoutes(server: FastifyInstance) {
         where: {
           practiceId,
           probationEndDate: { not: null },
-          probationStatus: { in: ['active', null] },
           status: 'active',
+          OR: [{ probationStatus: 'active' }, { probationStatus: null }],
         },
         select: {
           id: true, firstName: true, lastName: true, role: true,
