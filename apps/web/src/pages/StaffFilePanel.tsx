@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import EmployeeReportModal from './EmployeeReportModal'
+import StaffOnboardingTab from './StaffOnboardingTab'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -130,6 +131,7 @@ export default function StaffFilePanel({ member, onClose, onEdit }: Props) {
   const [reportData, setReportData] = useState<unknown>(null)
   const [generatingReport, setGeneratingReport] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'overview' | 'onboarding'>('overview')
 
   const today = new Date()
   today.setHours(23, 59, 59, 999)
@@ -335,8 +337,39 @@ export default function StaffFilePanel({ member, onClose, onEdit }: Props) {
           </div>
         </div>
 
+        {/* Tab bar */}
+        <div className="flex border-b border-gray-100 bg-white shrink-0">
+          {[
+            { key: 'overview', label: 'Overview' },
+            { key: 'onboarding', label: 'Onboarding' },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as 'overview' | 'onboarding')}
+              className={`px-5 py-3 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+                activeTab === tab.key
+                  ? 'border-[#1D9E75] text-[#1D9E75]'
+                  : 'border-transparent text-gray-400 hover:text-gray-700'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex-1 overflow-y-auto">
+          {/* Onboarding tab */}
+          {activeTab === 'onboarding' && (
+            <div className="px-6 py-5">
+              <StaffOnboardingTab
+                userId={member.id}
+                firstName={member.firstName}
+              />
+            </div>
+          )}
+
           {/* At a Glance */}
+          {activeTab === 'overview' && <>
           <section className="px-6 py-5 border-b border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -540,6 +573,7 @@ export default function StaffFilePanel({ member, onClose, onEdit }: Props) {
               </div>
             )}
           </section>
+          </>}
         </div>
       </div>
 
