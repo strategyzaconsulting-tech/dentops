@@ -402,23 +402,23 @@ export default function Dashboard() {
                   {mod.illustration}
                 </div>
 
-                {/* Text — bottom left */}
-                <div className="relative mt-16">
-                  <div className="flex items-center gap-2">
-                  <h3
-                    className="text-base font-bold leading-tight"
-                    style={{ color: mod.active ? mod.accent : '#9CA3AF' }}
-                  >
-                    {mod.title}
-                  </h3>
-                  {mod.title === 'Staff' && probationCount > 0 && (
-                    <span className="rounded-full bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 leading-none">
-                      {probationCount}
-                    </span>
-                  )}
+                {/* Text — centered bottom */}
+                <div className="relative mt-16 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <h3
+                      className="text-lg font-bold leading-tight"
+                      style={{ color: mod.active ? mod.accent : '#9CA3AF' }}
+                    >
+                      {mod.title}
+                    </h3>
+                    {mod.title === 'Staff' && probationCount > 0 && (
+                      <span className="rounded-full bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 leading-none">
+                        {probationCount}
+                      </span>
+                    )}
                   </div>
-                  <p className="mt-1 text-xs text-gray-500 leading-snug">{mod.desc}</p>
-                  </div>
+                  <p className="mt-1 text-sm text-gray-500 leading-snug">{mod.desc}</p>
+                </div>
 
                 {/* Active arrow hint */}
                 {mod.active && mod.href !== '#' && (
