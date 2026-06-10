@@ -198,6 +198,10 @@ model ClockAdjustment {
   notes      String
   status     String   @default("pending")
   createdAt  DateTime @default(now()) @map("created_at")
+  correctedPunchIn  DateTime? @map("corrected_punch_in")
+  correctedPunchOut DateTime? @map("corrected_punch_out")
+  reviewedAt        DateTime? @map("reviewed_at") @db.Timestamptz()
+  reviewNotes       String?   @map("review_notes")
 
   practice Practice @relation(fields: [practiceId], references: [id])
   user     User     @relation(fields: [userId], references: [id])

@@ -119,6 +119,8 @@ export default function TimeClockScreen() {
   const [adjPunchId, setAdjPunchId] = useState<string | undefined>()
   const [adjType, setAdjType] = useState('missed_clock_in')
   const [adjNotes, setAdjNotes] = useState('')
+  const [adjCorrectedIn, setAdjCorrectedIn] = useState('')
+  const [adjCorrectedOut, setAdjCorrectedOut] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const weekStart = getMonday(new Date())
@@ -154,14 +156,39 @@ export default function TimeClockScreen() {
   function openModal(date: Date, punchId?: string) {
     setAdjDate(toISODate(date))
     setAdjPunchId(punchId)
-    setAdjType('missed_clock_in')
+    setAdjType(punchId ? 'wrong_time' : 'missed_clock_in')
     setAdjNotes('')
+    setAdjCorrectedIn('')
+    setAdjCorrectedOut('')
     setModalVisible(true)
   }
 
+  function parseTimeToISO(dateStr: string, timeStr: string): string | null {
+    const t = timeStr.trim()
+    const ampm = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+    if (ampm) {
+      let h = parseInt(ampm[1])
+      const m = parseInt(ampm[2])
+      if (ampm[3].toUpperCase() === 'AM' && h === 12) h = 0
+      if (ampm[3].toUpperCase() === 'PM' && h !== 12) h += 12
+      const d = new Date(dateStr)
+      d.setHours(h, m, 0, 0)
+      return d.toISOString()
+    }
+    const hhmm = t.match(/^(\d{1,2}):(\d{2})$/)
+    if (hhmm) {
+      const d = new Date(dateStr)
+      d.setHours(parseInt(hhmm[1]), parseInt(hhmm[2]), 0, 0)
+      return d.toISOString()
+    }
+    return null
+  }
+
   async function submitAdjustment() {
-    if (!adjNotes.trim()) {
-      Alert.alert('Notes required', 'Please describe the adjustment needed.')
+    const hasCorrectedTime = adjCorrectedIn.trim() || adjCorrectedOut.trim()
+    const hasNotes = adjNotes.trim()
+    if (!hasCorrectedTime && !hasNotes) {
+      Alert.alert('Required', 'Please enter a corrected time or describe the adjustment needed.')
       return
     }
     setSubmitting(true)
@@ -176,6 +203,8 @@ export default function TimeClockScreen() {
           date: adjDate,
           type: adjType,
           notes: adjNotes.trim(),
+          correctedPunchIn: adjCorrectedIn.trim() ? parseTimeToISO(adjDate, adjCorrectedIn.trim()) : undefined,
+          correctedPunchOut: adjCorrectedOut.trim() ? parseTimeToISO(adjDate, adjCorrectedOut.trim()) : undefined,
         }),
       })
       if (res.ok) {
@@ -317,11 +346,41 @@ export default function TimeClockScreen() {
               ))}
             </ScrollView>
 
+            {/* Corrected times */}
+            {(adjType === 'missed_clock_in' || adjType === 'wrong_time') && (
+              <>
+                <Text style={styles.fieldLabel}>Corrected Clock-In Time</Text>
+                <TextInput
+                  style={styles.timeInput}
+                  placeholder="e.g. 9:00 AM"
+                  placeholderTextColor="#bbb"
+                  value={adjCorrectedIn}
+                  onChangeText={setAdjCorrectedIn}
+                  keyboardType="default"
+                  autoCapitalize="characters"
+                />
+              </>
+            )}
+            {(adjType === 'missed_clock_out' || adjType === 'wrong_time') && (
+              <>
+                <Text style={styles.fieldLabel}>Corrected Clock-Out Time</Text>
+                <TextInput
+                  style={styles.timeInput}
+                  placeholder="e.g. 5:30 PM"
+                  placeholderTextColor="#bbb"
+                  value={adjCorrectedOut}
+                  onChangeText={setAdjCorrectedOut}
+                  keyboardType="default"
+                  autoCapitalize="characters"
+                />
+              </>
+            )}
+
             {/* Notes */}
             <Text style={styles.fieldLabel}>Notes</Text>
             <TextInput
               style={styles.notesInput}
-              placeholder="Describe what needs to be corrected including the correct time…"
+              placeholder="Additional context for your manager…"
               placeholderTextColor="#bbb"
               multiline
               numberOfLines={3}
@@ -459,11 +518,17 @@ const styles = StyleSheet.create({
   },
   typeChipText: { fontSize: 13, color: '#555', fontWeight: '500' },
   typeChipTextSelected: { fontSize: 13, color: '#fff', fontWeight: '600' },
+  timeInput: {
+    borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 16, fontWeight: '600' as const, color: '#2C2C2A', backgroundColor: '#FAFAFA',
+    letterSpacing: 0.5,
+  },
   notesInput: {
     borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 12,
     fontSize: 14, color: '#2C2C2A', backgroundColor: '#FAFAFA',
-    minHeight: 80, textAlignVertical: 'top',
+    minHeight: 80, textAlignVertical: 'top' as const,
   },
   submitBtn: {
     backgroundColor: '#1D9E75', borderRadius: 10,

@@ -55,6 +55,10 @@ interface AdjustmentRequest {
   notes: string
   status: string
   createdAt: string
+  correctedPunchIn: string | null
+  correctedPunchOut: string | null
+  reviewedAt: string | null
+  reviewNotes: string | null
 }
 
 const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
@@ -136,6 +140,8 @@ export default function TimeClock() {
   const [adjustments, setAdjustments] = useState<AdjustmentRequest[]>([])
   const [adjFilter, setAdjFilter] = useState<'all' | 'pending' | 'approved' | 'denied'>('pending')
   const [reviewingId, setReviewingId] = useState<string | null>(null)
+  const [expandedAdjId, setExpandedAdjId] = useState<string | null>(null)
+  const [managerNote, setManagerNote] = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -199,17 +205,20 @@ export default function TimeClock() {
     })
   }
 
-  async function reviewAdjustment(id: string, status: 'approved' | 'denied') {
+  async function reviewAdjustment(id: string, status: 'approved' | 'denied', note?: string) {
     setReviewingId(id)
     try {
       const res = await fetch(`${API_BASE}/api/clock-adjustments/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, reviewNotes: note?.trim() || undefined }),
       })
       if (res.ok) {
         const updated: AdjustmentRequest = await res.json()
         setAdjustments((prev) => prev.map((a) => (a.id === id ? updated : a)))
+        setExpandedAdjId(null)
+        setManagerNote('')
+        if (status === 'approved') await fetchData()
       }
     } catch {
       // swallow
@@ -482,83 +491,187 @@ export default function TimeClock() {
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b bg-gray-50 text-xs uppercase text-gray-500">
-                  <th className="px-4 py-3 text-left font-semibold">Staff</th>
-                  <th className="px-4 py-3 text-left font-semibold">Date</th>
-                  <th className="px-4 py-3 text-left font-semibold">Type</th>
-                  <th className="px-4 py-3 text-left font-semibold">Notes</th>
-                  <th className="px-4 py-3 text-left font-semibold">Submitted</th>
-                  <th className="px-4 py-3 text-left font-semibold">Status</th>
-                  <th className="px-4 py-3 text-left font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {adjustments.filter((a) => adjFilter === 'all' || a.status === adjFilter).length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-10 text-center text-gray-400">
-                      No {adjFilter === 'all' ? '' : adjFilter} requests
-                    </td>
-                  </tr>
-                ) : (
-                  adjustments
-                    .filter((a) => adjFilter === 'all' || a.status === adjFilter)
-                    .map((a) => (
-                      <tr key={a.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium text-gray-900">
-                          {a.user.firstName} {a.user.lastName}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">
-                          {new Date(a.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">
-                          {ADJUSTMENT_TYPE_LABELS[a.type] ?? a.type}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 max-w-xs">
-                          <span className="line-clamp-2">{a.notes}</span>
-                        </td>
-                        <td className="px-4 py-3 text-gray-400 text-xs">
-                          {new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}{' '}
-                          {new Date(a.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            a.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                            a.status === 'approved' ? 'bg-green-100 text-green-700' :
-                            'bg-red-100 text-red-700'
-                          }`}>
-                            {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {a.status === 'pending' ? (
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            {adjustments.filter((a) => adjFilter === 'all' || a.status === adjFilter).length === 0 ? (
+              <div className="py-10 text-center text-sm text-gray-400">
+                No {adjFilter === 'all' ? '' : adjFilter} requests
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {adjustments
+                  .filter((a) => adjFilter === 'all' || a.status === adjFilter)
+                  .map((a) => {
+                    const isExpanded = expandedAdjId === a.id
+                    const hasCorrectedTimes = a.correctedPunchIn || a.correctedPunchOut
+                    return (
+                      <div key={a.id} className={isExpanded ? 'bg-amber-50' : ''}>
+                        {/* Main row */}
+                        <div className="flex items-center gap-4 px-5 py-3.5">
+                          {/* Staff + date */}
+                          <div className="w-40 shrink-0">
+                            <p className="text-sm font-semibold text-gray-900">{a.user.firstName} {a.user.lastName}</p>
+                            <p className="text-xs text-gray-400">
+                              {new Date(a.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                          </div>
+
+                          {/* Type */}
+                          <div className="w-32 shrink-0">
+                            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                              {ADJUSTMENT_TYPE_LABELS[a.type] ?? a.type}
+                            </span>
+                          </div>
+
+                          {/* Corrected times */}
+                          <div className="flex-1 min-w-0">
+                            {hasCorrectedTimes ? (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {a.correctedPunchIn && (
+                                  <span className="inline-flex items-center gap-1 rounded-lg bg-[#E8F5F0] border border-[#A7F3D0] px-2.5 py-1 text-xs font-semibold text-[#065F46]">
+                                    In → {formatHm(a.correctedPunchIn)}
+                                  </span>
+                                )}
+                                {a.correctedPunchOut && (
+                                  <span className="inline-flex items-center gap-1 rounded-lg bg-[#E8F5F0] border border-[#A7F3D0] px-2.5 py-1 text-xs font-semibold text-[#065F46]">
+                                    Out → {formatHm(a.correctedPunchOut)}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-500 truncate">{a.notes}</p>
+                            )}
+                            {hasCorrectedTimes && a.notes && (
+                              <p className="text-xs text-gray-400 mt-0.5 truncate">{a.notes}</p>
+                            )}
+                          </div>
+
+                          {/* Submitted */}
+                          <div className="w-24 shrink-0 text-right hidden lg:block">
+                            <p className="text-xs text-gray-400">
+                              {new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </p>
+                          </div>
+
+                          {/* Status */}
+                          <div className="w-24 shrink-0">
+                            <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              a.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                              a.status === 'approved' ? 'bg-green-100 text-green-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+                            </span>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="shrink-0">
+                            {a.status === 'pending' ? (
+                              <button
+                                onClick={() => {
+                                  setExpandedAdjId(isExpanded ? null : a.id)
+                                  setManagerNote('')
+                                }}
+                                className="rounded-lg bg-[#1D9E75] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+                              >
+                                Review
+                              </button>
+                            ) : (
+                              <span className="text-xs text-gray-300">—</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Inline review panel */}
+                        {isExpanded && a.status === 'pending' && (
+                          <div className="mx-5 mb-4 rounded-xl border border-amber-200 bg-white p-4 space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="text-sm font-bold text-gray-800">
+                                  Review — {a.user.firstName} {a.user.lastName}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {ADJUSTMENT_TYPE_LABELS[a.type] ?? a.type} · {new Date(a.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* What will change */}
+                            {hasCorrectedTimes && (
+                              <div className="rounded-lg bg-[#F0FAF6] border border-[#A7F3D0] px-4 py-3">
+                                <p className="text-xs font-semibold text-[#065F46] mb-1.5">
+                                  {a.punchId ? 'Approving will update the time punch:' : 'Corrected times requested:'}
+                                </p>
+                                <div className="flex flex-wrap gap-3">
+                                  {a.correctedPunchIn && (
+                                    <div>
+                                      <span className="text-xs text-gray-500">Clock In →</span>
+                                      <span className="ml-1.5 text-sm font-bold text-[#1D9E75]">{formatHm(a.correctedPunchIn)}</span>
+                                    </div>
+                                  )}
+                                  {a.correctedPunchOut && (
+                                    <div>
+                                      <span className="text-xs text-gray-500">Clock Out →</span>
+                                      <span className="ml-1.5 text-sm font-bold text-[#1D9E75]">{formatHm(a.correctedPunchOut)}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                {!a.punchId && (
+                                  <p className="text-xs text-amber-600 mt-1.5">No linked punch — you may need to add the entry manually in today's log.</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Staff's notes */}
+                            {a.notes && (
+                              <div className="rounded-lg bg-gray-50 px-3 py-2">
+                                <p className="text-xs text-gray-400 font-medium mb-0.5">Staff note:</p>
+                                <p className="text-sm text-gray-700">{a.notes}</p>
+                              </div>
+                            )}
+
+                            {/* Manager notes */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Manager Notes <span className="text-gray-400 font-normal">(optional)</span>
+                              </label>
+                              <input
+                                type="text"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                                placeholder="Add a note for the employee…"
+                                value={managerNote}
+                                onChange={e => setManagerNote(e.target.value)}
+                              />
+                            </div>
+
                             <div className="flex gap-2">
                               <button
-                                onClick={() => reviewAdjustment(a.id, 'approved')}
-                                disabled={reviewingId === a.id}
-                                className="rounded px-2.5 py-1 text-xs font-medium text-[#1D9E75] hover:bg-[#E1F5EE] disabled:opacity-50"
+                                onClick={() => { setExpandedAdjId(null); setManagerNote('') }}
+                                className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50"
                               >
-                                Approve
+                                Cancel
                               </button>
                               <button
-                                onClick={() => reviewAdjustment(a.id, 'denied')}
+                                onClick={() => reviewAdjustment(a.id, 'denied', managerNote)}
                                 disabled={reviewingId === a.id}
-                                className="rounded px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                className="flex-1 rounded-lg border border-red-300 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
                               >
-                                Deny
+                                {reviewingId === a.id ? '…' : 'Deny'}
+                              </button>
+                              <button
+                                onClick={() => reviewAdjustment(a.id, 'approved', managerNote)}
+                                disabled={reviewingId === a.id}
+                                className="flex-1 rounded-lg bg-[#1D9E75] py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                              >
+                                {reviewingId === a.id ? 'Applying…' : hasCorrectedTimes && a.punchId ? '✓ Approve & Update Timesheet' : '✓ Approve'}
                               </button>
                             </div>
-                          ) : (
-                            <span className="text-xs text-gray-400">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                )}
-              </tbody>
-            </table>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+              </div>
+            )}
           </div>
         </section>
       </main>
