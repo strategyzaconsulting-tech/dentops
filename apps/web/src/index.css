@@ -1,51 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@100;300;400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 162 69% 37%;
+    /* ── Brisa palette ───────────────────────────────────────── */
+    --background:        36 35% 93%;    /* #F5F0E8  warm cream    */
+    --foreground:        165 17% 21%;   /* #2C3E3A  dark forest   */
+
+    --card:              0 0% 100%;     /* #FFFFFF  white cards   */
+    --card-foreground:   165 17% 21%;   /* #2C3E3A                */
+
+    --popover:           0 0% 100%;
+    --popover-foreground: 165 17% 21%;
+
+    --primary:           162 69% 37%;   /* #1D9E75  Brisa teal    */
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
+
+    --secondary:         152 20% 88%;   /* #DCEAE3  sage light    */
+    --secondary-foreground: 165 17% 21%;
+
+    --muted:             40 18% 91%;    /* #EFECE4  warm tan      */
+    --muted-foreground:  152 7% 46%;    /* #6B7A72  sage muted    */
+
+    --accent:            152 20% 88%;
+    --accent-foreground: 165 17% 21%;
+
+    --destructive:       0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 162 69% 37%;
-    --radius: 0.5rem;
+
+    --border:            40 12% 82%;    /* #D8D4CC  warm border   */
+    --input:             40 12% 82%;
+    --ring:              162 69% 37%;   /* #1D9E75                */
+    --radius:            0.5rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --background:        165 17% 12%;
+    --foreground:        38 30% 93%;
+    --card:              165 17% 15%;
+    --card-foreground:   38 30% 93%;
+    --popover:           165 17% 15%;
+    --popover-foreground: 38 30% 93%;
+    --primary:           162 69% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary:         165 17% 20%;
+    --secondary-foreground: 38 30% 93%;
+    --muted:             165 17% 20%;
+    --muted-foreground:  152 10% 55%;
+    --accent:            165 17% 20%;
+    --accent-foreground: 38 30% 93%;
+    --destructive:       0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --border:            165 17% 25%;
+    --input:             165 17% 25%;
+    --ring:              162 69% 37%;
   }
 }
 
@@ -53,7 +64,45 @@
   * {
     @apply border-border;
   }
+
+  html {
+    font-family: 'Josefin Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
     @apply bg-background text-foreground;
+    font-family: 'Josefin Sans', system-ui, sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+
+  /* Headings — slightly wider tracking, lighter weight */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Josefin Sans', system-ui, sans-serif;
+    font-weight: 300;
+    letter-spacing: 0.06em;
+  }
+
+  /* Uppercase labels get generous tracking like the mobile app */
+  .uppercase {
+    letter-spacing: 0.12em;
+  }
+
+  /* Buttons — keep readable weight */
+  button {
+    font-family: 'Josefin Sans', system-ui, sans-serif;
+    letter-spacing: 0.04em;
+  }
+
+  input, select, textarea {
+    font-family: 'Josefin Sans', system-ui, sans-serif;
+    letter-spacing: 0.02em;
+  }
+
+  /* Table cells */
+  td, th {
+    font-family: 'Josefin Sans', system-ui, sans-serif;
   }
 }
