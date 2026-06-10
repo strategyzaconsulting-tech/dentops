@@ -99,6 +99,8 @@ export interface StaffMember {
   hireDate: string | null
   managerId: string | null
   separationDate: string | null
+  phone: string | null
+  address: string | null
 }
 
 interface Occurrence {
@@ -295,7 +297,11 @@ export default function StaffFilePanel({ member, onClose, onEdit }: Props) {
                 {member.status}
               </span>
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">{member.email}</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+              <p className="text-xs text-gray-400">{member.email}</p>
+              {member.phone && <p className="text-xs text-gray-400">{member.phone}</p>}
+              {member.address && <p className="text-xs text-gray-400">{member.address}</p>}
+            </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <button

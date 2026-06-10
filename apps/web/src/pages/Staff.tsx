@@ -38,6 +38,8 @@ interface StaffMember {
   hireDate: string | null
   managerId: string | null
   separationDate: string | null
+  phone: string | null
+  address: string | null
 }
 
 type ModalMode = 'add' | 'edit'
@@ -53,6 +55,8 @@ interface FormState {
   hireDate: string
   managerId: string
   separationDate: string
+  phone: string
+  address: string
 }
 
 const emptyForm: FormState = {
@@ -66,6 +70,8 @@ const emptyForm: FormState = {
   hireDate: '',
   managerId: '',
   separationDate: '',
+  phone: '',
+  address: '',
 }
 
 function fmt12h(t: string | null) {
@@ -165,6 +171,8 @@ export default function Staff() {
       hireDate: member.hireDate ? member.hireDate.split('T')[0] : '',
       managerId: member.managerId ?? '',
       separationDate: member.separationDate ? member.separationDate.split('T')[0] : '',
+      phone: member.phone ?? '',
+      address: member.address ?? '',
     })
     setShowNewBenefitInput(false)
     setNewBenefitName('')
@@ -225,6 +233,8 @@ export default function Staff() {
         hireDate: form.hireDate || null,
         managerId: form.managerId || null,
         separationDate: form.separationDate || null,
+        phone: form.phone || null,
+        address: form.address || null,
       }
       if (modal?.mode === 'add') {
         await fetch(`${API_BASE}/api/staff`, {
@@ -255,11 +265,12 @@ export default function Staff() {
   )
 
   const KNOWN_STATUSES = new Set(['active', 'on_leave', 'terminated', 'resigned'])
-  const displayed = statusFilter === 'all'
+  const displayed = (statusFilter === 'all'
     ? filtered
     : statusFilter === 'other'
     ? filtered.filter(s => !KNOWN_STATUSES.has(s.status))
     : filtered.filter(s => s.status === statusFilter)
+  ).slice().sort((a, b) => a.lastName.localeCompare(b.lastName))
 
   const countByStatus = (key: string) => {
     if (key === 'all') return filtered.length
@@ -403,6 +414,12 @@ export default function Staff() {
                       <span className="text-gray-300">✉</span>
                       <span className="truncate">{member.email}</span>
                     </div>
+                    {member.phone && (
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span className="text-gray-300">📞</span>
+                        <span>{member.phone}</span>
+                      </div>
+                    )}
                     {(member.shiftStart || member.shiftEnd) && (
                       <div className="flex items-center gap-2 text-xs text-gray-500">
                         <span className="text-gray-300">◷</span>
@@ -576,6 +593,28 @@ export default function Staff() {
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Phone</label>
+                <input
+                  type="tel"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                  placeholder="(555) 000-0000"
+                  value={form.phone}
+                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Address</label>
+                <input
+                  type="text"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                  placeholder="123 Main St, City, State ZIP"
+                  value={form.address}
+                  onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
                 />
               </div>
 

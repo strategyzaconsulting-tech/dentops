@@ -45,7 +45,7 @@ export default async function reportRoutes(server: FastifyInstance) {
           select: {
             id: true, firstName: true, lastName: true, email: true,
             role: true, status: true, shiftStart: true, shiftEnd: true,
-            hireDate: true, managerId: true,
+            hireDate: true, managerId: true, phone: true, address: true,
           },
         }),
         prisma.employeeOccurrence.findMany({
@@ -150,6 +150,8 @@ Be direct and factual. Write in third person. Keep the full response under 250 w
           shiftStart: user.shiftStart,
           shiftEnd: user.shiftEnd,
           manager: manager ? `${manager.firstName} ${manager.lastName}` : null,
+          phone: user.phone ?? null,
+          address: user.address ?? null,
         },
         attendance: {
           scheduledDays,

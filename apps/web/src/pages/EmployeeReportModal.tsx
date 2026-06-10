@@ -35,6 +35,8 @@ interface ReportData {
     shiftStart: string | null
     shiftEnd: string | null
     manager: string | null
+    phone?: string | null
+    address?: string | null
   }
   attendance: {
     scheduledDays: number
@@ -160,6 +162,8 @@ export default function EmployeeReportModal({ report, onClose }: Props) {
                   { label: 'Email', value: employee.email },
                   { label: 'Role', value: employee.role.replace('_', ' '), capitalize: true },
                   { label: 'Status', value: employee.status, capitalize: true },
+                  { label: 'Phone', value: employee.phone ?? '—' },
+                  { label: 'Address', value: employee.address ?? '—' },
                   { label: 'Hire Date', value: fmtDate(employee.hireDate) },
                   { label: 'Manager', value: employee.manager ?? '—' },
                   {
