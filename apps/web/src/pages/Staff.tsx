@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import StaffFilePanel from './StaffFilePanel'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -83,6 +84,7 @@ export default function Staff() {
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<{ mode: ModalMode; member?: StaffMember } | null>(null)
+  const [filePanel, setFilePanel] = useState<StaffMember | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
@@ -327,8 +329,14 @@ export default function Staff() {
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <button
+                            onClick={() => setFilePanel(member)}
+                            className="text-xs font-semibold text-[#1D9E75] hover:underline"
+                          >
+                            File
+                          </button>
+                          <button
                             onClick={() => openEdit(member)}
-                            className="text-xs font-medium text-[#1D9E75] hover:underline"
+                            className="text-xs font-medium text-gray-500 hover:text-gray-800"
                           >
                             Edit
                           </button>
@@ -348,6 +356,18 @@ export default function Staff() {
           </div>
         )}
       </main>
+
+      {/* Staff file panel */}
+      {filePanel && (
+        <StaffFilePanel
+          member={filePanel}
+          onClose={() => setFilePanel(null)}
+          onEdit={() => {
+            openEdit(filePanel)
+            setFilePanel(null)
+          }}
+        />
+      )}
 
       {/* Add / Edit modal */}
       {modal && (

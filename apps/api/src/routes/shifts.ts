@@ -2,23 +2,33 @@ import type { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
 
 export default async function shiftsRoutes(server: FastifyInstance) {
-  // GET /api/shifts?practiceId=&weekStart=YYYY-MM-DD
-  server.get<{ Querystring: { practiceId: string; weekStart: string } }>(
+  // GET /api/shifts?practiceId=&weekStart=YYYY-MM-DD&userId=&from=YYYY-MM-DD&to=YYYY-MM-DD
+  server.get<{ Querystring: { practiceId: string; weekStart?: string; userId?: string; from?: string; to?: string } }>(
     '/shifts',
     async (request, reply) => {
-      const { practiceId, weekStart } = request.query
+      const { practiceId, weekStart, userId, from, to } = request.query
       if (!practiceId) {
         return reply.status(400).send({ error: 'practiceId is required' })
       }
 
-      const start = weekStart ? new Date(weekStart) : getMonday(new Date())
-      const end = new Date(start)
-      end.setDate(end.getDate() + 7)
+      let start: Date
+      let end: Date
+      if (from && to) {
+        start = new Date(from)
+        start.setHours(0, 0, 0, 0)
+        end = new Date(to)
+        end.setHours(23, 59, 59, 999)
+      } else {
+        start = weekStart ? new Date(weekStart) : getMonday(new Date())
+        end = new Date(start)
+        end.setDate(end.getDate() + 7)
+      }
 
       const shifts = await prisma.shift.findMany({
         where: {
           practiceId,
-          date: { gte: start, lt: end },
+          ...(userId ? { userId } : {}),
+          date: { gte: start, lte: end },
         },
         include: {
           user: { select: { id: true, firstName: true, lastName: true, role: true } },
