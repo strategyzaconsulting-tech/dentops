@@ -116,6 +116,14 @@ export default function Staff() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('active')
   const [filePanel, setFilePanel] = useState<StaffMember | null>(null)
+  const [view, setView] = useState<'grid' | 'list'>(() =>
+    (localStorage.getItem('staff-view') as 'grid' | 'list') ?? 'grid'
+  )
+
+  function toggleView(v: 'grid' | 'list') {
+    setView(v)
+    localStorage.setItem('staff-view', v)
+  }
 
   const [benefits, setBenefits] = useState<BenefitRow[]>([])
   const [newBenefitName, setNewBenefitName] = useState('')
@@ -293,6 +301,33 @@ export default function Staff() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
           />
+          <div className="flex items-center gap-3">
+          {/* View toggle */}
+          <div className="flex rounded-lg border border-gray-200 bg-white overflow-hidden shrink-0">
+            <button
+              onClick={() => toggleView('grid')}
+              title="Grid view"
+              className={`px-2.5 py-1.5 transition-colors ${view === 'grid' ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700'}`}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <rect x="0" y="0" width="6" height="6" rx="1" fill="currentColor"/>
+                <rect x="8" y="0" width="6" height="6" rx="1" fill="currentColor"/>
+                <rect x="0" y="8" width="6" height="6" rx="1" fill="currentColor"/>
+                <rect x="8" y="8" width="6" height="6" rx="1" fill="currentColor"/>
+              </svg>
+            </button>
+            <button
+              onClick={() => toggleView('list')}
+              title="List view"
+              className={`px-2.5 py-1.5 transition-colors border-l border-gray-200 ${view === 'list' ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700'}`}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <rect x="0" y="1" width="14" height="2" rx="1" fill="currentColor"/>
+                <rect x="0" y="6" width="14" height="2" rx="1" fill="currentColor"/>
+                <rect x="0" y="11" width="14" height="2" rx="1" fill="currentColor"/>
+              </svg>
+            </button>
+          </div>
           <div className="flex flex-wrap gap-1.5">
             <button
               onClick={() => setStatusFilter('all')}
@@ -319,6 +354,7 @@ export default function Staff() {
               </button>
             ))}
           </div>
+          </div>
         </div>
 
         {loading ? (
@@ -327,7 +363,7 @@ export default function Staff() {
           <div className="py-20 text-center text-sm text-gray-400">
             {search ? 'No staff match your search.' : `No ${statusFilter === 'all' ? '' : statusFilter.replace('_', ' ')} staff members.`}
           </div>
-        ) : (
+        ) : view === 'grid' ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {displayed.map((member) => {
               const st = STATUS_STYLES[member.status] ?? STATUS_STYLES['inactive']
@@ -339,7 +375,6 @@ export default function Staff() {
                     isSeparated ? 'border-gray-200 opacity-80' : 'border-gray-100'
                   }`}
                 >
-                  {/* Card top */}
                   <div className="flex items-start gap-4 p-5 pb-4">
                     <div
                       className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white ${isSeparated ? 'opacity-60' : ''}`}
@@ -363,7 +398,6 @@ export default function Staff() {
                     </div>
                   </div>
 
-                  {/* Card details */}
                   <div className="px-5 pb-4 space-y-1.5 flex-1">
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <span className="text-gray-300">✉</span>
@@ -389,7 +423,6 @@ export default function Staff() {
                     )}
                   </div>
 
-                  {/* Card actions */}
                   <div className="flex items-center justify-between border-t border-gray-50 px-5 py-3">
                     <button
                       onClick={() => setFilePanel(member)}
@@ -400,6 +433,83 @@ export default function Staff() {
                     <button
                       onClick={() => openEdit(member)}
                       className="text-xs font-medium text-gray-500 hover:text-gray-800"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          /* List view */
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            {displayed.map((member, idx) => {
+              const st = STATUS_STYLES[member.status] ?? STATUS_STYLES['inactive']
+              const isSeparated = SEPARATION_STATUSES.has(member.status)
+              return (
+                <div
+                  key={member.id}
+                  className={`flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors ${
+                    idx > 0 ? 'border-t border-gray-100' : ''
+                  } ${isSeparated ? 'opacity-75' : ''}`}
+                >
+                  {/* Avatar */}
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                    style={{ backgroundColor: avatarColor(member.id) }}
+                  >
+                    {initials(member.firstName, member.lastName)}
+                  </div>
+
+                  {/* Name + role */}
+                  <div className="w-48 shrink-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {member.firstName} {member.lastName}
+                    </p>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${ROLE_STYLES[member.role] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {member.role.replace('_', ' ')}
+                    </span>
+                  </div>
+
+                  {/* Email */}
+                  <p className="flex-1 text-sm text-gray-500 truncate hidden sm:block">{member.email}</p>
+
+                  {/* Shift */}
+                  <p className="w-36 shrink-0 text-xs text-gray-400 hidden lg:block">
+                    {member.shiftStart ? `${fmt12h(member.shiftStart)}${member.shiftEnd ? ` – ${fmt12h(member.shiftEnd)}` : ''}` : '—'}
+                  </p>
+
+                  {/* Hire / separation date */}
+                  <div className="w-32 shrink-0 hidden lg:block">
+                    {isSeparated && member.separationDate ? (
+                      <p className="text-xs text-red-500">{st.label} {fmtDate(member.separationDate)}</p>
+                    ) : member.hireDate ? (
+                      <p className="text-xs text-gray-400">Hired {fmtDate(member.hireDate)}</p>
+                    ) : (
+                      <p className="text-xs text-gray-300">—</p>
+                    )}
+                  </div>
+
+                  {/* Status */}
+                  <div className="w-28 shrink-0">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${st.badge}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} />
+                      {st.label}
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      onClick={() => setFilePanel(member)}
+                      className="text-xs font-semibold text-[#1D9E75] hover:underline"
+                    >
+                      File
+                    </button>
+                    <button
+                      onClick={() => openEdit(member)}
+                      className="text-xs font-medium text-gray-400 hover:text-gray-700"
                     >
                       Edit
                     </button>
