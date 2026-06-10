@@ -48,10 +48,22 @@ export default async function staffRoutes(server: FastifyInstance) {
       separationDate?: string | null
       phone?: string | null
       address?: string | null
+      probationDays?: number | null
+      probationEndDate?: string | null
+      probationStatus?: string | null
+      probationNotes?: string | null
+      probationCompletedAt?: string | null
+      probationAlertDays?: number | null
+      benefitsEligibleAt?: string | null
     }
   }>('/staff/:id', async (request, reply) => {
     const { id } = request.params
-    const { firstName, lastName, email, role, status, shiftStart, shiftEnd, hireDate, managerId, separationDate, phone, address } = request.body
+    const {
+      firstName, lastName, email, role, status, shiftStart, shiftEnd,
+      hireDate, managerId, separationDate, phone, address,
+      probationDays, probationEndDate, probationStatus, probationNotes,
+      probationCompletedAt, probationAlertDays, benefitsEligibleAt,
+    } = request.body
 
     const data: Record<string, unknown> = {}
     if (firstName !== undefined) data.firstName = firstName
@@ -66,8 +78,55 @@ export default async function staffRoutes(server: FastifyInstance) {
     if (separationDate !== undefined) data.separationDate = separationDate ? new Date(separationDate) : null
     if (phone !== undefined) data.phone = phone || null
     if (address !== undefined) data.address = address || null
+    if (probationDays !== undefined) data.probationDays = probationDays ?? null
+    if (probationEndDate !== undefined) data.probationEndDate = probationEndDate ? new Date(probationEndDate) : null
+    if (probationStatus !== undefined) data.probationStatus = probationStatus || null
+    if (probationNotes !== undefined) data.probationNotes = probationNotes || null
+    if (probationCompletedAt !== undefined) data.probationCompletedAt = probationCompletedAt ? new Date(probationCompletedAt) : null
+    if (probationAlertDays !== undefined) data.probationAlertDays = probationAlertDays ?? null
+    if (benefitsEligibleAt !== undefined) data.benefitsEligibleAt = benefitsEligibleAt ? new Date(benefitsEligibleAt) : null
 
     const user = await prisma.user.update({ where: { id }, data })
     return reply.send(user)
   })
+
+  // GET /api/staff/probation-alerts?practiceId=
+  server.get<{ Querystring: { practiceId: string } }>(
+    '/staff/probation-alerts',
+    async (request, reply) => {
+      const { practiceId } = request.query
+      if (!practiceId) return reply.status(400).send({ error: 'practiceId is required' })
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const staff = await prisma.user.findMany({
+        where: {
+          practiceId,
+          probationEndDate: { not: null },
+          probationStatus: { in: ['active', null] },
+          status: 'active',
+        },
+        select: {
+          id: true, firstName: true, lastName: true, role: true,
+          hireDate: true, probationDays: true, probationEndDate: true,
+          probationStatus: true, probationAlertDays: true,
+        },
+      })
+
+      const alerts = staff
+        .filter(s => s.probationEndDate)
+        .map(s => {
+          const end = new Date(s.probationEndDate!)
+          end.setHours(0, 0, 0, 0)
+          const daysLeft = Math.ceil((end.getTime() - today.getTime()) / 86400000)
+          const alertDays = s.probationAlertDays ?? 14
+          return { ...s, daysLeft, alertDays }
+        })
+        .filter(s => s.daysLeft <= s.alertDays)
+        .sort((a, b) => a.daysLeft - b.daysLeft)
+
+      return reply.send(alerts)
+    }
+  )
 }

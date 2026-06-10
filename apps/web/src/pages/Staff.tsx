@@ -40,6 +40,13 @@ interface StaffMember {
   separationDate: string | null
   phone: string | null
   address: string | null
+  probationDays: number | null
+  probationEndDate: string | null
+  probationStatus: string | null
+  probationNotes: string | null
+  probationCompletedAt: string | null
+  probationAlertDays: number | null
+  benefitsEligibleAt: string | null
 }
 
 type ModalMode = 'add' | 'edit'
@@ -57,6 +64,9 @@ interface FormState {
   separationDate: string
   phone: string
   address: string
+  probationPreset: string   // '30' | '60' | '90' | 'custom' | ''
+  probationEndDate: string
+  probationAlertDays: string
 }
 
 const emptyForm: FormState = {
@@ -72,6 +82,9 @@ const emptyForm: FormState = {
   separationDate: '',
   phone: '',
   address: '',
+  probationPreset: '',
+  probationEndDate: '',
+  probationAlertDays: '14',
 }
 
 function fmt12h(t: string | null) {
@@ -105,6 +118,16 @@ interface BenefitRow {
   enabled: boolean
 }
 
+interface ProbationAlert {
+  id: string
+  firstName: string
+  lastName: string
+  role: string
+  probationEndDate: string
+  daysLeft: number
+  alertDays: number
+}
+
 const STATUS_GROUPS = [
   { key: 'active',     label: 'Active' },
   { key: 'on_leave',   label: 'On Leave' },
@@ -125,6 +148,7 @@ export default function Staff() {
   const [view, setView] = useState<'grid' | 'list'>(() =>
     (localStorage.getItem('staff-view') as 'grid' | 'list') ?? 'grid'
   )
+  const [probationAlerts, setProbationAlerts] = useState<ProbationAlert[]>([])
 
   function toggleView(v: 'grid' | 'list') {
     setView(v)
@@ -139,9 +163,14 @@ export default function Staff() {
   async function fetchStaff() {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/staff?practiceId=${PRACTICE_ID}`)
-      const data = await res.json()
-      setStaff(Array.isArray(data) ? data : [])
+      const [staffRes, alertRes] = await Promise.all([
+        fetch(`${API_BASE}/api/staff?practiceId=${PRACTICE_ID}`),
+        fetch(`${API_BASE}/api/staff/probation-alerts?practiceId=${PRACTICE_ID}`),
+      ])
+      const staffData = await staffRes.json()
+      const alertData = await alertRes.json().catch(() => [])
+      setStaff(Array.isArray(staffData) ? staffData : [])
+      setProbationAlerts(Array.isArray(alertData) ? alertData : [])
     } catch {
       // silent
     } finally {
@@ -173,6 +202,9 @@ export default function Staff() {
       separationDate: member.separationDate ? member.separationDate.split('T')[0] : '',
       phone: member.phone ?? '',
       address: member.address ?? '',
+      probationPreset: member.probationDays ? String(member.probationDays) : (member.probationEndDate ? 'custom' : ''),
+      probationEndDate: member.probationEndDate ? member.probationEndDate.split('T')[0] : '',
+      probationAlertDays: String(member.probationAlertDays ?? 14),
     })
     setShowNewBenefitInput(false)
     setNewBenefitName('')
@@ -235,6 +267,10 @@ export default function Staff() {
         separationDate: form.separationDate || null,
         phone: form.phone || null,
         address: form.address || null,
+        probationDays: form.probationPreset && form.probationPreset !== 'custom' ? parseInt(form.probationPreset) : null,
+        probationEndDate: form.probationEndDate || null,
+        probationStatus: (form.probationPreset || form.probationEndDate) ? 'active' : null,
+        probationAlertDays: form.probationAlertDays ? parseInt(form.probationAlertDays) : 14,
       }
       if (modal?.mode === 'add') {
         await fetch(`${API_BASE}/api/staff`, {
@@ -367,6 +403,42 @@ export default function Staff() {
           </div>
           </div>
         </div>
+
+        {/* Probation alerts banner */}
+        {probationAlerts.length > 0 && (
+          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 divide-y divide-amber-100 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-100">
+              <span className="text-amber-600 font-bold text-sm">⚠</span>
+              <p className="text-xs font-bold text-amber-800 uppercase tracking-wide">
+                {probationAlerts.length} Probationary Review{probationAlerts.length > 1 ? 's' : ''} Requiring Attention
+              </p>
+            </div>
+            {probationAlerts.map(a => {
+              const isOverdue = a.daysLeft < 0
+              return (
+                <div key={a.id} className="flex items-center justify-between px-4 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-block h-2 w-2 rounded-full ${isOverdue ? 'bg-red-500' : 'bg-amber-400'}`} />
+                    <span className="text-sm font-semibold text-gray-800">{a.firstName} {a.lastName}</span>
+                    <span className="text-xs text-gray-500 capitalize">{a.role.replace('_', ' ')}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500">Ends {new Date(a.probationEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${isOverdue ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {isOverdue ? `${Math.abs(a.daysLeft)}d overdue` : `${a.daysLeft}d left`}
+                    </span>
+                    <button
+                      onClick={() => { const m = staff.find(s => s.id === a.id); if (m) setFilePanel(m) }}
+                      className="text-xs font-semibold text-[#1D9E75] hover:underline"
+                    >
+                      Open File →
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {loading ? (
           <div className="py-20 text-center text-sm text-gray-400">Loading…</div>
@@ -543,10 +615,8 @@ export default function Staff() {
         <StaffFilePanel
           member={filePanel}
           onClose={() => setFilePanel(null)}
-          onEdit={() => {
-            openEdit(filePanel)
-            setFilePanel(null)
-          }}
+          onEdit={() => { openEdit(filePanel); setFilePanel(null) }}
+          onUpdated={() => fetchStaff()}
         />
       )}
 
@@ -686,6 +756,63 @@ export default function Staff() {
                       </option>
                     ))}
                 </select>
+              </div>
+
+              {/* Probationary Period */}
+              <div className="pt-2 border-t border-gray-100">
+                <label className="mb-2 block text-xs font-semibold text-gray-700 uppercase tracking-wide">Probationary Period</label>
+                <div className="flex gap-2 flex-wrap mb-2">
+                  {[{ v: '', label: 'None' }, { v: '30', label: '30 days' }, { v: '60', label: '60 days' }, { v: '90', label: '90 days' }, { v: 'custom', label: 'Custom date' }].map(opt => (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => {
+                        const endDate = opt.v && opt.v !== 'custom' && form.hireDate
+                          ? (() => {
+                              const d = new Date(form.hireDate)
+                              d.setDate(d.getDate() + parseInt(opt.v))
+                              return d.toISOString().split('T')[0]
+                            })()
+                          : form.probationEndDate
+                        setForm(f => ({ ...f, probationPreset: opt.v, probationEndDate: opt.v ? endDate : '' }))
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                        form.probationPreset === opt.v
+                          ? 'bg-[#1D9E75] border-[#1D9E75] text-white'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-400 bg-white'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {form.probationPreset && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs text-gray-500">
+                        {form.probationPreset === 'custom' ? 'End Date' : 'Calculated End Date'}
+                      </label>
+                      <input
+                        type="date"
+                        readOnly={form.probationPreset !== 'custom'}
+                        className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75] ${form.probationPreset !== 'custom' ? 'bg-gray-50 text-gray-500' : 'border-gray-300'}`}
+                        value={form.probationEndDate}
+                        onChange={e => setForm(f => ({ ...f, probationEndDate: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-gray-500">Alert me (days before)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="60"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                        value={form.probationAlertDays}
+                        onChange={e => setForm(f => ({ ...f, probationAlertDays: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

@@ -57,6 +57,13 @@ model User {
   separationDate  DateTime?    @map("separation_date") @db.Date
   phone           String?
   address         String?
+  probationDays      Int?      @map("probation_days")
+  probationEndDate   DateTime? @map("probation_end_date") @db.Date
+  probationStatus    String?   @map("probation_status")
+  probationNotes     String?   @map("probation_notes")
+  probationCompletedAt DateTime? @map("probation_completed_at") @db.Date
+  probationAlertDays Int?      @map("probation_alert_days")
+  benefitsEligibleAt DateTime? @map("benefits_eligible_at") @db.Date
 
   practice         Practice          @relation(fields: [practiceId], references: [id])
   manager          User?             @relation("ManagerRelation", fields: [managerId], references: [id])

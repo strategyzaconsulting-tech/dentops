@@ -240,6 +240,13 @@ function ComplianceIllustration() {
   )
 }
 
+// ─── Probation alert fetch ────────────────────────────────────────────────────
+
+import { useEffect, useState } from 'react'
+
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
+
 // ─── Module data ──────────────────────────────────────────────────────────────
 
 const MODULES = [
@@ -338,6 +345,15 @@ const MODULES = [
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
+  const [probationCount, setProbationCount] = useState(0)
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/staff/probation-alerts?practiceId=${PRACTICE_ID}`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setProbationCount(data.length) })
+      .catch(() => {})
+  }, [])
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="border-b bg-white">
@@ -374,14 +390,21 @@ export default function Dashboard() {
 
                 {/* Text — bottom left */}
                 <div className="relative mt-16">
+                  <div className="flex items-center gap-2">
                   <h3
                     className="text-base font-bold leading-tight"
                     style={{ color: mod.active ? mod.accent : '#9CA3AF' }}
                   >
                     {mod.title}
                   </h3>
+                  {mod.title === 'Staff' && probationCount > 0 && (
+                    <span className="rounded-full bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 leading-none">
+                      {probationCount}
+                    </span>
+                  )}
+                  </div>
                   <p className="mt-1 text-xs text-gray-500 leading-snug">{mod.desc}</p>
-                </div>
+                  </div>
 
                 {/* Active arrow hint */}
                 {mod.active && mod.href !== '#' && (

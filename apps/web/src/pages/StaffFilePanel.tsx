@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import EmployeeReportModal from './EmployeeReportModal'
 import StaffOnboardingTab from './StaffOnboardingTab'
+import ProbationSection from './ProbationSection'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -102,6 +103,13 @@ export interface StaffMember {
   separationDate: string | null
   phone: string | null
   address: string | null
+  probationDays: number | null
+  probationEndDate: string | null
+  probationStatus: string | null
+  probationNotes: string | null
+  probationCompletedAt: string | null
+  probationAlertDays: number | null
+  benefitsEligibleAt: string | null
 }
 
 interface Occurrence {
@@ -116,9 +124,10 @@ interface Props {
   member: StaffMember
   onClose: () => void
   onEdit: () => void
+  onUpdated?: () => void
 }
 
-export default function StaffFilePanel({ member, onClose, onEdit }: Props) {
+export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: Props) {
   const [occurrences, setOccurrences] = useState<Occurrence[]>([])
   const [scheduledDays, setScheduledDays] = useState<number | null>(null)
   const [loadingOcc, setLoadingOcc] = useState(true)
@@ -573,6 +582,8 @@ export default function StaffFilePanel({ member, onClose, onEdit }: Props) {
               </div>
             )}
           </section>
+
+          <ProbationSection member={member} onUpdated={() => { onUpdated?.() }} />
           </>}
         </div>
       </div>
