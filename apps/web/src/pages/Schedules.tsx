@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+﻿import { useEffect, useState, useMemo } from 'react'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -230,13 +230,13 @@ export default function Schedules() {
   const canSave = form.locationId && form.startTime && form.endTime && form.userId
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white">
+    <div className="min-h-screen bg-[#F5F0E8]">
+      <header className="bg-[#2C3E3A]">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
-            <a href="/" className="text-sm text-gray-500 hover:text-gray-800">← Back</a>
-            <span className="text-gray-300">|</span>
-            <h1 className="text-xl font-bold text-gray-900">Schedules</h1>
+            <a href="/" className="text-sm text-[#8BAF9A] hover:text-white">← Back</a>
+            <span className="text-[#4A5C52]">|</span>
+            <h1 className="text-xl font-bold text-[#FAF6EF]">Schedules</h1>
           </div>
           {/* Week navigator */}
           <div className="flex items-center gap-3">

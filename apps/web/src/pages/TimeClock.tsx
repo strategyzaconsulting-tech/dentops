@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = 'http://localhost:3000'
@@ -272,16 +272,15 @@ export default function TimeClock() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F5F0E8]">
       {/* Header */}
-      <header className="border-b bg-white">
+      <header className="bg-[#2C3E3A]">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
-            <a href="/" className="text-sm text-gray-500 hover:text-gray-800">
-              ← Back
+            <a href="/" className="text-sm text-[#8BAF9A] hover:text-white">← Back
             </a>
-            <span className="text-gray-300">|</span>
-            <h1 className="text-xl font-bold text-gray-900">Time Clock</h1>
+            <span className="text-[#4A5C52]">|</span>
+            <h1 className="text-xl font-bold text-[#FAF6EF]">Time Clock</h1>
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import StaffFilePanel from './StaffFilePanel'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
@@ -315,16 +315,16 @@ export default function Staff() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F5F0E8]">
       {/* Header */}
-      <header className="border-b bg-white sticky top-0 z-10">
+      <header className="bg-[#2C3E3A] sticky top-0 z-10">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
-            <a href="/" className="text-sm text-gray-500 hover:text-gray-800">← Back</a>
-            <span className="text-gray-300">|</span>
-            <h1 className="text-xl font-bold text-gray-900">Staff</h1>
+            <a href="/" className="text-sm text-[#8BAF9A] hover:text-white">← Back</a>
+            <span className="text-[#4A5C52]">|</span>
+            <h1 className="text-xl font-bold text-[#FAF6EF]">Staff</h1>
             {!loading && (
-              <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-500">
+              <span className="rounded-full bg-[#4A5C52] px-2.5 py-0.5 text-xs font-semibold text-[#FAF6EF]">
                 {staff.length}
               </span>
             )}

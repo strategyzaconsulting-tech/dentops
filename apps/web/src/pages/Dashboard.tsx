@@ -1,4 +1,4 @@
-// ─── Illustrations ────────────────────────────────────────────────────────────
+﻿// ─── Illustrations ────────────────────────────────────────────────────────────
 
 function StaffIllustration() {
   return (
@@ -355,11 +355,25 @@ export default function Dashboard() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white">
-        <div className="container flex h-16 items-center gap-2">
-          <h1 className="text-xl font-bold text-[#1D9E75]">DentOps</h1>
-          <span className="text-sm text-gray-400">Admin Portal</span>
+    <div className="min-h-screen bg-[#F5F0E8]">
+      <header className="bg-[#2C3E3A]">
+        <div className="container flex h-16 items-center justify-between">
+          <div className="flex items-center gap-3">
+            <svg width="32" height="32" viewBox="0 0 44 44" fill="none">
+              <rect width="44" height="44" rx="10" fill="#1E2E2A" />
+              <path d="M8 16 Q15 11 22 16 Q29 21 36 16" stroke="#A8D5E2" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M8 22 Q16 16 24 22 Q30 26 36 22" stroke="#5BA4BE" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M8 28 Q14 23 20 28 Q28 34 36 28" stroke="#8BAF9A" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+            </svg>
+            <div>
+              <h1 className="text-base font-bold text-[#FAF6EF] leading-tight tracking-wide">DentOps</h1>
+              <p className="text-[10px] text-[#8BAF9A] tracking-widest uppercase leading-tight">Admin Portal</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="h-2 w-2 rounded-full bg-[#1D9E75]" />
+            <span className="text-xs text-[#8BAF9A]">Live</span>
+          </div>
         </div>
       </header>
 

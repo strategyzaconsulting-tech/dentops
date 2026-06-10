@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = 'http://localhost:3000'
@@ -386,18 +386,18 @@ export default function Onboarding() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#F5F0E8] flex items-center justify-center">
         <p className="text-muted-foreground">Loading onboarding data…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#F5F0E8]">
       {/* Header */}
-      <header className="border-b">
+      <header className="bg-[#2C3E3A]">
         <div className="container flex h-16 items-center gap-4">
-          <a href="/" className="text-sm text-muted-foreground hover:text-foreground">← Back</a>
+          <a href="/" className="text-sm text-[#8BAF9A] hover:text-white">← Back</a>
           <h1 className="text-xl font-bold text-[#1D9E75]">Onboarding</h1>
           <span className="text-sm text-muted-foreground">Staff HR Forms, Training &amp; Manual</span>
         </div>
