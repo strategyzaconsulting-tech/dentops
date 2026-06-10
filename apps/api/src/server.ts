@@ -18,6 +18,7 @@ import benefitRoutes from "./routes/benefits.js";
 import onboardingRoutes from "./routes/onboarding.js";
 import w4ReviewRoutes from "./routes/w4Review.js";
 import occurrenceRoutes from "./routes/occurrences.js";
+import reportRoutes from "./routes/reports.js";
 import { sendExpoPushNotifications } from "./lib/expoPush.js";
 import { prisma } from "./lib/prisma.js";
 
@@ -65,6 +66,7 @@ export async function createServer() {
   await server.register(onboardingRoutes, { prefix: "/api" });
   await server.register(w4ReviewRoutes, { prefix: "/api" });
   await server.register(occurrenceRoutes, { prefix: "/api" });
+  await server.register(reportRoutes, { prefix: "/api" });
 
   // Jan 1 at midnight — create review records + notify all active staff
   cron.schedule("0 0 1 1 *", async () => {

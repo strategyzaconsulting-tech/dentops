@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import EmployeeReportModal from './EmployeeReportModal'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -95,6 +96,9 @@ export interface StaffMember {
   status: string
   shiftStart: string | null
   shiftEnd: string | null
+  hireDate: string | null
+  managerId: string | null
+  separationDate: string | null
 }
 
 interface Occurrence {
@@ -121,6 +125,9 @@ export default function StaffFilePanel({ member, onClose, onEdit }: Props) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [addForm, setAddForm] = useState({ type: 'verbal_warning', date: toISODate(new Date()), notes: '' })
   const [adding, setAdding] = useState(false)
+  const [reportData, setReportData] = useState<unknown>(null)
+  const [generatingReport, setGeneratingReport] = useState(false)
+  const [reportError, setReportError] = useState<string | null>(null)
 
   const today = new Date()
   today.setHours(23, 59, 59, 999)
@@ -160,6 +167,25 @@ export default function StaffFilePanel({ member, onClose, onEdit }: Props) {
 
   const displayed =
     typeFilter === 'all' ? occurrences : occurrences.filter(o => o.type === typeFilter)
+
+  async function generateReport() {
+    setGeneratingReport(true)
+    setReportError(null)
+    try {
+      const res = await fetch(`${API_BASE}/api/staff/${member.id}/report?practiceId=${PRACTICE_ID}&days=365`)
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { error?: string }
+        setReportError(err.error ?? `Server error (${res.status})`)
+        return
+      }
+      const data = await res.json()
+      setReportData(data)
+    } catch {
+      setReportError('Could not reach the server.')
+    } finally {
+      setGeneratingReport(false)
+    }
+  }
 
   async function handleAddEntry() {
     setAdding(true)
@@ -272,6 +298,22 @@ export default function StaffFilePanel({ member, onClose, onEdit }: Props) {
             <p className="text-xs text-gray-400 mt-0.5">{member.email}</p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={generateReport}
+              disabled={generatingReport}
+              className="flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-gray-700 disabled:opacity-60 transition-colors"
+            >
+              {generatingReport ? (
+                <>
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Generating…
+                </>
+              ) : (
+                <>
+                  <span className="text-[10px]">✦</span> Generate Report
+                </>
+              )}
+            </button>
             <button
               onClick={onEdit}
               className="text-xs font-semibold text-[#1D9E75] hover:underline"
@@ -494,6 +536,22 @@ export default function StaffFilePanel({ member, onClose, onEdit }: Props) {
           </section>
         </div>
       </div>
+
+      {/* Report error toast */}
+      {reportError && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] rounded-lg bg-red-600 px-5 py-3 text-sm text-white shadow-lg flex items-center gap-3">
+          <span>{reportError}</span>
+          <button onClick={() => setReportError(null)} className="text-white/70 hover:text-white text-base leading-none">✕</button>
+        </div>
+      )}
+
+      {/* Report modal */}
+      {reportData && (
+        <EmployeeReportModal
+          report={reportData as Parameters<typeof EmployeeReportModal>[0]['report']}
+          onClose={() => setReportData(null)}
+        />
+      )}
     </>
   )
 }

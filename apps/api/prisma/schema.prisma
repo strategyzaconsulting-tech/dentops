@@ -52,8 +52,13 @@ model User {
   pushToken   String?      @map("push_token")
   shiftStart  String?      @map("shift_start")
   shiftEnd    String?      @map("shift_end")
+  hireDate        DateTime?    @map("hire_date") @db.Date
+  managerId       String?      @map("manager_id") @db.Uuid
+  separationDate  DateTime?    @map("separation_date") @db.Date
 
   practice         Practice          @relation(fields: [practiceId], references: [id])
+  manager          User?             @relation("ManagerRelation", fields: [managerId], references: [id])
+  directReports    User[]            @relation("ManagerRelation")
   timePunches      TimePunch[]
   ptoRequests      PtoRequest[]
   shifts           Shift[]

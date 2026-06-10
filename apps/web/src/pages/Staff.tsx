@@ -5,21 +5,26 @@ const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const ROLES = ['doctor', 'staff', 'hygienist', 'front_desk', 'manager']
-const STATUSES = ['active', 'invited', 'inactive']
+const STATUSES = ['active', 'on_leave', 'terminated', 'resigned']
 
-const STATUS_STYLES: Record<string, string> = {
-  active: 'bg-green-100 text-green-700',
-  invited: 'bg-yellow-100 text-yellow-700',
-  inactive: 'bg-gray-100 text-gray-500',
+const STATUS_STYLES: Record<string, { badge: string; dot: string; label: string }> = {
+  active:     { badge: 'bg-green-100 text-green-700',   dot: 'bg-green-500',  label: 'Active' },
+  on_leave:   { badge: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-400',   label: 'On Leave' },
+  terminated: { badge: 'bg-red-100 text-red-700',       dot: 'bg-red-500',    label: 'Terminated' },
+  resigned:   { badge: 'bg-gray-100 text-gray-600',     dot: 'bg-gray-400',   label: 'Resigned' },
+  invited:    { badge: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400', label: 'Invited' },
+  inactive:   { badge: 'bg-gray-100 text-gray-400',     dot: 'bg-gray-300',   label: 'Inactive' },
 }
 
 const ROLE_STYLES: Record<string, string> = {
-  doctor: 'bg-blue-100 text-blue-700',
-  staff: 'bg-[#E1F5EE] text-[#085041]',
-  hygienist: 'bg-purple-100 text-purple-700',
-  front_desk: 'bg-orange-100 text-orange-700',
-  manager: 'bg-indigo-100 text-indigo-700',
+  doctor:     'bg-blue-50 text-blue-700',
+  staff:      'bg-[#E1F5EE] text-[#085041]',
+  hygienist:  'bg-purple-50 text-purple-700',
+  front_desk: 'bg-orange-50 text-orange-700',
+  manager:    'bg-indigo-50 text-indigo-700',
 }
+
+const SEPARATION_STATUSES = new Set(['terminated', 'resigned'])
 
 interface StaffMember {
   id: string
@@ -30,6 +35,9 @@ interface StaffMember {
   status: string
   shiftStart: string | null
   shiftEnd: string | null
+  hireDate: string | null
+  managerId: string | null
+  separationDate: string | null
 }
 
 type ModalMode = 'add' | 'edit'
@@ -42,6 +50,9 @@ interface FormState {
   status: string
   shiftStart: string
   shiftEnd: string
+  hireDate: string
+  managerId: string
+  separationDate: string
 }
 
 const emptyForm: FormState = {
@@ -52,6 +63,9 @@ const emptyForm: FormState = {
   status: 'active',
   shiftStart: '',
   shiftEnd: '',
+  hireDate: '',
+  managerId: '',
+  separationDate: '',
 }
 
 function fmt12h(t: string | null) {
@@ -59,6 +73,11 @@ function fmt12h(t: string | null) {
   const [h, m] = t.split(':').map(Number)
   const ampm = h >= 12 ? 'PM' : 'AM'
   return `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${ampm}`
+}
+
+function fmtDate(iso: string | null) {
+  if (!iso) return null
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function initials(f: string, l: string) {
@@ -80,16 +99,24 @@ interface BenefitRow {
   enabled: boolean
 }
 
+const STATUS_GROUPS = [
+  { key: 'active',     label: 'Active' },
+  { key: 'on_leave',   label: 'On Leave' },
+  { key: 'resigned',   label: 'Resigned' },
+  { key: 'terminated', label: 'Terminated' },
+  { key: 'other',      label: 'Other' },
+]
+
 export default function Staff() {
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<{ mode: ModalMode; member?: StaffMember } | null>(null)
-  const [filePanel, setFilePanel] = useState<StaffMember | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('active')
+  const [filePanel, setFilePanel] = useState<StaffMember | null>(null)
 
-  // benefits state
   const [benefits, setBenefits] = useState<BenefitRow[]>([])
   const [newBenefitName, setNewBenefitName] = useState('')
   const [addingBenefit, setAddingBenefit] = useState(false)
@@ -127,19 +154,19 @@ export default function Staff() {
       status: member.status,
       shiftStart: member.shiftStart ?? '',
       shiftEnd: member.shiftEnd ?? '',
+      hireDate: member.hireDate ? member.hireDate.split('T')[0] : '',
+      managerId: member.managerId ?? '',
+      separationDate: member.separationDate ? member.separationDate.split('T')[0] : '',
     })
     setShowNewBenefitInput(false)
     setNewBenefitName('')
     setModal({ mode: 'edit', member })
 
-    // Load benefits for this staff member
     try {
       const res = await fetch(`${API_BASE}/api/benefits/user?practiceId=${PRACTICE_ID}&userId=${member.id}`)
       const data = await res.json()
       if (Array.isArray(data)) setBenefits(data)
-    } catch {
-      // silent
-    }
+    } catch { /* silent */ }
   }
 
   async function handleToggleBenefit(benefitId: string, enabled: boolean, userId: string) {
@@ -151,7 +178,6 @@ export default function Staff() {
         body: JSON.stringify({ practiceId: PRACTICE_ID, userId, benefitId, enabled }),
       })
     } catch {
-      // revert on failure
       setBenefits((prev) => prev.map((b) => b.id === benefitId ? { ...b, enabled: !enabled } : b))
     }
   }
@@ -188,6 +214,9 @@ export default function Staff() {
         ...form,
         shiftStart: form.shiftStart || null,
         shiftEnd: form.shiftEnd || null,
+        hireDate: form.hireDate || null,
+        managerId: form.managerId || null,
+        separationDate: form.separationDate || null,
       }
       if (modal?.mode === 'add') {
         await fetch(`${API_BASE}/api/staff`, {
@@ -209,29 +238,31 @@ export default function Staff() {
     }
   }
 
-  async function toggleStatus(member: StaffMember) {
-    const next = member.status === 'active' ? 'inactive' : 'active'
-    await fetch(`${API_BASE}/api/staff/${member.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: next }),
-    })
-    await fetchStaff()
-  }
+  const q = search.toLowerCase()
+  const filtered = staff.filter((s) =>
+    s.firstName.toLowerCase().includes(q) ||
+    s.lastName.toLowerCase().includes(q) ||
+    s.email.toLowerCase().includes(q) ||
+    s.role.toLowerCase().includes(q)
+  )
 
-  const filtered = staff.filter((s) => {
-    const q = search.toLowerCase()
-    return (
-      s.firstName.toLowerCase().includes(q) ||
-      s.lastName.toLowerCase().includes(q) ||
-      s.email.toLowerCase().includes(q) ||
-      s.role.toLowerCase().includes(q)
-    )
-  })
+  const KNOWN_STATUSES = new Set(['active', 'on_leave', 'terminated', 'resigned'])
+  const displayed = statusFilter === 'all'
+    ? filtered
+    : statusFilter === 'other'
+    ? filtered.filter(s => !KNOWN_STATUSES.has(s.status))
+    : filtered.filter(s => s.status === statusFilter)
+
+  const countByStatus = (key: string) => {
+    if (key === 'all') return filtered.length
+    if (key === 'other') return filtered.filter(s => !KNOWN_STATUSES.has(s.status)).length
+    return filtered.filter(s => s.status === key).length
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white">
+      {/* Header */}
+      <header className="border-b bg-white sticky top-0 z-10">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
             <a href="/" className="text-sm text-gray-500 hover:text-gray-800">← Back</a>
@@ -247,112 +278,135 @@ export default function Staff() {
             onClick={openAdd}
             className="rounded-lg bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
           >
-            + Add staff
+            + Add Staff
           </button>
         </div>
       </header>
 
-      <main className="container py-8">
-        {/* Search */}
-        <div className="mb-6 max-w-sm">
+      <main className="container py-6">
+        {/* Search + status filter bar */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <input
             type="text"
-            placeholder="Search by name, email, or role…"
+            placeholder="Search name, email, or role…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+            className="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
           />
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                statusFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-400'
+              }`}
+            >
+              All <span className="ml-1 opacity-60">{countByStatus('all')}</span>
+            </button>
+            {STATUS_GROUPS.filter(g => countByStatus(g.key) > 0 || g.key === 'active').map(g => (
+              <button
+                key={g.key}
+                onClick={() => setStatusFilter(g.key)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                  statusFilter === g.key
+                    ? 'bg-gray-800 text-white'
+                    : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-400'
+                }`}
+              >
+                {g.label}
+                {countByStatus(g.key) > 0 && (
+                  <span className="ml-1 opacity-60">{countByStatus(g.key)}</span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {loading ? (
           <div className="py-20 text-center text-sm text-gray-400">Loading…</div>
+        ) : displayed.length === 0 ? (
+          <div className="py-20 text-center text-sm text-gray-400">
+            {search ? 'No staff match your search.' : `No ${statusFilter === 'all' ? '' : statusFilter.replace('_', ' ')} staff members.`}
+          </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b bg-gray-50 text-xs uppercase text-gray-500">
-                  <th className="px-5 py-3 text-left font-semibold">Name</th>
-                  <th className="px-5 py-3 text-left font-semibold">Email</th>
-                  <th className="px-5 py-3 text-left font-semibold">Role</th>
-                  <th className="px-5 py-3 text-left font-semibold">Shift</th>
-                  <th className="px-5 py-3 text-left font-semibold">Status</th>
-                  <th className="px-5 py-3 text-left font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-gray-400">
-                      {search ? 'No staff match your search.' : 'No staff members yet.'}
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((member) => (
-                    <tr key={member.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                            style={{ backgroundColor: avatarColor(member.id) }}
-                          >
-                            {initials(member.firstName, member.lastName)}
-                          </div>
-                          <span className="font-medium text-gray-900">
-                            {member.firstName} {member.lastName}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-gray-500">{member.email}</td>
-                      <td className="px-5 py-3">
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                            ROLE_STYLES[member.role] ?? 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {displayed.map((member) => {
+              const st = STATUS_STYLES[member.status] ?? STATUS_STYLES['inactive']
+              const isSeparated = SEPARATION_STATUSES.has(member.status)
+              return (
+                <div
+                  key={member.id}
+                  className={`rounded-2xl bg-white border shadow-sm flex flex-col transition-shadow hover:shadow-md ${
+                    isSeparated ? 'border-gray-200 opacity-80' : 'border-gray-100'
+                  }`}
+                >
+                  {/* Card top */}
+                  <div className="flex items-start gap-4 p-5 pb-4">
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white ${isSeparated ? 'opacity-60' : ''}`}
+                      style={{ backgroundColor: avatarColor(member.id) }}
+                    >
+                      {initials(member.firstName, member.lastName)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-semibold text-gray-900 truncate ${isSeparated ? 'text-gray-500' : ''}`}>
+                        {member.firstName} {member.lastName}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${ROLE_STYLES[member.role] ?? 'bg-gray-100 text-gray-600'}`}>
                           {member.role.replace('_', ' ')}
                         </span>
-                      </td>
-                      <td className="px-5 py-3 text-sm text-gray-500">
-                        {member.shiftStart
-                          ? <span>{fmt12h(member.shiftStart)}{member.shiftEnd ? ` – ${fmt12h(member.shiftEnd)}` : ''}</span>
-                          : <span className="text-gray-300 italic text-xs">—</span>}
-                      </td>
-                      <td className="px-5 py-3">
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                            STATUS_STYLES[member.status] ?? 'bg-gray-100 text-gray-500'
-                          }`}
-                        >
-                          {member.status}
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${st.badge}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} />
+                          {st.label}
                         </span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => setFilePanel(member)}
-                            className="text-xs font-semibold text-[#1D9E75] hover:underline"
-                          >
-                            File
-                          </button>
-                          <button
-                            onClick={() => openEdit(member)}
-                            className="text-xs font-medium text-gray-500 hover:text-gray-800"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => toggleStatus(member)}
-                            className="text-xs font-medium text-gray-400 hover:text-gray-700"
-                          >
-                            {member.status === 'active' ? 'Deactivate' : 'Activate'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card details */}
+                  <div className="px-5 pb-4 space-y-1.5 flex-1">
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span className="text-gray-300">✉</span>
+                      <span className="truncate">{member.email}</span>
+                    </div>
+                    {(member.shiftStart || member.shiftEnd) && (
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span className="text-gray-300">◷</span>
+                        <span>{fmt12h(member.shiftStart)}{member.shiftEnd ? ` – ${fmt12h(member.shiftEnd)}` : ''}</span>
+                      </div>
+                    )}
+                    {member.hireDate && (
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span className="text-gray-300">▷</span>
+                        <span>Hired {fmtDate(member.hireDate)}</span>
+                      </div>
+                    )}
+                    {isSeparated && member.separationDate && (
+                      <div className="flex items-center gap-2 text-xs text-red-500">
+                        <span className="text-red-300">◼</span>
+                        <span>{st.label} {fmtDate(member.separationDate)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card actions */}
+                  <div className="flex items-center justify-between border-t border-gray-50 px-5 py-3">
+                    <button
+                      onClick={() => setFilePanel(member)}
+                      className="rounded-lg bg-[#1D9E75] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+                    >
+                      Open File
+                    </button>
+                    <button
+                      onClick={() => openEdit(member)}
+                      className="text-xs font-medium text-gray-500 hover:text-gray-800"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </main>
@@ -378,9 +432,9 @@ export default function Staff() {
         >
           <div className="w-full max-w-md rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh]">
             <div className="px-6 pt-6 pb-4 border-b border-gray-100">
-            <h3 className="text-base font-semibold text-gray-900">
-              {modal.mode === 'add' ? 'Add staff member' : `Edit — ${modal.member?.firstName} ${modal.member?.lastName}`}
-            </h3>
+              <h3 className="text-base font-semibold text-gray-900">
+                {modal.mode === 'add' ? 'Add Staff Member' : `Edit — ${modal.member?.firstName} ${modal.member?.lastName}`}
+              </h3>
             </div>
 
             <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
@@ -433,13 +487,56 @@ export default function Staff() {
                   <select
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
                     value={form.status}
-                    onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                    onChange={(e) => setForm((f) => ({ ...f, status: e.target.value, separationDate: '' }))}
                   >
                     {STATUSES.map((s) => (
-                      <option key={s} value={s}>{s}</option>
+                      <option key={s} value={s}>{s.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Hire Date</label>
+                  <input
+                    type="date"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                    value={form.hireDate}
+                    onChange={(e) => setForm((f) => ({ ...f, hireDate: e.target.value }))}
+                  />
+                </div>
+                {SEPARATION_STATUSES.has(form.status) && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">
+                      {form.status === 'terminated' ? 'Termination Date' : 'Resignation Date'}
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      value={form.separationDate}
+                      onChange={(e) => setForm((f) => ({ ...f, separationDate: e.target.value }))}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Manager</label>
+                <select
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                  value={form.managerId}
+                  onChange={(e) => setForm((f) => ({ ...f, managerId: e.target.value }))}
+                >
+                  <option value="">— None —</option>
+                  {staff
+                    .filter((s) => s.id !== modal?.member?.id)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.firstName} {s.lastName} ({s.role.replace('_', ' ')})
+                      </option>
+                    ))}
+                </select>
               </div>
 
               <div>
@@ -448,7 +545,7 @@ export default function Staff() {
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-xs text-gray-400">Start time</label>
+                    <label className="mb-1 block text-xs text-gray-400">Start</label>
                     <input
                       type="time"
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
@@ -457,7 +554,7 @@ export default function Staff() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-gray-400">End time</label>
+                    <label className="mb-1 block text-xs text-gray-400">End</label>
                     <input
                       type="time"
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
@@ -484,7 +581,6 @@ export default function Staff() {
                     </button>
                   </div>
 
-                  {/* New benefit input */}
                   {showNewBenefitInput && (
                     <div className="mb-3 flex gap-2">
                       <input
@@ -519,20 +615,16 @@ export default function Staff() {
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            {/* Toggle switch */}
                             <button
                               onClick={() => handleToggleBenefit(b.id, !b.enabled, modal.member!.id)}
                               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${b.enabled ? 'bg-[#1D9E75]' : 'bg-gray-300'}`}
                             >
-                              <span
-                                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${b.enabled ? 'translate-x-[18px]' : 'translate-x-[3px]'}`}
-                              />
+                              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${b.enabled ? 'translate-x-[18px]' : 'translate-x-[3px]'}`} />
                             </button>
                             {!b.isDefault && (
                               <button
                                 onClick={() => handleDeleteBenefit(b.id)}
                                 className="text-gray-300 hover:text-red-500 text-xs leading-none"
-                                title="Remove benefit"
                               >
                                 ✕
                               </button>
@@ -558,7 +650,7 @@ export default function Staff() {
                 disabled={saving || !form.firstName || !form.lastName || !form.email}
                 className="flex-1 rounded-lg bg-[#1D9E75] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
-                {saving ? 'Saving…' : modal.mode === 'add' ? 'Add member' : 'Save changes'}
+                {saving ? 'Saving…' : modal.mode === 'add' ? 'Add Member' : 'Save Changes'}
               </button>
             </div>
           </div>
