@@ -110,6 +110,7 @@ function formatUSDate(isoDate: string): string {
 
 export default function TimeClockScreen() {
   const [punches, setPunches] = useState<MyPunch[]>([])
+  const [absentDates, setAbsentDates] = useState<string[]>([])
   const [adjustments, setAdjustments] = useState<Adjustment[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -134,7 +135,12 @@ export default function TimeClockScreen() {
           fetch(`${API_BASE}/api/clock-adjustments?practiceId=${PRACTICE_ID}&userId=${USER_ID}`),
         ])
         const [pData, aData] = await Promise.all([pRes.json(), aRes.json()])
-        if (Array.isArray(pData)) setPunches(pData)
+        if (Array.isArray(pData)) {
+          setPunches(pData)
+        } else if (pData?.punches && Array.isArray(pData.punches)) {
+          setPunches(pData.punches)
+          setAbsentDates(pData.absentDates ?? [])
+        }
         if (Array.isArray(aData)) setAdjustments(aData)
       } catch {
         // silent
@@ -226,7 +232,16 @@ export default function TimeClockScreen() {
                   </View>
 
                   {dayPunches.length === 0 ? (
-                    <Text style={styles.noPunches}>No punches recorded</Text>
+                    (() => {
+                      const iso = toISODate(day)
+                      const today = new Date(); today.setHours(0, 0, 0, 0)
+                      const isAbsent = day < today && absentDates.includes(iso)
+                      return (
+                        <Text style={isAbsent ? styles.absentText : styles.noPunches}>
+                          {isAbsent ? 'Absent' : 'No punches recorded'}
+                        </Text>
+                      )
+                    })()
                   ) : (
                     dayPunches.map((p) => (
                       <View key={p.id} style={styles.punchRow}>
@@ -377,6 +392,7 @@ const styles = StyleSheet.create({
   requestBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: '#E8F5F0' },
   requestBtnText: { fontSize: 12, fontWeight: '700', color: '#1D9E75' },
   noPunches: { fontSize: 13, color: '#bbb', padding: 16, fontStyle: 'italic' },
+  absentText: { fontSize: 13, color: '#DC2626', padding: 16, fontStyle: 'italic', fontWeight: '600' },
 
   punchRow: {
     paddingHorizontal: 16,

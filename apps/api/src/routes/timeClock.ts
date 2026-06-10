@@ -84,6 +84,22 @@ export default async function timeclockRoutes(server: FastifyInstance) {
 
     const effectiveStart = shift?.startTime ?? user?.shiftStart ?? null
     const tardy = effectiveStart ? isTardy(punchInDate, shift?.date ?? punchInDate, effectiveStart) : false
+
+    if (tardy) {
+      const occDate = new Date(punchInDate.toDateString())
+      await prisma.employeeOccurrence.upsert({
+        where: { userId_date_type: { userId, date: occDate, type: 'tardy' } },
+        create: {
+          practiceId,
+          userId,
+          date: occDate,
+          type: 'tardy',
+          notes: `Clocked in at ${punchInDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
+        },
+        update: {},
+      })
+    }
+
     return reply.status(201).send({ ...punch, isTardy: tardy })
   })
 
@@ -154,7 +170,38 @@ export default async function timeclockRoutes(server: FastifyInstance) {
         const effectiveStart = s?.startTime ?? user?.shiftStart ?? null
         return { ...p, isTardy: effectiveStart ? isTardy(new Date(p.punchIn), s?.date ?? new Date(p.punchIn), effectiveStart) : false }
       })
-      return reply.send(result)
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const punchDateStrings = new Set(result.map((p) => new Date(p.punchIn).toDateString()))
+      const seenAbsent = new Set<string>()
+      const absentDates: string[] = []
+
+      for (const s of shifts) {
+        const shiftDay = new Date(s.date)
+        if (shiftDay < today && !punchDateStrings.has(shiftDay.toDateString())) {
+          const iso = shiftDay.toISOString().split('T')[0]
+          if (!seenAbsent.has(iso)) {
+            seenAbsent.add(iso)
+            absentDates.push(iso)
+          }
+        }
+      }
+
+      if (absentDates.length > 0) {
+        await Promise.all(
+          absentDates.map((iso) => {
+            const dateObj = new Date(iso)
+            return prisma.employeeOccurrence.upsert({
+              where: { userId_date_type: { userId, date: dateObj, type: 'unexcused_absence' } },
+              create: { practiceId, userId, date: dateObj, type: 'unexcused_absence' },
+              update: {},
+            })
+          })
+        )
+      }
+
+      return reply.send({ punches: result, absentDates })
     }
   )
 
