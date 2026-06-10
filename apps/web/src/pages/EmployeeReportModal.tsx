@@ -268,7 +268,7 @@ export default function EmployeeReportModal({ report, onClose }: Props) {
 
             {/* Print footer */}
             <div className="hidden print:block mt-8 pt-4 border-t border-gray-200 text-xs text-gray-400 flex justify-between">
-              <span>Confidential — Brisa Employee Report</span>
+              <span>Confidential — BRISA Employee Report</span>
               <span>{generatedStr}</span>
             </div>
 

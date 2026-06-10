@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -260,7 +260,7 @@ export default function StaffOnboardingTab({ userId, firstName }: Props) {
   if (!checklist) return (
     <div className="py-12 text-center">
       <p className="text-sm text-gray-400">No onboarding record yet.</p>
-      <p className="text-xs text-gray-300 mt-1">{firstName} needs to open the Brisa mobile app to start onboarding.</p>
+      <p className="text-xs text-gray-300 mt-1">{firstName} needs to open the BRISA mobile app to start onboarding.</p>
     </div>
   )
 

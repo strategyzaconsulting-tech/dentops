@@ -53,7 +53,7 @@ export default function Step7Staff() {
         Add your staff
       </h1>
       <p className="text-sm text-gray-500 mb-8">
-        They'll receive an email invite to join Brisa.
+        They'll receive an email invite to join BRISA.
       </p>
 
       {/* Staff list */}

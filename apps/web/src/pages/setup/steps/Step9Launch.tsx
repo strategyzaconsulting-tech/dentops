@@ -210,7 +210,7 @@ export default function Step9Launch() {
               Setting up your practice...
             </>
           ) : (
-            'Launch Brisa →'
+            'Launch BRISA →'
           )}
         </button>
 

@@ -49,7 +49,7 @@ export default function SetupWizard() {
             >
               D
             </div>
-            <span className="font-semibold text-[#2C2C2A] text-base">Brisa</span>
+            <span className="font-semibold text-[#2C2C2A] text-base">BRISA</span>
           </div>
 
           {/* Step indicator */}
