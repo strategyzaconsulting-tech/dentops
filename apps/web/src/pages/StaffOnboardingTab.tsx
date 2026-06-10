@@ -85,6 +85,11 @@ function formatFieldValue(key: string, value: unknown): string {
     return '•'.repeat(Math.max(0, s.length - 2)) + s.slice(-2)
   }
   if (key === 'signatureDate') return fmtDate(String(value)) ?? String(value)
+  if (key === 'dob') {
+    const d = String(value).replace(/\D/g, '')
+    if (d.length === 8) return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`
+    return String(value)
+  }
   if (key === 'birthdayPrivacy') return value === 'private' ? 'Keep private' : 'Celebrate with team'
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
   return String(value)
