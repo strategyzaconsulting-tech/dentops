@@ -76,54 +76,40 @@
     @apply bg-background text-foreground;
     font-family: 'Josefin Sans', system-ui, sans-serif;
     font-weight: 300;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.02em;
   }
 
   /* Headings */
-  h1 {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Josefin Sans', system-ui, sans-serif;
     font-weight: 300;
-    letter-spacing: 0.35em;
-  }
-  h2 {
-    font-weight: 300;
-    letter-spacing: 0.28em;
-  }
-  h3, h4 {
-    font-weight: 300;
-    letter-spacing: 0.22em;
-  }
-  h5, h6 {
-    font-weight: 300;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.04em;
   }
 
   /* Uppercase labels */
   .uppercase {
-    letter-spacing: 0.35em;
-    font-weight: 300;
+    letter-spacing: 0.1em;
   }
 
   /* Buttons */
   button {
     font-family: 'Josefin Sans', system-ui, sans-serif;
     font-weight: 400;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.04em;
   }
 
   input, select, textarea {
     font-family: 'Josefin Sans', system-ui, sans-serif;
     font-weight: 300;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.02em;
   }
 
   td, th {
     font-family: 'Josefin Sans', system-ui, sans-serif;
-    letter-spacing: 0.1em;
   }
 
   .font-bold, .font-semibold {
     font-weight: 600;
-    letter-spacing: 0.12em;
   }
   .font-medium {
     font-weight: 400;

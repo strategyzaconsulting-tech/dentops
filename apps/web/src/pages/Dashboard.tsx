@@ -366,8 +366,8 @@ export default function Dashboard() {
               <path d="M8 28 Q14 23 20 28 Q28 34 36 28" stroke="#8BAF9A" strokeWidth="2.5" strokeLinecap="round" fill="none" />
             </svg>
             <div>
-              <h1 className="text-base font-bold text-[#FAF6EF] leading-tight tracking-wide">BRISA</h1>
-              <p className="text-[10px] text-[#8BAF9A] tracking-widest uppercase leading-tight">Admin Portal</p>
+              <h1 className="text-base font-bold text-[#FAF6EF] leading-tight" style={{ letterSpacing: '0.35em' }}>BRISA</h1>
+              <p className="text-[10px] text-[#8BAF9A] uppercase leading-tight" style={{ letterSpacing: '0.25em' }}>Admin Portal</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
