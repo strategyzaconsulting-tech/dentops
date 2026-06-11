@@ -40,6 +40,7 @@ model Practice {
   occurrences        EmployeeOccurrence[]
   licenses           License[]
   licenseDocuments   LicenseDocument[]
+  occurrenceAudits   OccurrenceAudit[]
 
   @@map("practices")
 }
@@ -86,9 +87,11 @@ model User {
   trainingSessions TrainingSession[]
   trainerSessions  TrainingSession[] @relation("Trainer")
   w4AnnualReviews  W4AnnualReview[]
-  occurrences      EmployeeOccurrence[]
-  licenses         License[]
-  licenseDocuments LicenseDocument[]
+  occurrences         EmployeeOccurrence[]
+  managedOccurrences  EmployeeOccurrence[] @relation("OccurrenceManager")
+  occurrenceAudits    OccurrenceAudit[]
+  licenses            License[]
+  licenseDocuments    LicenseDocument[]
 
   @@map("users")
 }
@@ -222,6 +225,8 @@ model BlackoutDate {
   practiceId String   @map("practice_id") @db.Uuid
   date       DateTime @db.Date
   reason     String?
+  type       String   @default("blackout")
+  name       String?
 
   practice Practice @relation(fields: [practiceId], references: [id])
 
@@ -383,12 +388,21 @@ model EmployeeOccurrence {
   practiceId String   @map("practice_id") @db.Uuid
   userId     String   @map("user_id") @db.Uuid
   date       DateTime @db.Date
-  type       String   // "tardy" | "unexcused_absence"
+  type       String
   notes      String?
+  title                String?   @map("title")
+  body                 String?   @map("body")
+  managerId            String?   @map("manager_id") @db.Uuid
+  managerSignedAt      DateTime? @map("manager_signed_at") @db.Timestamptz()
+  managerSignatureName String?   @map("manager_signature_name")
+  staffAcknowledgedAt  DateTime? @map("staff_acknowledged_at") @db.Timestamptz()
+  staffSignatureName   String?   @map("staff_signature_name")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
-  practice Practice @relation(fields: [practiceId], references: [id])
-  user     User     @relation(fields: [userId], references: [id])
+  practice   Practice           @relation(fields: [practiceId], references: [id])
+  user       User               @relation(fields: [userId], references: [id])
+  manager    User?              @relation("OccurrenceManager", fields: [managerId], references: [id])
+  audits     OccurrenceAudit[]
 
   @@unique([userId, date, type])
   @@map("employee_occurrences")
@@ -434,4 +448,22 @@ model LicenseDocument {
   user     User     @relation(fields: [userId], references: [id])
 
   @@map("license_documents")
+}
+
+model OccurrenceAudit {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  occurrenceId String   @map("occurrence_id") @db.Uuid
+  practiceId   String   @map("practice_id") @db.Uuid
+  editorId     String   @map("editor_id") @db.Uuid
+  field        String
+  oldValue     String?  @map("old_value")
+  newValue     String?  @map("new_value")
+  reason       String
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  occurrence EmployeeOccurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+  practice   Practice           @relation(fields: [practiceId], references: [id])
+  editor     User               @relation(fields: [editorId], references: [id])
+
+  @@map("occurrence_audits")
 }

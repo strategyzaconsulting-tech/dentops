@@ -1,0 +1,2 @@
+ALTER TABLE "blackout_dates" ADD COLUMN IF NOT EXISTS "type" TEXT NOT NULL DEFAULT 'blackout';
+ALTER TABLE "blackout_dates" ADD COLUMN IF NOT EXISTS "name" TEXT;

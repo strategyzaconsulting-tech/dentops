@@ -7,42 +7,49 @@ import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/apiFetch'
 
 const TYPE_STYLE: Record<string, string> = {
-  tardy: 'bg-amber-100 text-amber-700',
-  unexcused_absence: 'bg-red-100 text-red-700',
-  verbal_warning: 'bg-orange-100 text-orange-700',
-  written_warning: 'bg-rose-100 text-rose-700',
-  note: 'bg-blue-100 text-blue-700',
+  tardy:            'bg-amber-100 text-amber-700',
+  unexcused_absence:'bg-red-100 text-red-700',
+  verbal_warning:   'bg-orange-100 text-orange-700',
+  written_warning:  'bg-rose-100 text-rose-700',
+  performance_note: 'bg-blue-100 text-blue-700',
+  termination:      'bg-gray-900 text-white',
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  tardy: 'Tardy',
-  unexcused_absence: 'Absent',
-  verbal_warning: 'Verbal Warning',
-  written_warning: 'Written Warning',
-  note: 'Event of Note',
+  tardy:            'Tardy',
+  unexcused_absence:'Absent',
+  verbal_warning:   'Verbal Warning',
+  written_warning:  'Written Warning',
+  performance_note: 'Performance Note',
+  termination:      'Termination',
 }
 
 const DOT_COLOR: Record<string, string> = {
-  tardy: 'bg-amber-400',
-  unexcused_absence: 'bg-red-500',
-  verbal_warning: 'bg-orange-400',
-  written_warning: 'bg-rose-600',
-  note: 'bg-blue-400',
+  tardy:            'bg-amber-400',
+  unexcused_absence:'bg-red-500',
+  verbal_warning:   'bg-orange-400',
+  written_warning:  'bg-rose-600',
+  performance_note: 'bg-blue-400',
+  termination:      'bg-gray-900',
 }
 
+const FORMAL_TYPES = new Set(['verbal_warning', 'written_warning', 'performance_note', 'termination'])
+
 const MANUAL_TYPES = [
-  { key: 'verbal_warning', label: 'Verbal Warning' },
-  { key: 'written_warning', label: 'Written Warning' },
-  { key: 'note', label: 'Event of Note' },
+  { key: 'verbal_warning',   label: 'Verbal Warning'   },
+  { key: 'written_warning',  label: 'Written Warning'  },
+  { key: 'performance_note', label: 'Performance Note' },
+  { key: 'termination',      label: 'Termination Record' },
 ]
 
 const FILTER_CHIPS = [
-  { key: 'all', label: 'All' },
-  { key: 'tardy', label: 'Tardies' },
-  { key: 'unexcused_absence', label: 'Absences' },
-  { key: 'verbal_warning', label: 'Verbal' },
-  { key: 'written_warning', label: 'Written' },
-  { key: 'note', label: 'Notes' },
+  { key: 'all',              label: 'All'         },
+  { key: 'tardy',            label: 'Tardies'     },
+  { key: 'unexcused_absence',label: 'Absences'    },
+  { key: 'verbal_warning',   label: 'Verbal'      },
+  { key: 'written_warning',  label: 'Written'     },
+  { key: 'performance_note', label: 'Performance' },
+  { key: 'termination',      label: 'Termination' },
 ]
 
 const DATE_RANGES = [
@@ -112,11 +119,33 @@ export interface StaffMember {
   benefitsEligibleAt: string | null
 }
 
+interface OccurrenceManager {
+  id: string; firstName: string; lastName: string; role: string
+}
+
+interface AuditEntry {
+  id: string
+  field: string
+  oldValue: string | null
+  newValue: string | null
+  reason: string
+  createdAt: string
+  editor: { id: string; firstName: string; lastName: string; role: string }
+}
+
 interface Occurrence {
   id: string
   date: string
   type: string
   notes: string | null
+  title: string | null
+  body: string | null
+  managerId: string | null
+  manager: OccurrenceManager | null
+  managerSignedAt: string | null
+  managerSignatureName: string | null
+  staffAcknowledgedAt: string | null
+  staffSignatureName: string | null
   createdAt: string
 }
 
@@ -161,7 +190,18 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
   const [typeFilter, setTypeFilter] = useState('all')
   const [showAddForm, setShowAddForm] = useState(false)
   const [addForm, setAddForm] = useState({ type: 'verbal_warning', date: toISODate(new Date()), notes: '' })
+  const [docForm, setDocForm] = useState({ type: 'verbal_warning', date: toISODate(new Date()), title: '', body: '', managerSignatureName: '' })
+  const [showDocModal, setShowDocModal] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [viewingDoc, setViewingDoc] = useState<Occurrence | null>(null)
+  const [ackForm, setAckForm] = useState('')
+  const [savingAck, setSavingAck] = useState(false)
+  const [deletingOccId, setDeletingOccId] = useState<string | null>(null)
+  const [showOverride, setShowOverride] = useState(false)
+  const [overrideForm, setOverrideForm] = useState({ title: '', body: '', notes: '', reason: '' })
+  const [savingOverride, setSavingOverride] = useState(false)
+  const [auditTrail, setAuditTrail] = useState<AuditEntry[]>([])
+  const [showAudit, setShowAudit] = useState(false)
   const [reportData, setReportData] = useState<unknown>(null)
   const [generatingReport, setGeneratingReport] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
@@ -263,14 +303,95 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
       })
       if (res.ok) {
         const occ: Occurrence = await res.json()
-        setOccurrences(prev =>
-          [occ, ...prev].sort((a, b) => b.date.localeCompare(a.date))
-        )
+        setOccurrences(prev => [occ, ...prev].sort((a, b) => b.date.localeCompare(a.date)))
         setShowAddForm(false)
         setAddForm({ type: 'verbal_warning', date: toISODate(new Date()), notes: '' })
       }
     } catch { /* silent */ }
     finally { setAdding(false) }
+  }
+
+  async function handleAddDoc() {
+    if (!docForm.title.trim() || !docForm.body.trim() || !docForm.managerSignatureName.trim()) return
+    setAdding(true)
+    try {
+      const res = await apiFetch('/api/occurrences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          practiceId: PRACTICE_ID,
+          userId: member.id,
+          date: docForm.date,
+          type: docForm.type,
+          title: docForm.title.trim(),
+          body: docForm.body.trim(),
+          managerSignatureName: docForm.managerSignatureName.trim(),
+        }),
+      })
+      if (res.ok) {
+        const occ: Occurrence = await res.json()
+        setOccurrences(prev => [occ, ...prev].sort((a, b) => b.date.localeCompare(a.date)))
+        setShowDocModal(false)
+        setDocForm({ type: 'verbal_warning', date: toISODate(new Date()), title: '', body: '', managerSignatureName: '' })
+      }
+    } catch { /* silent */ }
+    finally { setAdding(false) }
+  }
+
+  async function handleAcknowledge(occId: string) {
+    if (!ackForm.trim()) return
+    setSavingAck(true)
+    try {
+      const res = await apiFetch(`/api/occurrences/${occId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acknowledge: true, staffSignatureName: ackForm.trim() }),
+      })
+      if (res.ok) {
+        const updated: Occurrence = await res.json()
+        setOccurrences(prev => prev.map(o => o.id === occId ? updated : o))
+        setViewingDoc(updated)
+        setAckForm('')
+      }
+    } catch { /* silent */ }
+    finally { setSavingAck(false) }
+  }
+
+  async function handleDeleteOcc(occId: string) {
+    setDeletingOccId(occId)
+    await apiFetch(`/api/occurrences/${occId}`, { method: 'DELETE' })
+    setOccurrences(prev => prev.filter(o => o.id !== occId))
+    setDeletingOccId(null)
+    if (viewingDoc?.id === occId) setViewingDoc(null)
+  }
+
+  async function handleOverride(occId: string) {
+    if (!overrideForm.reason.trim()) return
+    setSavingOverride(true)
+    try {
+      const body: Record<string, string> = { reason: overrideForm.reason.trim() }
+      if (overrideForm.title.trim()) body.title = overrideForm.title.trim()
+      if (overrideForm.body.trim()) body.body = overrideForm.body.trim()
+      if (overrideForm.notes.trim()) body.notes = overrideForm.notes.trim()
+      const res = await apiFetch(`/api/occurrences/${occId}/override`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) {
+        const updated: Occurrence = await res.json()
+        setOccurrences(prev => prev.map(o => o.id === occId ? updated : o))
+        setViewingDoc(updated)
+        setOverrideForm({ title: '', body: '', notes: '', reason: '' })
+        setShowOverride(false)
+        loadAudit(occId)
+      }
+    } catch { /* silent */ }
+    finally { setSavingOverride(false) }
+  }
+
+  async function loadAudit(occId: string) {
+    const res = await apiFetch(`/api/occurrences/${occId}/audit`)
+    if (res.ok) { const data = await res.json(); setAuditTrail(Array.isArray(data) ? data : []) }
   }
 
   const stats = [
@@ -765,98 +886,30 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
           {/* Occurrence Log */}
           <section className="px-6 py-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Occurrence Log
-              </h3>
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Occurrence Log</h3>
               <button
-                onClick={() => setShowAddForm(v => !v)}
+                onClick={() => { setShowDocModal(true); setDocForm(f => ({ ...f, date: toISODate(new Date()) })) }}
                 className="flex items-center gap-1 rounded-lg border border-dashed border-[#1D9E75] px-3 py-1.5 text-xs font-semibold text-[#1D9E75] hover:bg-[#E8F5F0] transition-colors"
               >
-                + Add Entry
+                + Add Document
               </button>
             </div>
-
-            {/* Add entry form */}
-            {showAddForm && (
-              <div className="mb-5 rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-600">Type</label>
-                    <select
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-                      value={addForm.type}
-                      onChange={e => setAddForm(f => ({ ...f, type: e.target.value }))}
-                    >
-                      {MANUAL_TYPES.map(t => (
-                        <option key={t.key} value={t.key}>{t.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-600">Date</label>
-                    <input
-                      type="date"
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-                      value={addForm.date}
-                      onChange={e => setAddForm(f => ({ ...f, date: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">Notes</label>
-                  <textarea
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75] resize-none"
-                    rows={3}
-                    placeholder="Describe the occurrence…"
-                    value={addForm.notes}
-                    onChange={e => setAddForm(f => ({ ...f, notes: e.target.value }))}
-                    autoFocus
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => setShowAddForm(false)}
-                    className="px-4 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-100"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAddEntry}
-                    disabled={adding}
-                    className="px-4 py-1.5 rounded-lg bg-[#1D9E75] text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-                  >
-                    {adding ? 'Saving…' : 'Save Entry'}
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Type filter chips */}
             <div className="flex flex-wrap gap-1.5 mb-5">
               {FILTER_CHIPS.map(chip => {
-                const count =
-                  chip.key === 'all'
-                    ? occurrences.length
-                    : occurrences.filter(o => o.type === chip.key).length
+                const count = chip.key === 'all' ? occurrences.length : occurrences.filter(o => o.type === chip.key).length
                 return (
                   <button
                     key={chip.key}
                     onClick={() => setTypeFilter(chip.key)}
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                      typeFilter === chip.key
-                        ? 'bg-gray-800 text-white'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      typeFilter === chip.key ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                     }`}
                   >
                     {chip.label}
                     {count > 0 && (
-                      <span
-                        className={`text-xs rounded-full px-1.5 py-0 leading-4 font-semibold ${
-                          typeFilter === chip.key
-                            ? 'bg-white/20 text-white'
-                            : 'bg-white text-gray-500'
-                        }`}
-                      >
+                      <span className={`text-xs rounded-full px-1.5 py-0 leading-4 font-semibold ${typeFilter === chip.key ? 'bg-white/20 text-white' : 'bg-white text-gray-500'}`}>
                         {count}
                       </span>
                     )}
@@ -870,60 +923,98 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
               <div className="py-12 text-center text-sm text-gray-400">Loading…</div>
             ) : displayed.length === 0 ? (
               <div className="py-12 text-center">
-                <p className="text-sm text-gray-400 italic">
-                  No entries{typeFilter !== 'all' ? ' of this type' : ''} on record.
-                </p>
+                <p className="text-sm text-gray-400 italic">No entries{typeFilter !== 'all' ? ' of this type' : ''} on record.</p>
               </div>
             ) : (
               <div>
                 {displayed.map((occ, idx) => {
-                  const d = new Date(occ.date)
-                  const dateStr = d.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })
-                  const isAuto =
-                    occ.type === 'tardy' || occ.type === 'unexcused_absence'
+                  const d = new Date(occ.date.split('T')[0] + 'T12:00:00')
+                  const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  const isAuto = occ.type === 'tardy' || occ.type === 'unexcused_absence'
+                  const isFormal = FORMAL_TYPES.has(occ.type)
                   const isLast = idx === displayed.length - 1
+                  const isDeleting = deletingOccId === occ.id
 
                   return (
                     <div key={occ.id} className="flex gap-4">
                       {/* Spine */}
                       <div className="flex flex-col items-center shrink-0 w-4">
-                        <div
-                          className={`mt-1.5 h-3 w-3 rounded-full border-2 border-white shadow-sm shrink-0 ${
-                            DOT_COLOR[occ.type] ?? 'bg-gray-400'
-                          }`}
-                        />
-                        {!isLast && (
-                          <div className="w-px flex-1 bg-gray-200 mt-1" style={{ minHeight: 20 }} />
-                        )}
+                        <div className={`mt-1.5 h-3 w-3 rounded-full border-2 border-white shadow-sm shrink-0 ${DOT_COLOR[occ.type] ?? 'bg-gray-400'}`} />
+                        {!isLast && <div className="w-px flex-1 bg-gray-200 mt-1" style={{ minHeight: 20 }} />}
                       </div>
 
                       {/* Content */}
-                      <div className={`flex-1 pb-5 ${isLast ? 'pb-8' : ''}`}>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span
-                              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                TYPE_STYLE[occ.type] ?? 'bg-gray-100 text-gray-600'
-                              }`}
-                            >
-                              {TYPE_LABEL[occ.type] ?? occ.type}
-                            </span>
-                            {isAuto && (
-                              <span className="text-[10px] text-gray-400 italic">
-                                from time clock
-                              </span>
-                            )}
+                      <div className={`flex-1 ${isLast ? 'pb-8' : 'pb-5'}`}>
+                        {isFormal ? (
+                          /* Formal document card */
+                          <div className={`rounded-xl border overflow-hidden ${occ.type === 'termination' ? 'border-gray-800' : 'border-gray-200'}`}>
+                            <div className={`flex items-start justify-between px-4 py-3 ${occ.type === 'termination' ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${TYPE_STYLE[occ.type] ?? 'bg-gray-100 text-gray-600'}`}>
+                                    {TYPE_LABEL[occ.type] ?? occ.type}
+                                  </span>
+                                  <span className={`text-xs ${occ.type === 'termination' ? 'text-gray-400' : 'text-gray-500'}`}>{dateStr}</span>
+                                </div>
+                                {occ.title && (
+                                  <p className={`text-sm font-semibold mt-1 ${occ.type === 'termination' ? 'text-white' : 'text-gray-800'}`}>{occ.title}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0 ml-2">
+                                <button
+                                  onClick={() => { setViewingDoc(occ); setAckForm('') }}
+                                  className={`text-xs font-semibold hover:underline ${occ.type === 'termination' ? 'text-gray-300' : 'text-[#1D9E75]'}`}
+                                >
+                                  View →
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteOcc(occ.id)}
+                                  disabled={isDeleting}
+                                  className={`text-xs ${occ.type === 'termination' ? 'text-gray-600 hover:text-red-400' : 'text-gray-300 hover:text-red-500'} disabled:opacity-50`}
+                                >
+                                  {isDeleting ? '…' : '✕'}
+                                </button>
+                              </div>
+                            </div>
+                            <div className="px-4 py-3 space-y-2 bg-white">
+                              {occ.body && (
+                                <p className="text-sm text-gray-600 leading-relaxed line-clamp-2">{occ.body}</p>
+                              )}
+                              <div className="flex items-center gap-4 flex-wrap">
+                                {occ.managerSignatureName ? (
+                                  <span className="text-[11px] text-gray-500 flex items-center gap-1">
+                                    <span className="text-green-500">✓</span> Signed by {occ.managerSignatureName}
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] text-amber-500 flex items-center gap-1">⏳ Awaiting manager signature</span>
+                                )}
+                                {occ.staffSignatureName ? (
+                                  <span className="text-[11px] text-gray-500 flex items-center gap-1">
+                                    <span className="text-green-500">✓</span> Acknowledged by {occ.staffSignatureName}
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] text-orange-500 flex items-center gap-1">⏳ Pending staff acknowledgment</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <span className="text-xs text-gray-400 shrink-0 mt-0.5">{dateStr}</span>
-                        </div>
-                        {occ.notes && (
-                          <p className="mt-1.5 text-sm text-gray-600 leading-relaxed">
-                            {occ.notes}
-                          </p>
+                        ) : (
+                          /* Auto-log compact row */
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${TYPE_STYLE[occ.type] ?? 'bg-gray-100 text-gray-600'}`}>
+                                {TYPE_LABEL[occ.type] ?? occ.type}
+                              </span>
+                              {isAuto && <span className="text-[10px] text-gray-400 italic">from time clock</span>}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs text-gray-400">{dateStr}</span>
+                              <button onClick={() => handleDeleteOcc(occ.id)} disabled={isDeleting} className="text-gray-300 hover:text-red-500 text-xs disabled:opacity-50">{isDeleting ? '…' : '✕'}</button>
+                            </div>
+                          </div>
+                        )}
+                        {!isFormal && occ.notes && (
+                          <p className="mt-1.5 text-sm text-gray-600 leading-relaxed">{occ.notes}</p>
                         )}
                       </div>
                     </div>
@@ -937,6 +1028,229 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
           </>}
         </div>
       </div>
+
+      {/* Document creation modal */}
+      {showDocModal && (
+        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100 }} onClick={e => { if (e.target === e.currentTarget) setShowDocModal(false) }}>
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh]">
+            <div className="px-6 pt-5 pb-4 border-b border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-900">New HR Document</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Timestamped, manager-signed, staff-acknowledged</p>
+            </div>
+            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Document type</label>
+                  <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]" value={docForm.type} onChange={e => setDocForm(f => ({ ...f, type: e.target.value }))}>
+                    {MANUAL_TYPES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Date</label>
+                  <input type="date" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]" value={docForm.date} onChange={e => setDocForm(f => ({ ...f, date: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Document title <span className="text-red-400">*</span></label>
+                <input type="text" placeholder={`e.g. ${docForm.type === 'verbal_warning' ? 'Verbal Warning — Attendance Policy' : docForm.type === 'written_warning' ? 'Written Warning — Conduct Policy' : docForm.type === 'termination' ? 'Notice of Termination' : 'Performance Review Note'}`} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]" value={docForm.title} onChange={e => setDocForm(f => ({ ...f, title: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Document body <span className="text-red-400">*</span></label>
+                <textarea rows={8} placeholder="Write the full content of this HR document. Include specific dates, incidents, expectations, and any required corrective actions…" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75] resize-none" value={docForm.body} onChange={e => setDocForm(f => ({ ...f, body: e.target.value }))} />
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+                <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">Manager Attestation</p>
+                <p className="text-xs text-gray-500">By entering your name below, you certify that this document is accurate and was prepared in good faith.</p>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Manager signature (type full name) <span className="text-red-400">*</span></label>
+                  <input type="text" placeholder="Your full name" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]" value={docForm.managerSignatureName} onChange={e => setDocForm(f => ({ ...f, managerSignatureName: e.target.value }))} />
+                </div>
+                <p className="text-[10px] text-gray-400">Signed at: {new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+              <button onClick={() => setShowDocModal(false)} className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button onClick={handleAddDoc} disabled={adding || !docForm.title.trim() || !docForm.body.trim() || !docForm.managerSignatureName.trim()} className="flex-1 rounded-lg bg-[#1D9E75] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+                {adding ? 'Saving…' : 'Save & Sign Document'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document viewer modal */}
+      {viewingDoc && (
+        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100 }} onClick={e => { if (e.target === e.currentTarget) setViewingDoc(null) }}>
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh]">
+            <div className="px-6 pt-5 pb-4 border-b border-gray-100 flex items-start justify-between">
+              <div>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${TYPE_STYLE[viewingDoc.type] ?? 'bg-gray-100 text-gray-600'}`}>
+                  {TYPE_LABEL[viewingDoc.type] ?? viewingDoc.type}
+                </span>
+                <h3 className="text-base font-semibold text-gray-900 mt-2">{viewingDoc.title ?? TYPE_LABEL[viewingDoc.type]}</h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {new Date(viewingDoc.date.split('T')[0] + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                  {' · '}Employee: {member.firstName} {member.lastName}
+                </p>
+              </div>
+              <button onClick={() => setViewingDoc(null)} className="text-gray-400 hover:text-gray-700 text-xl leading-none shrink-0 ml-3">✕</button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+              {/* Body */}
+              <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{viewingDoc.body ?? viewingDoc.notes ?? <em className="text-gray-400">No content.</em>}</div>
+
+              <hr className="border-gray-200" />
+
+              {/* Manager attestation */}
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-1.5">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Manager Attestation</p>
+                {viewingDoc.managerSignatureName ? (
+                  <>
+                    <p className="text-sm font-semibold text-gray-800">
+                      <span className="text-green-500 mr-1.5">✓</span>{viewingDoc.managerSignatureName}
+                    </p>
+                    {viewingDoc.manager && (
+                      <p className="text-xs text-gray-500">{viewingDoc.manager.firstName} {viewingDoc.manager.lastName} · {viewingDoc.manager.role.replace('_', ' ')}</p>
+                    )}
+                    {viewingDoc.managerSignedAt && (
+                      <p className="text-xs text-gray-400">{new Date(viewingDoc.managerSignedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-amber-600 italic">Awaiting manager signature</p>
+                )}
+              </div>
+
+              {/* Staff acknowledgment */}
+              <div className={`rounded-xl border p-4 space-y-3 ${viewingDoc.staffAcknowledgedAt ? 'border-gray-200 bg-gray-50' : 'border-orange-200 bg-orange-50'}`}>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Employee Acknowledgment</p>
+                {viewingDoc.staffAcknowledgedAt ? (
+                  <>
+                    <p className="text-sm font-semibold text-gray-800">
+                      <span className="text-green-500 mr-1.5">✓</span>{viewingDoc.staffSignatureName}
+                    </p>
+                    <p className="text-xs text-gray-400">{new Date(viewingDoc.staffAcknowledgedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-orange-700 italic mb-2">
+                      {member.firstName} {member.lastName} has not yet acknowledged this document.
+                    </p>
+                    <p className="text-xs text-gray-500 mb-2">Once the employee has reviewed and acknowledged, enter their name below to record it.</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder={`${member.firstName} ${member.lastName} (typed name)`}
+                        className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                        value={ackForm}
+                        onChange={e => setAckForm(e.target.value)}
+                      />
+                      <button
+                        onClick={() => handleAcknowledge(viewingDoc.id)}
+                        disabled={savingAck || !ackForm.trim()}
+                        className="rounded-lg bg-[#1D9E75] px-4 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                      >
+                        {savingAck ? '…' : 'Mark Acknowledged'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <hr className="border-gray-200" />
+
+              {/* Override section — managers only */}
+              {(user?.role === 'manager' || user?.role === 'doctor') && (
+                <div>
+                  <button
+                    onClick={() => {
+                      setShowOverride(v => !v)
+                      if (!showOverride) setOverrideForm({ title: viewingDoc.title ?? '', body: viewingDoc.body ?? '', notes: viewingDoc.notes ?? '', reason: '' })
+                    }}
+                    className="flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors"
+                  >
+                    <span>✏️</span> Admin Override
+                    <span className="text-gray-400">{showOverride ? '▲' : '▼'}</span>
+                  </button>
+                  {showOverride && (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+                      <p className="text-xs text-amber-700 font-medium">⚠ Overrides are logged with full audit trail. All changes are permanent and attributed to your account.</p>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Corrected title</label>
+                        <input type="text" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" value={overrideForm.title} onChange={e => setOverrideForm(f => ({ ...f, title: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Corrected document body</label>
+                        <textarea rows={5} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none" value={overrideForm.body} onChange={e => setOverrideForm(f => ({ ...f, body: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Corrected notes</label>
+                        <input type="text" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" value={overrideForm.notes} onChange={e => setOverrideForm(f => ({ ...f, notes: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Reason for correction <span className="text-red-500">*</span></label>
+                        <input type="text" placeholder="e.g. Corrected employee name, date error, typo in policy citation" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" value={overrideForm.reason} onChange={e => setOverrideForm(f => ({ ...f, reason: e.target.value }))} />
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => setShowOverride(false)} className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button onClick={() => handleOverride(viewingDoc.id)} disabled={savingOverride || !overrideForm.reason.trim()} className="flex-1 rounded-lg bg-amber-500 hover:bg-amber-600 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                          {savingOverride ? 'Saving…' : 'Save Override'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Audit trail */}
+              <div>
+                <button
+                  onClick={() => { setShowAudit(v => !v); if (!showAudit) loadAudit(viewingDoc.id) }}
+                  className="flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors"
+                >
+                  <span>🕓</span> Audit Trail
+                  <span className="text-gray-400">{showAudit ? '▲' : '▼'}</span>
+                </button>
+                {showAudit && (
+                  <div className="mt-3 space-y-2">
+                    {auditTrail.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">No overrides recorded.</p>
+                    ) : auditTrail.map(a => (
+                      <div key={a.id} className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-gray-700">
+                              <span className="font-normal text-gray-500">Field:</span> <span className="font-mono text-purple-700">{a.field}</span>
+                            </p>
+                            {a.oldValue && <p className="text-[11px] text-red-500 mt-0.5">— {a.oldValue}</p>}
+                            {a.newValue && <p className="text-[11px] text-green-600">+ {a.newValue}</p>}
+                            <p className="text-[11px] text-gray-500 mt-1 italic">Reason: "{a.reason}"</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-[11px] font-medium text-gray-700">{a.editor.firstName} {a.editor.lastName}</p>
+                            <p className="text-[10px] text-gray-400">{new Date(a.createdAt).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => { handleDeleteOcc(viewingDoc.id); setViewingDoc(null) }}
+                className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50"
+              >
+                Delete Record
+              </button>
+              <button onClick={() => { setViewingDoc(null); setShowOverride(false); setShowAudit(false) }} className="flex-1 rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Report error toast */}
       {reportError && (
