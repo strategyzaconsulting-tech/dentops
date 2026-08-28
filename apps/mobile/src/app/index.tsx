@@ -3,7 +3,9 @@ import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,10 +15,13 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useAuth } from '../lib/AuthContext'
+import { apiFetch } from '../lib/api'
 
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.137:3000'
+const SPECIALTIES = [
+  'General Dentistry', 'Orthodontics', 'Periodontics',
+  'Endodontics', 'Oral Surgery', 'Hygiene', 'Front Desk',
+]
 
 const TEST_LOCATIONS = [
   { id: 'test-loc-1', name: 'Main Office', address: '123 Dental Ave', city: 'New York', state: 'NY' },
@@ -37,10 +42,88 @@ const LOG_COLORS: Record<string, string> = {
   breakEnd: '#3B82F6',
 }
 
+const ADJ_TYPES = ['missed_clock_in', 'missed_clock_out', 'wrong_time', 'other'] as const
+type AdjType = (typeof ADJ_TYPES)[number]
+
+const ADJ_LABELS: Record<AdjType, string> = {
+  missed_clock_in: 'Missed Clock-In',
+  missed_clock_out: 'Missed Clock-Out',
+  wrong_time: 'Wrong Time',
+  other: 'Other',
+}
+
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
 interface Location { id: string; name: string; address?: string; city?: string; state?: string }
 interface TimePunch { id: string; punchIn: string; locationId: string; specialty?: string; isTardy?: boolean }
 interface LogEntry { event: 'clockIn' | 'breakStart' | 'breakEnd'; time: Date }
 type TimerOption = 'none' | number | 'custom'
+
+interface WeekPunch {
+  id: string
+  punchIn: string
+  punchOut: string | null
+  location: { name: string }
+  specialty: string | null
+  breakStart: string | null
+  breakEnd: string | null
+  isTardy: boolean
+}
+
+interface Pt { x: number; y: number }
+
+function getMonday(date: Date): Date {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function getWeekDays(): Date[] {
+  const monday = getMonday(new Date())
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(d.getDate() + i)
+    return d
+  })
+}
+
+function parseTimeStr(str: string, base: Date): Date | null {
+  const s = str.trim()
+  const ampm = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+  if (ampm) {
+    let h = parseInt(ampm[1], 10)
+    const m = parseInt(ampm[2], 10)
+    if (ampm[3].toUpperCase() === 'PM' && h !== 12) h += 12
+    if (ampm[3].toUpperCase() === 'AM' && h === 12) h = 0
+    const d = new Date(base); d.setHours(h, m, 0, 0); return d
+  }
+  const hhmm = s.match(/^(\d{1,2}):(\d{2})$/)
+  if (hhmm) {
+    const d = new Date(base); d.setHours(parseInt(hhmm[1], 10), parseInt(hhmm[2], 10), 0, 0); return d
+  }
+  return null
+}
+
+function punchDurationMs(p: WeekPunch): number {
+  const start = new Date(p.punchIn).getTime()
+  const end = p.punchOut ? new Date(p.punchOut).getTime() : 0
+  if (!p.punchOut) return 0
+  let ms = end - start
+  if (p.breakStart && p.breakEnd) {
+    ms -= new Date(p.breakEnd).getTime() - new Date(p.breakStart).getTime()
+  }
+  return Math.max(0, ms)
+}
+
+function formatHours(ms: number): string {
+  const m = Math.floor(ms / 60000)
+  const h = Math.floor(m / 60)
+  const rem = m % 60
+  return h > 0 ? `${h}h ${rem}m` : `${rem}m`
+}
 
 function formatElapsed(punchIn: Date): string {
   const secs = Math.floor((Date.now() - punchIn.getTime()) / 1000)
@@ -65,11 +148,26 @@ function formatLogTime(date: Date): string {
   return `${h % 12 || 12}:${m} ${ampm}`
 }
 
+function formatHm(iso: string): string {
+  const d = new Date(iso)
+  const h = d.getHours()
+  const m = d.getMinutes().toString().padStart(2, '0')
+  return `${h % 12 || 12}:${m} ${h >= 12 ? 'PM' : 'AM'}`
+}
+
 function formatDate(date: Date): string {
   return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-interface Pt { x: number; y: number }
+function formatShortDate(date: Date): string {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function formatCountdown(secs: number): string {
+  const m = Math.floor(secs / 60).toString().padStart(2, '0')
+  const s = (secs % 60).toString().padStart(2, '0')
+  return `${m}:${s}`
+}
 
 function bezierWavePoints(p0: Pt, p1: Pt, p2: Pt, p3: Pt, p4: Pt, n = 8): Pt[] {
   const pts: Pt[] = []
@@ -104,13 +202,11 @@ function WaveLine({ color, p0, p1, p2, p3, p4 }: { color: string; p0: Pt; p1: Pt
   )
 }
 
-function formatCountdown(secs: number): string {
-  const m = Math.floor(secs / 60).toString().padStart(2, '0')
-  const s = (secs % 60).toString().padStart(2, '0')
-  return `${m}:${s}`
-}
-
 export default function HomeScreen() {
+  const { user } = useAuth()
+  const practiceId = user?.practiceId ?? ''
+  const userId = user?.id ?? ''
+
   const [now, setNow] = useState(new Date())
   const [practiceName, setPracticeName] = useState<string | null>(null)
   const [locations, setLocations] = useState<Location[]>([])
@@ -130,28 +226,65 @@ export default function HomeScreen() {
   const mealTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Specialty
+  const [requireSpecialty, setRequireSpecialty] = useState(false)
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null)
+
+  // Weekly timesheet
+  const [showTimesheet, setShowTimesheet] = useState(false)
+  const [weekPunches, setWeekPunches] = useState<WeekPunch[]>([])
+  const [weekAbsent, setWeekAbsent] = useState<string[]>([])
+  const [timesheetLoading, setTimesheetLoading] = useState(false)
+
+  // Adjustment request
+  const [showAdjModal, setShowAdjModal] = useState(false)
+  const [adjDate, setAdjDate] = useState(new Date())
+  const [adjType, setAdjType] = useState<AdjType>('missed_clock_in')
+  const [adjInTime, setAdjInTime] = useState('')
+  const [adjOutTime, setAdjOutTime] = useState('')
+  const [adjNotes, setAdjNotes] = useState('')
+  const [adjSubmitting, setAdjSubmitting] = useState(false)
+
+  // Clock ticker
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
 
+  // Fetch practice settings + locations when auth is ready
   useEffect(() => {
-    fetch(`${API_BASE}/api/practice/${PRACTICE_ID}`)
-      .then((r) => r.json())
-      .then((data) => { if (data?.name) setPracticeName(data.name) })
+    if (!practiceId) return
+    apiFetch(`/api/practice/${practiceId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data?.name) setPracticeName(data.name)
+        if (typeof data?.requireSpecialty === 'boolean') setRequireSpecialty(data.requireSpecialty)
+      })
       .catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    fetch(`${API_BASE}/api/locations?practiceId=${PRACTICE_ID}`)
-      .then((r) => r.json())
+    apiFetch(`/api/locations?practiceId=${practiceId}`)
+      .then(r => r.json())
       .then((data: Location[]) => {
         if (Array.isArray(data) && data.length > 0) setLocations(data)
         else setLocations(TEST_LOCATIONS)
       })
       .catch(() => setLocations(TEST_LOCATIONS))
-  }, [])
+  }, [practiceId])
 
+  // Fetch weekly timesheet when panel opens
+  useEffect(() => {
+    if (!showTimesheet || !practiceId || !userId) return
+    setTimesheetLoading(true)
+    apiFetch(`/api/time-punches/mine?practiceId=${practiceId}&userId=${userId}`)
+      .then(r => r.json())
+      .then(data => {
+        setWeekPunches(Array.isArray(data.punches) ? data.punches : [])
+        setWeekAbsent(Array.isArray(data.absentDates) ? data.absentDates : [])
+      })
+      .catch(() => {})
+      .finally(() => setTimesheetLoading(false))
+  }, [showTimesheet, practiceId, userId])
+
+  // Elapsed timer while clocked in
   useEffect(() => {
     if (punch) {
       const punchInDate = new Date(punch.punchIn)
@@ -202,13 +335,18 @@ export default function HomeScreen() {
     setClockingIn(true)
     const punchIn = new Date()
     try {
-      const res = await fetch(`${API_BASE}/api/time-punches`, {
+      const res = await apiFetch('/api/time-punches', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ practiceId: PRACTICE_ID, userId: USER_ID, locationId: selectedLocation, punchIn: punchIn.toISOString() }),
+        body: JSON.stringify({
+          practiceId,
+          userId,
+          locationId: selectedLocation,
+          specialty: selectedSpecialty ?? undefined,
+          punchIn: punchIn.toISOString(),
+        }),
       })
       if (res.status === 409) {
-        Alert.alert('Already Clocked In', "Please clock out before starting a new shift.")
+        Alert.alert('Already Clocked In', 'Please clock out before starting a new shift.')
         return
       }
       if (res.ok) {
@@ -235,22 +373,21 @@ export default function HomeScreen() {
     }
     setBreakLoading(true)
     try {
-      const now = new Date()
-      const body = onBreak ? { breakEnd: now.toISOString() } : { breakStart: now.toISOString() }
-      await fetch(`${API_BASE}/api/time-punches/${punch.id}`, {
+      const n = new Date()
+      const body = onBreak ? { breakEnd: n.toISOString() } : { breakStart: n.toISOString() }
+      await apiFetch(`/api/time-punches/${punch.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       if (!onBreak) {
-        setBreakLog((prev) => [...prev, { event: 'breakStart', time: now }])
+        setBreakLog(prev => [...prev, { event: 'breakStart', time: n }])
         const mins = resolvedTimerMins()
         if (mins !== null) startMealTimer(mins, alertVibrate)
       } else {
-        setBreakLog((prev) => [...prev, { event: 'breakEnd', time: now }])
+        setBreakLog(prev => [...prev, { event: 'breakEnd', time: n }])
         stopMealTimer()
       }
-      setOnBreak((prev) => !prev)
+      setOnBreak(prev => !prev)
     } catch { /* swallow */ }
     finally { setBreakLoading(false) }
   }
@@ -262,21 +399,77 @@ export default function HomeScreen() {
     if (elapsedRef.current) clearInterval(elapsedRef.current)
     const punchId = punch.id
     setPunch(null); setOnBreak(false); setBreakLog([])
-    setTimerOption('none'); setCustomInput(''); setSelectedLocation(null); setClockingOut(false)
+    setTimerOption('none'); setCustomInput('')
+    setSelectedLocation(null); setSelectedSpecialty(null)
+    setClockingOut(false)
     if (!punchId.startsWith('local-')) {
       try {
-        await fetch(`${API_BASE}/api/time-punches/${punchId}`, {
+        await apiFetch(`/api/time-punches/${punchId}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ punchOut: new Date().toISOString() }),
         })
       } catch { /* API unavailable */ }
     }
   }
 
-  const activeLocation = locations.find((l) => l.id === punch?.locationId)
+  async function handleSubmitAdj() {
+    const corrIn = adjInTime.trim() ? parseTimeStr(adjInTime, adjDate) : null
+    const corrOut = adjOutTime.trim() ? parseTimeStr(adjOutTime, adjDate) : null
+    if (adjInTime.trim() && !corrIn) {
+      Alert.alert('Invalid time', 'Use format like "9:00 AM" or "14:30"')
+      return
+    }
+    if (adjOutTime.trim() && !corrOut) {
+      Alert.alert('Invalid time', 'Use format like "5:00 PM" or "17:00"')
+      return
+    }
+    setAdjSubmitting(true)
+    try {
+      const res = await apiFetch('/api/clock-adjustments', {
+        method: 'POST',
+        body: JSON.stringify({
+          practiceId,
+          userId,
+          date: adjDate.toISOString().split('T')[0],
+          type: adjType,
+          notes: adjNotes.trim() || ADJ_LABELS[adjType],
+          correctedPunchIn: corrIn?.toISOString() ?? null,
+          correctedPunchOut: corrOut?.toISOString() ?? null,
+        }),
+      })
+      if (res.ok) {
+        Alert.alert('Submitted', 'Your time correction has been sent to your manager.')
+        setShowAdjModal(false)
+        setAdjNotes(''); setAdjInTime(''); setAdjOutTime('')
+        setAdjDate(new Date()); setAdjType('missed_clock_in')
+      } else {
+        Alert.alert('Error', 'Could not submit. Please try again.')
+      }
+    } catch {
+      Alert.alert('Error', 'Could not submit. Please try again.')
+    } finally {
+      setAdjSubmitting(false)
+    }
+  }
+
+  // Timesheet helpers
+  const weekDays = getWeekDays()
+  const today = new Date()
+
+  function punchForDay(day: Date): WeekPunch | undefined {
+    return weekPunches.find(p => new Date(p.punchIn).toDateString() === day.toDateString())
+  }
+
+  function isAbsent(day: Date): boolean {
+    return weekAbsent.includes(day.toISOString().split('T')[0])
+  }
+
+  const totalWeekMs = weekPunches.reduce((sum, p) => sum + punchDurationMs(p), 0)
+
+  const activeLocation = locations.find(l => l.id === punch?.locationId)
   const isCustomTimerInvalid = timerOption === 'custom' && customInput.length > 0 &&
     (isNaN(parseInt(customInput, 10)) || parseInt(customInput, 10) <= 0)
+  const canClockIn = !!selectedLocation && (!requireSpecialty || !!selectedSpecialty) && !clockingIn
 
   // ---- ACTIVE STATE ----
   if (punch) {
@@ -294,7 +487,7 @@ export default function HomeScreen() {
               <View style={styles.timerSection}>
                 <Text style={styles.timerSectionLabel}>Meal timer</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timerChipRow}>
-                  {(['none', ...PRESET_TIMER_MINS, 'custom'] as const).map((opt) => (
+                  {(['none', ...PRESET_TIMER_MINS, 'custom'] as const).map(opt => (
                     <TouchableOpacity key={String(opt)} style={timerOption === opt ? styles.timerChipSelected : styles.timerChip} onPress={() => setTimerOption(opt)}>
                       <Text style={timerOption === opt ? styles.timerChipTextSelected : styles.timerChipText}>
                         {opt === 'none' ? 'None' : opt === 'custom' ? 'Custom' : `${opt}m`}
@@ -311,7 +504,7 @@ export default function HomeScreen() {
                 {timerOption !== 'none' && (
                   <View style={styles.alertToggleRow}>
                     <Text style={styles.alertToggleLabel}>Alert with</Text>
-                    <TouchableOpacity style={alertVibrate ? styles.alertChipSelected : styles.alertChip} onPress={() => setAlertVibrate((v) => !v)}>
+                    <TouchableOpacity style={alertVibrate ? styles.alertChipSelected : styles.alertChip} onPress={() => setAlertVibrate(v => !v)}>
                       <Text style={alertVibrate ? styles.alertChipTextSelected : styles.alertChipText}>📳 Vibrate</Text>
                     </TouchableOpacity>
                   </View>
@@ -359,7 +552,7 @@ export default function HomeScreen() {
     <View style={styles.idleRoot}>
       <SafeAreaView style={styles.idleTopArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.idleScroll} keyboardShouldPersistTaps="handled">
-          {/* Brisa brand header */}
+          {/* Brand header */}
           <View style={styles.brandHeader}>
             <View style={styles.brandRow}>
               <View style={styles.logoMark}>
@@ -378,14 +571,74 @@ export default function HomeScreen() {
             <Text style={styles.dateText}>{formatDate(now)}</Text>
           </View>
 
-          <TouchableOpacity style={styles.clockInBtn} onPress={() => { setSelectedLocation(null); setShowLocationPicker(true) }}>
+          <TouchableOpacity style={styles.clockInBtn} onPress={() => { setSelectedLocation(null); setSelectedSpecialty(null); setShowLocationPicker(true) }}>
             <Text style={styles.clockInBtnText}>CLOCK IN</Text>
           </TouchableOpacity>
+
+          {/* Time correction link */}
+          <TouchableOpacity style={styles.adjLink} onPress={() => setShowAdjModal(true)}>
+            <Text style={styles.adjLinkText}>Report a missed punch</Text>
+          </TouchableOpacity>
+
+          {/* Weekly timesheet card */}
+          <View style={styles.timesheetCard}>
+            <TouchableOpacity style={styles.timesheetHeader} onPress={() => setShowTimesheet(v => !v)}>
+              <Text style={styles.timesheetTitle}>MY HOURS THIS WEEK</Text>
+              <View style={styles.timesheetHeaderRight}>
+                {totalWeekMs > 0 && <Text style={styles.timesheetTotal}>{formatHours(totalWeekMs)}</Text>}
+                <Text style={styles.timesheetChevron}>{showTimesheet ? '▲' : '▼'}</Text>
+              </View>
+            </TouchableOpacity>
+
+            {showTimesheet && (
+              <View style={styles.timesheetBody}>
+                {timesheetLoading ? (
+                  <ActivityIndicator color="#1D9E75" style={{ marginVertical: 16 }} />
+                ) : (
+                  weekDays.map((day, i) => {
+                    const p = punchForDay(day)
+                    const absent = isAbsent(day)
+                    const isToday = day.toDateString() === today.toDateString()
+                    const isFuture = day > today
+                    return (
+                      <View key={i} style={[styles.timesheetRow, i < 6 && styles.timesheetRowBorder]}>
+                        <View style={styles.timesheetDayCol}>
+                          <Text style={[styles.timesheetDayName, isToday && styles.timesheetToday]}>{DAY_NAMES[i]}</Text>
+                          <Text style={styles.timesheetDayDate}>{formatShortDate(day)}</Text>
+                        </View>
+                        <View style={styles.timesheetPunchCol}>
+                          {p ? (
+                            <>
+                              <Text style={styles.timesheetPunchTimes}>
+                                {formatHm(p.punchIn)} – {p.punchOut ? formatHm(p.punchOut) : 'Active'}
+                              </Text>
+                              {punchDurationMs(p) > 0 && (
+                                <Text style={styles.timesheetPunchDuration}>{formatHours(punchDurationMs(p))}</Text>
+                              )}
+                            </>
+                          ) : absent ? (
+                            <Text style={styles.timesheetAbsent}>Absent</Text>
+                          ) : isFuture ? (
+                            <Text style={styles.timesheetFuture}>—</Text>
+                          ) : isToday ? (
+                            <Text style={styles.timesheetFuture}>Not yet clocked in</Text>
+                          ) : (
+                            <Text style={styles.timesheetFuture}>—</Text>
+                          )}
+                        </View>
+                      </View>
+                    )
+                  })
+                )}
+              </View>
+            )}
+          </View>
         </ScrollView>
       </SafeAreaView>
 
       <BottomNav />
 
+      {/* Location + specialty picker modal */}
       <Modal visible={showLocationPicker} transparent animationType="slide" onRequestClose={() => setShowLocationPicker(false)}>
         <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowLocationPicker(false)}>
           <TouchableOpacity style={styles.locationSheet} activeOpacity={1}>
@@ -395,7 +648,7 @@ export default function HomeScreen() {
               <ActivityIndicator color="#1D9E75" style={{ marginVertical: 20 }} />
             ) : (
               <View style={styles.locationChips}>
-                {locations.map((loc) => {
+                {locations.map(loc => {
                   const selected = selectedLocation === loc.id
                   return (
                     <TouchableOpacity key={loc.id} style={selected ? styles.chipSelected : styles.chip} onPress={() => setSelectedLocation(loc.id)}>
@@ -405,15 +658,130 @@ export default function HomeScreen() {
                 })}
               </View>
             )}
+
+            {requireSpecialty && (
+              <>
+                <Text style={[styles.locationSheetTitle, { marginTop: 16 }]}>SELECT SPECIALTY</Text>
+                <View style={styles.locationChips}>
+                  {SPECIALTIES.map(sp => {
+                    const selected = selectedSpecialty === sp
+                    return (
+                      <TouchableOpacity key={sp} style={selected ? styles.chipSelected : styles.chip} onPress={() => setSelectedSpecialty(sp)}>
+                        <Text style={selected ? styles.chipTextSelected : styles.chipText}>{sp}</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+              </>
+            )}
+
             <TouchableOpacity
-              style={[styles.clockInBtn, (!selectedLocation || clockingIn) && styles.clockInBtnDisabled, { marginHorizontal: 0, marginTop: 8 }]}
+              style={[styles.clockInBtn, !canClockIn && styles.clockInBtnDisabled, { marginHorizontal: 0, marginTop: 8 }]}
               onPress={async () => { await handleClockIn(); setShowLocationPicker(false) }}
-              disabled={!selectedLocation || clockingIn}
+              disabled={!canClockIn}
             >
               {clockingIn ? <ActivityIndicator color="#fff" /> : <Text style={styles.clockInBtnText}>CONFIRM CLOCK IN</Text>}
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Adjustment request modal */}
+      <Modal visible={showAdjModal} transparent animationType="slide" onRequestClose={() => setShowAdjModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowAdjModal(false)}>
+            <TouchableOpacity style={styles.adjSheet} activeOpacity={1}>
+              <View style={styles.locationSheetHandle} />
+              <Text style={styles.adjSheetTitle}>REQUEST TIME CORRECTION</Text>
+
+              {/* Date */}
+              <View style={styles.adjField}>
+                <Text style={styles.adjFieldLabel}>Date</Text>
+                <View style={styles.adjDateRow}>
+                  <TouchableOpacity onPress={() => {
+                    const d = new Date(adjDate); d.setDate(d.getDate() - 1); setAdjDate(d)
+                  }} style={styles.adjDateArrow}>
+                    <Text style={styles.adjDateArrowText}>‹</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.adjDateText}>{adjDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
+                  <TouchableOpacity onPress={() => {
+                    const next = new Date(adjDate); next.setDate(next.getDate() + 1)
+                    if (next <= new Date()) setAdjDate(next)
+                  }} style={styles.adjDateArrow}>
+                    <Text style={styles.adjDateArrowText}>›</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Type chips */}
+              <View style={styles.adjField}>
+                <Text style={styles.adjFieldLabel}>Type</Text>
+                <View style={styles.adjTypeRow}>
+                  {ADJ_TYPES.map(t => (
+                    <TouchableOpacity key={t} style={adjType === t ? styles.adjTypeChipSelected : styles.adjTypeChip} onPress={() => setAdjType(t)}>
+                      <Text style={adjType === t ? styles.adjTypeChipTextSelected : styles.adjTypeChipText}>{ADJ_LABELS[t]}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Corrected times */}
+              <View style={styles.adjTimeRow}>
+                <View style={[styles.adjField, { flex: 1 }]}>
+                  <Text style={styles.adjFieldLabel}>Corrected In</Text>
+                  <TextInput
+                    style={styles.adjTimeInput}
+                    placeholder="e.g. 9:00 AM"
+                    placeholderTextColor="#888"
+                    value={adjInTime}
+                    onChangeText={setAdjInTime}
+                    autoCapitalize="characters"
+                  />
+                </View>
+                <View style={{ width: 12 }} />
+                <View style={[styles.adjField, { flex: 1 }]}>
+                  <Text style={styles.adjFieldLabel}>Corrected Out</Text>
+                  <TextInput
+                    style={styles.adjTimeInput}
+                    placeholder="e.g. 5:00 PM"
+                    placeholderTextColor="#888"
+                    value={adjOutTime}
+                    onChangeText={setAdjOutTime}
+                    autoCapitalize="characters"
+                  />
+                </View>
+              </View>
+
+              {/* Notes */}
+              <View style={styles.adjField}>
+                <Text style={styles.adjFieldLabel}>Notes</Text>
+                <TextInput
+                  style={styles.adjNotesInput}
+                  placeholder="Describe what happened…"
+                  placeholderTextColor="#888"
+                  value={adjNotes}
+                  onChangeText={setAdjNotes}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              {/* Actions */}
+              <View style={styles.adjActions}>
+                <TouchableOpacity style={styles.adjCancelBtn} onPress={() => setShowAdjModal(false)}>
+                  <Text style={styles.adjCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.adjSubmitBtn, adjSubmitting && styles.adjSubmitBtnDisabled]}
+                  onPress={handleSubmitAdj}
+                  disabled={adjSubmitting}
+                >
+                  {adjSubmitting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.adjSubmitText}>Submit Request</Text>}
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   )
@@ -442,6 +810,30 @@ const styles = StyleSheet.create({
   clockInBtnDisabled: { backgroundColor: '#5A6B61' },
   clockInBtnText: { color: '#fff', fontSize: 13, fontWeight: '500', letterSpacing: 5 },
 
+  // Adjustment link
+  adjLink: { alignItems: 'center', paddingTop: 14, paddingBottom: 4 },
+  adjLinkText: { color: '#8BAF9A', fontSize: 13, fontWeight: '400', textDecorationLine: 'underline' },
+
+  // Timesheet card
+  timesheetCard: { marginHorizontal: 20, marginTop: 20, borderRadius: 14, backgroundColor: '#2C3E3A', overflow: 'hidden' },
+  timesheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 },
+  timesheetTitle: { fontSize: 11, fontWeight: '600', color: '#8BAF9A', letterSpacing: 2 },
+  timesheetHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  timesheetTotal: { fontSize: 13, fontWeight: '600', color: '#FAF6EF' },
+  timesheetChevron: { fontSize: 10, color: '#8BAF9A' },
+  timesheetBody: { borderTopWidth: 1, borderTopColor: '#3D5045' },
+  timesheetRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 11 },
+  timesheetRowBorder: { borderBottomWidth: 1, borderBottomColor: '#3D5045' },
+  timesheetDayCol: { width: 56 },
+  timesheetDayName: { fontSize: 13, fontWeight: '600', color: '#FAF6EF' },
+  timesheetToday: { color: '#1D9E75' },
+  timesheetDayDate: { fontSize: 11, color: '#8BAF9A', marginTop: 2 },
+  timesheetPunchCol: { flex: 1, marginLeft: 12 },
+  timesheetPunchTimes: { fontSize: 13, color: '#FAF6EF', fontWeight: '400' },
+  timesheetPunchDuration: { fontSize: 11, color: '#8BAF9A', marginTop: 2 },
+  timesheetAbsent: { fontSize: 13, color: '#EF4444', fontStyle: 'italic' },
+  timesheetFuture: { fontSize: 13, color: '#5A6B61' },
+
   // Location modal
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   locationSheet: { backgroundColor: '#1E1E1C', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 16 },
@@ -452,6 +844,30 @@ const styles = StyleSheet.create({
   chipSelected: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#1D9E75', borderWidth: 1, borderColor: '#1D9E75' },
   chipText: { fontSize: 13, color: '#FAF6EF', fontWeight: '500' },
   chipTextSelected: { fontSize: 13, color: '#fff', fontWeight: '600' },
+
+  // Adjustment modal
+  adjSheet: { backgroundColor: '#1E1E1C', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 14 },
+  adjSheetTitle: { fontSize: 11, fontWeight: '600', color: '#9A9A96', letterSpacing: 4, textAlign: 'center' },
+  adjField: { gap: 6 },
+  adjFieldLabel: { fontSize: 11, fontWeight: '600', color: '#8BAF9A', letterSpacing: 0.5 },
+  adjDateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
+  adjDateArrow: { padding: 8 },
+  adjDateArrowText: { fontSize: 22, color: '#8BAF9A', fontWeight: '300' },
+  adjDateText: { fontSize: 15, fontWeight: '500', color: '#FAF6EF', minWidth: 140, textAlign: 'center' },
+  adjTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  adjTypeChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: '#2E3D35', borderWidth: 1, borderColor: '#3D5045' },
+  adjTypeChipSelected: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: '#1D9E75', borderWidth: 1, borderColor: '#1D9E75' },
+  adjTypeChipText: { fontSize: 12, color: '#FAF6EF', fontWeight: '500' },
+  adjTypeChipTextSelected: { fontSize: 12, color: '#fff', fontWeight: '600' },
+  adjTimeRow: { flexDirection: 'row' },
+  adjTimeInput: { borderWidth: 1, borderColor: '#3D5045', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#FAF6EF', backgroundColor: '#2C3E3A' },
+  adjNotesInput: { borderWidth: 1, borderColor: '#3D5045', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#FAF6EF', backgroundColor: '#2C3E3A', minHeight: 70, textAlignVertical: 'top' },
+  adjActions: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  adjCancelBtn: { flex: 1, borderWidth: 1, borderColor: '#3D5045', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  adjCancelText: { fontSize: 14, color: '#8BAF9A', fontWeight: '500' },
+  adjSubmitBtn: { flex: 2, backgroundColor: '#1D9E75', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  adjSubmitBtnDisabled: { opacity: 0.5 },
+  adjSubmitText: { fontSize: 14, color: '#fff', fontWeight: '600' },
 
   // Active state
   activeRoot: { flex: 1, backgroundColor: '#4A5C52' },
