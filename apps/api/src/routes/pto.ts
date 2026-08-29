@@ -65,13 +65,15 @@ export default async function ptoRoutes(server: FastifyInstance) {
 
       const total = staffUser?.ptoDaysPerYear ?? practice?.defaultPtoDays ?? 15
 
+      const today = new Date(); today.setHours(0, 0, 0, 0)
+
       let usedDays = 0
       let pendingDays = 0
       for (const req of requests) {
         if (!PTO_TYPES.includes(req.type)) continue
         const days = daysBetween(req.startDate, req.endDate)
         if (req.status === 'approved') usedDays += days
-        else pendingDays += days
+        else if (req.status === 'pending' && req.startDate >= today) pendingDays += days
       }
 
       const available = Math.max(0, total - usedDays - pendingDays)
