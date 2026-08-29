@@ -1,21 +1,19 @@
-﻿import { useCallback, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import { hasUnreadAnnouncements } from '../store/announcementStore'
 import { timeClockHasBadge, openShiftsHasBadge, timeOffHasBadge } from '../store/navBadgeStore'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.139:3000'
+import { apiFetch } from '../lib/api'
+import { useAuth } from '../lib/AuthContext'
 
 const TABS = [
-  { route: 'time-clock',    label: 'Clock',    icon: 'ðŸ•' },
-  { route: 'open-shifts',   label: 'Shifts',   icon: 'ðŸ“‹' },
-  { route: 'pto',           label: 'Time Off',  icon: 'ðŸŒ´' },
-  { route: 'announcements', label: 'News',     icon: 'ðŸ“¢' },
-  { route: 'benefits',      label: 'Benefits', icon: 'ðŸ’¼' },
-  { route: 'onboarding',    label: 'Profile',  icon: 'ðŸ‘¤' },
+  { route: 'index',        label: 'Home',     icon: '🏠' },
+  { route: 'time-clock',   label: 'Clock',    icon: '🕐' },
+  { route: 'open-shifts',  label: 'Shifts',   icon: '📋' },
+  { route: 'pto',          label: 'Time Off', icon: '🌴' },
+  { route: 'announcements',label: 'News',     icon: '📢' },
+  { route: 'onboarding',   label: 'Profile',  icon: '👤' },
 ] as const
 
 type Route = typeof TABS[number]['route']
@@ -25,6 +23,10 @@ interface Props {
 }
 
 export default function BottomNav({ activeRoute }: Props) {
+  const { user } = useAuth()
+  const practiceId = user?.practiceId ?? ''
+  const userId = user?.id ?? ''
+
   const [annBadge, setAnnBadge] = useState(false)
   const [clockBadge, setClockBadge] = useState(false)
   const [shiftsBadge, setShiftsBadge] = useState(false)
@@ -32,27 +34,28 @@ export default function BottomNav({ activeRoute }: Props) {
 
   useFocusEffect(
     useCallback(() => {
+      if (!practiceId || !userId) return
       Promise.allSettled([
-        fetch(`${API_BASE}/api/announcements?practiceId=${PRACTICE_ID}`).then((r) => r.json()),
-        fetch(`${API_BASE}/api/clock-adjustments?practiceId=${PRACTICE_ID}&userId=${USER_ID}`).then((r) => r.json()),
-        fetch(`${API_BASE}/api/open-shifts?practiceId=${PRACTICE_ID}&status=open`).then((r) => r.json()),
-        fetch(`${API_BASE}/api/pto/requests?practiceId=${PRACTICE_ID}&userId=${USER_ID}`).then((r) => r.json()),
+        apiFetch(`/api/announcements?practiceId=${practiceId}`).then((r) => r.json()),
+        apiFetch(`/api/clock-adjustments?practiceId=${practiceId}&userId=${userId}`).then((r) => r.json()),
+        apiFetch(`/api/open-shifts?practiceId=${practiceId}&status=open`).then((r) => r.json()),
+        apiFetch(`/api/pto/requests?practiceId=${practiceId}&userId=${userId}`).then((r) => r.json()),
       ]).then(([ann, adj, shifts, pto]) => {
         if (ann.status === 'fulfilled' && Array.isArray(ann.value)) setAnnBadge(hasUnreadAnnouncements(ann.value))
         if (adj.status === 'fulfilled' && Array.isArray(adj.value)) setClockBadge(timeClockHasBadge(adj.value))
         if (shifts.status === 'fulfilled' && Array.isArray(shifts.value)) setShiftsBadge(openShiftsHasBadge(shifts.value))
         if (pto.status === 'fulfilled' && Array.isArray(pto.value)) setPtoBadge(timeOffHasBadge(pto.value))
       })
-    }, [])
+    }, [practiceId, userId])
   )
 
   const badges: Record<Route, boolean> = {
-    'time-clock': clockBadge,
-    'open-shifts': shiftsBadge,
-    'pto': ptoBadge,
-    'announcements': annBadge,
-    'benefits': false,
-    'onboarding': false,
+    'index':        false,
+    'time-clock':   clockBadge,
+    'open-shifts':  shiftsBadge,
+    'pto':          ptoBadge,
+    'announcements':annBadge,
+    'onboarding':   false,
   }
 
   return (
@@ -65,7 +68,11 @@ export default function BottomNav({ activeRoute }: Props) {
             <TouchableOpacity
               key={tab.route}
               style={styles.item}
-              onPress={() => router.push(`/${tab.route}` as never)}
+              onPress={() =>
+                tab.route === 'index'
+                  ? router.replace('/')
+                  : router.push(`/${tab.route}` as never)
+              }
             >
               <View style={styles.iconWrap}>
                 <Text style={styles.icon}>{tab.icon}</Text>

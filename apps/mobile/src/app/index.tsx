@@ -680,7 +680,7 @@ export default function HomeScreen() {
             ))}
           </View>
         </ScrollView>
-        <BottomNav />
+        <BottomNav activeRoute="index" />
       </View>
     )
   }
