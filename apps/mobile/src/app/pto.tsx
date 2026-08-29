@@ -78,6 +78,7 @@ interface PtoBalance {
 }
 
 interface ApiBalances {
+  pto?: PtoBalance
   vacation?: PtoBalance
   sick?: PtoBalance
   personal?: PtoBalance
@@ -240,7 +241,7 @@ export default function TimeOffScreen() {
       ])
       const [bal, reqs] = await Promise.all([balRes.json(), reqRes.json()])
       const balData = bal as ApiBalances
-      if (balData && (balData.vacation || balData.sick || balData.personal)) setBalances(balData)
+      if (balData && (balData.pto || balData.vacation || balData.sick || balData.personal)) setBalances(balData)
       if (Array.isArray(reqs)) setMyRequests(reqs)
     } catch {
       // silent
@@ -366,17 +367,11 @@ export default function TimeOffScreen() {
           <View style={styles.balanceSection}>
             {loadingBalance ? (
               <ActivityIndicator color="#1D9E75" style={{ marginVertical: 16 }} />
-            ) : balances ? (
-              (() => {
-                const total = ['vacation', 'sick', 'personal'].reduce((s, k) => s + (balances[k]?.total ?? 0), 0)
-                const remaining = ['vacation', 'sick', 'personal'].reduce((s, k) => s + (balances[k]?.remaining ?? 0), 0)
-                return (
-                  <View style={styles.balCard}>
-                    <Text style={styles.balRemaining}>{remaining}/{total}</Text>
-                    <Text style={styles.balSub}>days remaining</Text>
-                  </View>
-                )
-              })()
+            ) : balances?.pto ? (
+              <View style={styles.balCard}>
+                <Text style={styles.balRemaining}>{balances.pto.remaining}/{balances.pto.total}</Text>
+                <Text style={styles.balSub}>days remaining</Text>
+              </View>
             ) : (
               <Text style={styles.noDataText}>Balance unavailable</Text>
             )}

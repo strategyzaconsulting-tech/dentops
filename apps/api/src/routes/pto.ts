@@ -30,12 +30,6 @@ async function sendPushNotification(
   }
 }
 
-const ALLOCATIONS: Record<string, number> = {
-  vacation: 15,
-  sick: 10,
-  personal: 5,
-}
-
 function daysBetween(start: Date, end: Date): number {
   return Math.round((end.getTime() - start.getTime()) / 86400000) + 1
 }
@@ -53,31 +47,32 @@ export default async function ptoRoutes(server: FastifyInstance) {
       const yearStart = new Date(new Date().getFullYear(), 0, 1)
       const yearEnd = new Date(new Date().getFullYear(), 11, 31)
 
-      const approved = await prisma.ptoRequest.findMany({
-        where: {
-          practiceId,
-          userId,
-          status: 'approved',
-          startDate: { gte: yearStart },
-          endDate: { lte: yearEnd },
-        },
-      })
+      const [practice, staffUser, approved] = await Promise.all([
+        prisma.practice.findUnique({ where: { id: practiceId }, select: { defaultPtoDays: true } }),
+        prisma.user.findUnique({ where: { id: userId }, select: { ptoDaysPerYear: true } }),
+        prisma.ptoRequest.findMany({
+          where: {
+            practiceId,
+            userId,
+            status: 'approved',
+            startDate: { gte: yearStart },
+            endDate: { lte: yearEnd },
+          },
+        }),
+      ])
 
-      const used: Record<string, number> = { vacation: 0, sick: 0, personal: 0 }
+      const total = staffUser?.ptoDaysPerYear ?? practice?.defaultPtoDays ?? 15
+
+      let usedDays = 0
       for (const req of approved) {
-        if (used[req.type] !== undefined) {
-          used[req.type] += daysBetween(req.startDate, req.endDate)
+        if (req.type === 'pto' || req.type === 'vacation' || req.type === 'sick' || req.type === 'personal') {
+          usedDays += daysBetween(req.startDate, req.endDate)
         }
       }
 
-      const balance = Object.fromEntries(
-        Object.entries(ALLOCATIONS).map(([type, total]) => [
-          type,
-          { total, used: used[type] ?? 0, remaining: total - (used[type] ?? 0) },
-        ])
-      )
-
-      return reply.send(balance)
+      return reply.send({
+        pto: { total, used: usedDays, remaining: Math.max(0, total - usedDays) },
+      })
     }
   )
 
@@ -228,16 +223,16 @@ export default async function ptoRoutes(server: FastifyInstance) {
     }
   )
 
-  // GET /api/pto/blackout-dates?practiceId=
-  server.get<{ Querystring: { practiceId: string } }>(
+  // GET /api/pto/blackout-dates?practiceId=&type=
+  server.get<{ Querystring: { practiceId: string; type?: string } }>(
     '/pto/blackout-dates',
     async (request, reply) => {
-      const { practiceId } = request.query
+      const { practiceId, type } = request.query
       if (!practiceId) {
         return reply.status(400).send({ error: 'practiceId is required' })
       }
       const dates = await prisma.blackoutDate.findMany({
-        where: { practiceId },
+        where: { practiceId, ...(type ? { type } : {}) },
         orderBy: { date: 'asc' },
       })
       return reply.send(dates)
@@ -246,14 +241,16 @@ export default async function ptoRoutes(server: FastifyInstance) {
 
   // POST /api/pto/blackout-dates
   server.post<{
-    Body: { practiceId: string; date: string; reason?: string }
+    Body: { practiceId: string; date: string; reason?: string; type?: string; name?: string }
   }>('/pto/blackout-dates', async (request, reply) => {
-    const { practiceId, date, reason } = request.body
+    const { practiceId, date, reason, type, name } = request.body
     const d = await prisma.blackoutDate.create({
       data: {
         practiceId,
         date: new Date(date),
         reason: reason ?? null,
+        type: type ?? 'blackout',
+        name: name ?? null,
       },
     })
     return reply.status(201).send(d)
