@@ -721,59 +721,6 @@ export default function HomeScreen() {
             <Text style={styles.adjLinkText}>Report a missed punch</Text>
           </TouchableOpacity>
 
-          {/* Weekly timesheet card */}
-          <View style={styles.timesheetCard}>
-            <TouchableOpacity style={styles.timesheetHeader} onPress={() => setShowTimesheet(v => !v)}>
-              <Text style={styles.timesheetTitle}>MY HOURS THIS WEEK</Text>
-              <View style={styles.timesheetHeaderRight}>
-                {totalWeekMs > 0 && <Text style={styles.timesheetTotal}>{formatHours(totalWeekMs)}</Text>}
-                <Text style={styles.timesheetChevron}>{showTimesheet ? 'â–²' : 'â–¼'}</Text>
-              </View>
-            </TouchableOpacity>
-
-            {showTimesheet && (
-              <View style={styles.timesheetBody}>
-                {timesheetLoading ? (
-                  <ActivityIndicator color="#1D9E75" style={{ marginVertical: 16 }} />
-                ) : (
-                  weekDays.map((day, i) => {
-                    const p = punchForDay(day)
-                    const absent = isAbsent(day)
-                    const isToday = day.toDateString() === today.toDateString()
-                    const isFuture = day > today
-                    return (
-                      <View key={i} style={[styles.timesheetRow, i < 6 && styles.timesheetRowBorder]}>
-                        <View style={styles.timesheetDayCol}>
-                          <Text style={[styles.timesheetDayName, isToday && styles.timesheetToday]}>{DAY_NAMES[i]}</Text>
-                          <Text style={styles.timesheetDayDate}>{formatShortDate(day)}</Text>
-                        </View>
-                        <View style={styles.timesheetPunchCol}>
-                          {p ? (
-                            <>
-                              <Text style={styles.timesheetPunchTimes}>
-                                {formatHm(p.punchIn)} â€“ {p.punchOut ? formatHm(p.punchOut) : 'Active'}
-                              </Text>
-                              {punchDurationMs(p) > 0 && (
-                                <Text style={styles.timesheetPunchDuration}>{formatHours(punchDurationMs(p))}</Text>
-                              )}
-                            </>
-                          ) : absent ? (
-                            <Text style={styles.timesheetAbsent}>Absent</Text>
-                          ) : isFuture ? (
-                            <Text style={styles.timesheetFuture}>â€”</Text>
-                          ) : isToday ? (
-                            <Text style={styles.timesheetFuture}>Not yet clocked in</Text>
-                          ) : (
-                            <Text style={styles.timesheetFuture}>â€”</Text>
-                          )}
-                        </View>
-                      </View>
-                    )
-                  })
-                )}
-              </View>
-            )}
-          </View>
         </ScrollView>
       </SafeAreaView>
 
