@@ -255,9 +255,42 @@ export default function HomeScreen() {
     return () => clearInterval(t)
   }, [])
 
+  // Restore active punch on load (handles app reload while clocked in)
+  async function loadActivePunch(pId: string, uId: string) {
+    try {
+      const res = await apiFetch(`/api/time-punches/live?practiceId=${pId}`)
+      if (!res.ok) return
+      const data = await res.json()
+      if (!Array.isArray(data)) return
+      const active = data.find((p: { userId: string }) => p.userId === uId)
+      if (!active) return
+      setPunch({
+        id: active.id,
+        punchIn: active.punchIn,
+        locationId: active.locationId,
+        specialty: active.specialty ?? undefined,
+        isTardy: active.isTardy ?? false,
+      })
+      if (active.location) {
+        setLocations(prev =>
+          prev.find(l => l.id === active.locationId)
+            ? prev
+            : [...prev, { id: active.locationId, name: active.location.name }]
+        )
+      }
+      const wasOnBreak = !!(active.breakStart && !active.breakEnd)
+      setOnBreak(wasOnBreak)
+      const log: LogEntry[] = [{ event: 'clockIn', time: new Date(active.punchIn) }]
+      if (active.breakStart) log.push({ event: 'breakStart', time: new Date(active.breakStart) })
+      if (active.breakEnd) log.push({ event: 'breakEnd', time: new Date(active.breakEnd) })
+      setBreakLog(log)
+    } catch { /* silent */ }
+  }
+
   // Fetch practice settings + locations when auth is ready
   useEffect(() => {
-    if (!practiceId) return
+    if (!practiceId || !userId) return
+    loadActivePunch(practiceId, userId)
     apiFetch(`/api/practice/${practiceId}`)
       .then(r => r.json())
       .then(data => {
@@ -272,7 +305,7 @@ export default function HomeScreen() {
         else setLocations(TEST_LOCATIONS)
       })
       .catch(() => setLocations(TEST_LOCATIONS))
-  }, [practiceId])
+  }, [practiceId, userId])
 
   // Fetch weekly timesheet when panel opens
   useEffect(() => {
@@ -350,7 +383,7 @@ export default function HomeScreen() {
         }),
       })
       if (res.status === 409) {
-        Alert.alert('Already Clocked In', 'Please clock out before starting a new shift.')
+        await loadActivePunch(practiceId, userId)
         return
       }
       if (res.ok) {
