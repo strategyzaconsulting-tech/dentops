@@ -2,14 +2,9 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native'
@@ -121,30 +116,6 @@ function toISODate(d: Date): string {
   return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
 }
 
-function formatUSDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-}
-
-function parseTimeToISO(dateStr: string, timeStr: string): string | null {
-  const t = timeStr.trim()
-  const ampm = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
-  if (ampm) {
-    let h = parseInt(ampm[1])
-    const m = parseInt(ampm[2])
-    if (ampm[3].toUpperCase() === 'AM' && h === 12) h = 0
-    if (ampm[3].toUpperCase() === 'PM' && h !== 12) h += 12
-    const d = new Date(dateStr); d.setHours(h, m, 0, 0)
-    return d.toISOString()
-  }
-  const hhmm = t.match(/^(\d{1,2}):(\d{2})$/)
-  if (hhmm) {
-    const d = new Date(dateStr); d.setHours(parseInt(hhmm[1]), parseInt(hhmm[2]), 0, 0)
-    return d.toISOString()
-  }
-  return null
-}
-
 export default function TimeClockScreen() {
   const { user } = useAuth()
   const practiceId = user?.practiceId ?? ''
@@ -163,16 +134,6 @@ export default function TimeClockScreen() {
   const [absentDates, setAbsentDates] = useState<string[]>([])
   const [adjustments, setAdjustments] = useState<Adjustment[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Adjustment modal
-  const [modalVisible, setModalVisible] = useState(false)
-  const [adjDate, setAdjDate] = useState('')
-  const [adjPunchId, setAdjPunchId] = useState<string | undefined>()
-  const [adjType, setAdjType] = useState('missed_clock_in')
-  const [adjNotes, setAdjNotes] = useState('')
-  const [adjCorrectedIn, setAdjCorrectedIn] = useState('')
-  const [adjCorrectedOut, setAdjCorrectedOut] = useState('')
-  const [submitting, setSubmitting] = useState(false)
 
   const weekStart = getMonday(new Date())
   const weekDays = getWeekDays(weekStart)
@@ -279,51 +240,6 @@ export default function TimeClockScreen() {
     finally { setClockOutLoading(false) }
   }
 
-  function openModal(date: Date, punchId?: string) {
-    setAdjDate(toISODate(date))
-    setAdjPunchId(punchId)
-    setAdjType(punchId ? 'wrong_time' : 'missed_clock_in')
-    setAdjNotes('')
-    setAdjCorrectedIn('')
-    setAdjCorrectedOut('')
-    setModalVisible(true)
-  }
-
-  async function submitAdjustment() {
-    if (!adjNotes.trim() && !adjCorrectedIn.trim() && !adjCorrectedOut.trim()) {
-      Alert.alert('Required', 'Please enter a corrected time or describe the adjustment needed.')
-      return
-    }
-    setSubmitting(true)
-    try {
-      const res = await apiFetch('/api/clock-adjustments', {
-        method: 'POST',
-        body: JSON.stringify({
-          practiceId,
-          userId,
-          punchId: adjPunchId,
-          date: adjDate,
-          type: adjType,
-          notes: adjNotes.trim(),
-          correctedPunchIn:  adjCorrectedIn.trim()  ? parseTimeToISO(adjDate, adjCorrectedIn.trim())  : undefined,
-          correctedPunchOut: adjCorrectedOut.trim() ? parseTimeToISO(adjDate, adjCorrectedOut.trim()) : undefined,
-        }),
-      })
-      if (res.ok) {
-        const data: Adjustment = await res.json()
-        setAdjustments(prev => [data, ...prev])
-        setModalVisible(false)
-        Alert.alert('Submitted', 'Your adjustment request has been sent to your manager.')
-      } else {
-        Alert.alert('Error', 'Could not submit request. Please try again.')
-      }
-    } catch {
-      Alert.alert('Connection error', 'Could not reach the server.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.topArea} edges={['top']}>
@@ -403,9 +319,6 @@ export default function TimeClockScreen() {
                     <Text style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
                       {formatDayHeader(day)}{isToday ? '  · Today' : ''}
                     </Text>
-                    <TouchableOpacity onPress={() => openModal(day)} style={styles.requestBtn}>
-                      <Text style={styles.requestBtnText}>+ Request</Text>
-                    </TouchableOpacity>
                   </View>
 
                   {dayPunches.length === 0 ? (
@@ -431,9 +344,6 @@ export default function TimeClockScreen() {
                         <View style={styles.punchMeta}>
                           <Text style={styles.punchDuration}>{formatDuration(p.punchIn, p.punchOut, p.breakStart, p.breakEnd)}</Text>
                           <Text style={styles.punchLocation}>{p.location.name}</Text>
-                          <TouchableOpacity onPress={() => openModal(new Date(p.punchIn), p.id)}>
-                            <Text style={styles.adjustLink}>Adjust</Text>
-                          </TouchableOpacity>
                         </View>
                       </View>
                     ))
@@ -464,55 +374,6 @@ export default function TimeClockScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
-
-      {/* Adjustment modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
-          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setModalVisible(false)} />
-          <SafeAreaView style={styles.modalSheet} edges={['bottom']}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Request Adjustment</Text>
-            <Text style={styles.modalDate}>{adjDate ? formatUSDate(adjDate) : ''}</Text>
-
-            <Text style={styles.fieldLabel}>Type</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeChips}>
-              {ADJUSTMENT_TYPES.map((t) => (
-                <TouchableOpacity
-                  key={t.key}
-                  style={adjType === t.key ? styles.typeChipSelected : styles.typeChip}
-                  onPress={() => setAdjType(t.key)}
-                >
-                  <Text style={adjType === t.key ? styles.typeChipTextSelected : styles.typeChipText}>{t.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {(adjType === 'missed_clock_in' || adjType === 'wrong_time') && (
-              <>
-                <Text style={styles.fieldLabel}>Corrected Clock-In</Text>
-                <TextInput style={styles.timeInput} placeholder="e.g. 9:00 AM" placeholderTextColor="#bbb" value={adjCorrectedIn} onChangeText={setAdjCorrectedIn} autoCapitalize="characters" />
-              </>
-            )}
-            {(adjType === 'missed_clock_out' || adjType === 'wrong_time') && (
-              <>
-                <Text style={styles.fieldLabel}>Corrected Clock-Out</Text>
-                <TextInput style={styles.timeInput} placeholder="e.g. 5:30 PM" placeholderTextColor="#bbb" value={adjCorrectedOut} onChangeText={setAdjCorrectedOut} autoCapitalize="characters" />
-              </>
-            )}
-
-            <Text style={styles.fieldLabel}>Notes</Text>
-            <TextInput style={styles.notesInput} placeholder="Additional context for your manager..." placeholderTextColor="#bbb" multiline numberOfLines={3} value={adjNotes} onChangeText={setAdjNotes} />
-
-            <TouchableOpacity
-              style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
-              onPress={submitAdjustment}
-              disabled={submitting}
-            >
-              {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Submit Request</Text>}
-            </TouchableOpacity>
-          </SafeAreaView>
-        </KeyboardAvoidingView>
-      </Modal>
 
       <BottomNav activeRoute="time-clock" />
     </View>
@@ -554,8 +415,6 @@ const styles = StyleSheet.create({
   dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F0F0F0' },
   dayLabel: { fontSize: 13, fontWeight: '700', color: '#2C2C2A' },
   dayLabelToday: { color: '#1D9E75' },
-  requestBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: '#E8F5F0' },
-  requestBtnText: { fontSize: 12, fontWeight: '700', color: '#1D9E75' },
   noPunches: { fontSize: 13, color: '#bbb', padding: 16, fontStyle: 'italic' },
   absentText: { fontSize: 13, color: '#DC2626', padding: 16, fontStyle: 'italic', fontWeight: '600' },
 
@@ -567,7 +426,6 @@ const styles = StyleSheet.create({
   punchMeta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
   punchDuration: { fontSize: 12, color: '#888', fontWeight: '500' },
   punchLocation: { fontSize: 12, color: '#aaa', flex: 1 },
-  adjustLink: { fontSize: 12, color: '#1D9E75', fontWeight: '600' },
 
   adjSection: { marginTop: 8 },
   adjSectionTitle: { fontSize: 11, fontWeight: '700', color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
@@ -577,22 +435,4 @@ const styles = StyleSheet.create({
   adjType: { fontSize: 12, color: '#888' },
   adjStatus: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
   adjStatusText: { fontSize: 12, fontWeight: '600' },
-
-  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
-  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, gap: 12 },
-  modalHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#E0E0E0', alignSelf: 'center', marginBottom: 4 },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: '#2C2C2A' },
-  modalDate: { fontSize: 13, color: '#888', marginTop: -8 },
-  fieldLabel: { fontSize: 11, fontWeight: '700', color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 },
-  typeChips: { gap: 8, paddingBottom: 2 },
-  typeChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F5F5F5', borderWidth: 1, borderColor: '#E0E0E0' },
-  typeChipSelected: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#1D9E75', borderWidth: 1, borderColor: '#1D9E75' },
-  typeChipText: { fontSize: 13, color: '#555', fontWeight: '500' },
-  typeChipTextSelected: { fontSize: 13, color: '#fff', fontWeight: '600' },
-  timeInput: { borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontWeight: '600', color: '#2C2C2A', backgroundColor: '#FAFAFA', letterSpacing: 0.5 },
-  notesInput: { borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: '#2C2C2A', backgroundColor: '#FAFAFA', minHeight: 80, textAlignVertical: 'top' },
-  submitBtn: { backgroundColor: '#1D9E75', borderRadius: 10, paddingVertical: 16, alignItems: 'center', marginTop: 4, marginBottom: 8 },
-  submitBtnDisabled: { opacity: 0.5 },
-  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 })
