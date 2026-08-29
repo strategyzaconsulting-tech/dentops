@@ -464,7 +464,7 @@ export default function TimeOffScreen() {
               {submittingAdjustment ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.submitBtnText}>Submit Adjustment</Text>
+                <Text style={styles.submitBtnText}>Submit Request</Text>
               )}
             </TouchableOpacity>
           </View>
