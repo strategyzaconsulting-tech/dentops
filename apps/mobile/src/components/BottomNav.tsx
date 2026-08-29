@@ -2,21 +2,24 @@ import { useCallback, useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { hasUnreadAnnouncements } from '../store/announcementStore'
 import { timeClockHasBadge, openShiftsHasBadge, timeOffHasBadge } from '../store/navBadgeStore'
 import { apiFetch } from '../lib/api'
 import { useAuth } from '../lib/AuthContext'
 
-const TABS = [
-  { route: 'index',        label: 'Home',     icon: '🏠' },
-  { route: 'time-clock',   label: 'Clock',    icon: '🕐' },
-  { route: 'open-shifts',  label: 'Shifts',   icon: '📋' },
-  { route: 'pto',          label: 'Time Off', icon: '🌴' },
-  { route: 'announcements',label: 'News',     icon: '📢' },
-  { route: 'onboarding',   label: 'Profile',  icon: '👤' },
-] as const
+type IoniconName = React.ComponentProps<typeof Ionicons>['name']
 
-type Route = typeof TABS[number]['route']
+const TABS: { route: string; label: string; icon: IoniconName }[] = [
+  { route: 'index',         label: 'Home',     icon: 'home-outline' },
+  { route: 'time-clock',    label: 'Clock',    icon: 'time-outline' },
+  { route: 'open-shifts',   label: 'Shifts',   icon: 'list-outline' },
+  { route: 'pto',           label: 'Time Off', icon: 'sunny-outline' },
+  { route: 'announcements', label: 'News',     icon: 'megaphone-outline' },
+  { route: 'onboarding',   label: 'Profile',  icon: 'person-outline' },
+]
+
+type Route = 'index' | 'time-clock' | 'open-shifts' | 'pto' | 'announcements' | 'onboarding'
 
 interface Props {
   activeRoute?: Route
@@ -50,12 +53,12 @@ export default function BottomNav({ activeRoute }: Props) {
   )
 
   const badges: Record<Route, boolean> = {
-    'index':        false,
-    'time-clock':   clockBadge,
-    'open-shifts':  shiftsBadge,
-    'pto':          ptoBadge,
-    'announcements':annBadge,
-    'onboarding':   false,
+    'index':         false,
+    'time-clock':    clockBadge,
+    'open-shifts':   shiftsBadge,
+    'pto':           ptoBadge,
+    'announcements': annBadge,
+    'onboarding':    false,
   }
 
   return (
@@ -63,7 +66,8 @@ export default function BottomNav({ activeRoute }: Props) {
       <View style={styles.inner}>
         {TABS.map((tab) => {
           const isActive = activeRoute === tab.route
-          const hasBadge = badges[tab.route]
+          const hasBadge = badges[tab.route as Route] ?? false
+          const color = isActive ? '#1D9E75' : '#9A9A96'
           return (
             <TouchableOpacity
               key={tab.route}
@@ -75,7 +79,7 @@ export default function BottomNav({ activeRoute }: Props) {
               }
             >
               <View style={styles.iconWrap}>
-                <Text style={styles.icon}>{tab.icon}</Text>
+                <Ionicons name={tab.icon} size={22} color={color} />
                 {hasBadge && <View style={styles.badgeDot} />}
               </View>
               <Text style={[styles.label, isActive && styles.labelActive]} numberOfLines={1}>
@@ -103,7 +107,6 @@ const styles = StyleSheet.create({
   inner: { flexDirection: 'row', paddingTop: 8, paddingBottom: 8 },
   item: { flex: 1, alignItems: 'center', gap: 2 },
   iconWrap: { position: 'relative' },
-  icon: { fontSize: 20 },
   label: { fontSize: 9, fontWeight: '300', color: '#9A9A96', letterSpacing: 2, textTransform: 'uppercase' },
   labelActive: { color: '#1D9E75' },
   badgeDot: {

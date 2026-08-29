@@ -6,11 +6,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
 import { markModuleSeen } from '../store/navBadgeStore'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
@@ -25,13 +23,13 @@ interface Benefit {
 }
 
 const BENEFIT_ICONS: Record<string, string> = {
-  'PTO': 'ðŸ–ï¸',
-  'Health Insurance': 'ðŸ¥',
-  'Retirement Plan': 'ðŸ’°',
+  'PTO': '🏖️',
+  'Health Insurance': '🏥',
+  'Retirement Plan': '💰',
 }
 
 function getBenefitIcon(name: string) {
-  return BENEFIT_ICONS[name] ?? 'âœ…'
+  return BENEFIT_ICONS[name] ?? '✅'
 }
 
 export default function BenefitsScreen() {
@@ -67,9 +65,6 @@ export default function BenefitsScreen() {
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.header} edges={['top']}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>â† Back</Text>
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>My Benefits</Text>
       </SafeAreaView>
 
@@ -123,7 +118,7 @@ export default function BenefitsScreen() {
           )}
         </ScrollView>
       )}
-      <BottomNav activeRoute="benefits" />
+      <BottomNav activeRoute="onboarding" />
     </View>
   )
 }
@@ -135,8 +130,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
-  backBtn: { marginBottom: 8 },
-  backText: { color: 'rgba(255,255,255,0.8)', fontSize: 14 },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: '700' },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 16, paddingBottom: 40 },

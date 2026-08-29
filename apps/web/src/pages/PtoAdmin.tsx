@@ -33,9 +33,11 @@ interface BlackoutDate {
   id: string
   date: string
   reason: string | null
+  type: string
+  name: string | null
 }
 
-type Tab = 'pending' | 'calendar' | 'blackout'
+type Tab = 'pending' | 'calendar' | 'blackout' | 'closures'
 
 function formatDateDisplay(iso: string): string {
   const d = new Date(iso)
@@ -71,20 +73,27 @@ export default function PtoAdmin() {
   const [newReason, setNewReason] = useState('')
   const [addingBlackout, setAddingBlackout] = useState(false)
 
+  const [closures, setClosures] = useState<BlackoutDate[]>([])
+  const [newClosureDate, setNewClosureDate] = useState('')
+  const [newClosureName, setNewClosureName] = useState('')
+  const [addingClosure, setAddingClosure] = useState(false)
+
   async function fetchAll() {
     setLoading(true)
     try {
-      const [pendRes, appRes, boutRes] = await Promise.all([
+      const [pendRes, appRes, boutRes, closureRes] = await Promise.all([
         apiFetch(`/api/pto/requests?practiceId=${PRACTICE_ID}&status=pending`),
         apiFetch(`/api/pto/requests?practiceId=${PRACTICE_ID}&status=approved`),
-        apiFetch(`/api/pto/blackout-dates?practiceId=${PRACTICE_ID}`),
+        apiFetch(`/api/pto/blackout-dates?practiceId=${PRACTICE_ID}&type=blackout`),
+        apiFetch(`/api/pto/blackout-dates?practiceId=${PRACTICE_ID}&type=closure`),
       ])
-      const [pend, app, bouts] = await Promise.all([
-        pendRes.json(), appRes.json(), boutRes.json(),
+      const [pend, app, bouts, cls] = await Promise.all([
+        pendRes.json(), appRes.json(), boutRes.json(), closureRes.json(),
       ])
       setPendingRequests(Array.isArray(pend) ? pend : [])
       setApprovedRequests(Array.isArray(app) ? app : [])
       setBlackouts(Array.isArray(bouts) ? bouts : [])
+      setClosures(Array.isArray(cls) ? cls : [])
     } catch {
       // silent — keep stale data
     } finally {
@@ -134,6 +143,26 @@ export default function PtoAdmin() {
     await fetchAll()
   }
 
+  async function handleAddClosure() {
+    if (!newClosureName.trim() || !newClosureDate) return
+    setAddingClosure(true)
+    try {
+      await apiFetch('/api/pto/blackout-dates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ practiceId: PRACTICE_ID, date: newClosureDate, name: newClosureName.trim(), type: 'closure' }),
+      })
+      setNewClosureDate('')
+      setNewClosureName('')
+      await fetchAll()
+    } finally { setAddingClosure(false) }
+  }
+
+  async function handleDeleteClosure(id: string) {
+    await apiFetch(`/api/pto/blackout-dates/${id}`, { method: 'DELETE' })
+    setClosures(prev => prev.filter(c => c.id !== id))
+  }
+
   // Calendar: expand approved requests into a per-day map
   const calendarMap = useMemo(() => {
     const map = new Map<string, PtoRequest[]>()
@@ -154,6 +183,11 @@ export default function PtoAdmin() {
   const blackoutSet = useMemo(
     () => new Set(blackouts.map((b) => b.date.split('T')[0])),
     [blackouts]
+  )
+
+  const closureSet = useMemo(
+    () => new Map(closures.map((c) => [c.date.split('T')[0], c.name ?? 'Office Closed'])),
+    [closures]
   )
 
   const userColorMap = useMemo(() => {
@@ -209,6 +243,7 @@ export default function PtoAdmin() {
             ['pending', 'Pending Requests', pendingRequests.length],
             ['calendar', 'Team Calendar', null],
             ['blackout', 'Blackout Dates', blackouts.length],
+            ['closures', 'Office Calendar', closures.length],
           ] as const).map(([key, label, count]) => (
             <button
               key={key}
@@ -346,6 +381,7 @@ export default function PtoAdmin() {
                       }
                       const key = dayKey(date)
                       const isBlackout = blackoutSet.has(key)
+                      const closureName = closureSet.get(key)
                       const isToday = key === dayKey(today)
                       const dayReqs = calendarMap.get(key) ?? []
 
@@ -353,13 +389,15 @@ export default function PtoAdmin() {
                         <div
                           key={key}
                           className={`h-28 overflow-hidden border-r border-b p-1.5 last:border-r-0 ${
-                            isBlackout ? 'bg-red-50' : 'bg-white'
+                            closureName ? 'bg-purple-50' : isBlackout ? 'bg-red-50' : 'bg-white'
                           }`}
                         >
                           <div
                             className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
                               isToday
                                 ? 'bg-[#1D9E75] text-white'
+                                : closureName
+                                ? 'text-purple-600'
                                 : isBlackout
                                 ? 'text-red-500'
                                 : 'text-gray-700'
@@ -367,6 +405,11 @@ export default function PtoAdmin() {
                           >
                             {date.getDate()}
                           </div>
+                          {closureName && (
+                            <div className="mb-0.5 truncate text-xs font-medium text-purple-600">
+                              🏢 {closureName}
+                            </div>
+                          )}
                           {isBlackout && (
                             <div className="mb-0.5 text-xs font-medium text-red-400">
                               Blackout
@@ -493,6 +536,80 @@ export default function PtoAdmin() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Office Calendar (closures) tab */}
+            {tab === 'closures' && (
+              <div className="max-w-2xl space-y-6">
+                {/* Add closure form */}
+                <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                  <h3 className="mb-1 text-sm font-semibold text-gray-800">Add Office Closure</h3>
+                  <p className="mb-4 text-xs text-gray-500">Mark holidays, training days, and other dates when the office is closed. These appear on the Team Calendar.</p>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-600">Date <span className="text-red-400">*</span></label>
+                      <input type="date" value={newClosureDate} onChange={e => setNewClosureDate(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-600">Name <span className="text-red-400">*</span></label>
+                      <input type="text" placeholder="e.g. Independence Day, Staff Training" value={newClosureName} onChange={e => setNewClosureName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]" />
+                    </div>
+                  </div>
+                  <button onClick={handleAddClosure} disabled={!newClosureDate || !newClosureName.trim() || addingClosure} className="rounded-lg bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                    {addingClosure ? 'Adding…' : '+ Add Closure'}
+                  </button>
+                </div>
+
+                {/* Closure calendar view */}
+                {closures.length > 0 && (() => {
+                  // Group by year/month
+                  const grouped = new Map<string, typeof closures>()
+                  for (const c of [...closures].sort((a, b) => a.date.localeCompare(b.date))) {
+                    const key = c.date.split('T')[0].slice(0, 7) // YYYY-MM
+                    if (!grouped.has(key)) grouped.set(key, [])
+                    grouped.get(key)!.push(c)
+                  }
+                  return (
+                    <div className="space-y-4">
+                      {[...grouped.entries()].map(([monthKey, items]) => {
+                        const [y, m] = monthKey.split('-').map(Number)
+                        const monthLabel = new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                        return (
+                          <div key={monthKey}>
+                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{monthLabel}</h4>
+                            <div className="space-y-2">
+                              {items.map(c => {
+                                const d = new Date(c.date.split('T')[0] + 'T12:00:00')
+                                const weekday = d.toLocaleDateString('en-US', { weekday: 'long' })
+                                const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                return (
+                                  <div key={c.id} className="flex items-center justify-between rounded-xl border border-purple-100 bg-purple-50 px-4 py-3">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-purple-400 text-lg">🏢</span>
+                                      <div>
+                                        <p className="text-sm font-semibold text-gray-800">{c.name}</p>
+                                        <p className="text-xs text-gray-500">{weekday}, {dateLabel}</p>
+                                      </div>
+                                    </div>
+                                    <button onClick={() => handleDeleteClosure(c.id)} className="text-xs font-medium text-gray-400 hover:text-red-500">Remove</button>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+
+                {closures.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-gray-200 py-12 text-center">
+                    <p className="text-sm text-gray-400">No office closures on file.</p>
+                    <p className="text-xs text-gray-400 mt-1">Add holidays and closure days above — they'll appear on the Team Calendar.</p>
+                  </div>
+                )}
               </div>
             )}
           </>

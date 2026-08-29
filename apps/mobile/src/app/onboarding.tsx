@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import BottomNav from '../components/BottomNav'
 import { apiFetch } from '../lib/api'
 import { useAuth } from '../lib/AuthContext'
@@ -141,8 +142,8 @@ export default function OnboardingScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Section A â€” HR Forms */}
-        <Text style={styles.sectionTitle}>Section A â€” HR Forms</Text>
+        {/* Section A — HR Forms */}
+        <Text style={styles.sectionTitle}>Section A — HR Forms</Text>
         <View style={styles.card}>
           {SECTION_A.map((item, idx) => (
             <TouchableOpacity
@@ -152,17 +153,17 @@ export default function OnboardingScreen() {
               activeOpacity={0.7}
             >
               <View style={[styles.checkCircle, item.done && styles.checkCircleDone]}>
-                {item.done && <Text style={styles.checkMark}>âœ“</Text>}
+                {item.done && <Ionicons name="checkmark" size={14} color="#fff" />}
               </View>
               <Text style={[styles.checkLabel, item.done && styles.checkLabelComplete]}>{item.label}</Text>
-              <Text style={styles.chevron}>â€º</Text>
+              <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
             </TouchableOpacity>
           ))}
 
-          {/* Equipment log â€” read-only */}
+          {/* Equipment log — read-only */}
           <View style={[styles.checkRow]}>
             <View style={[styles.checkCircle, (checklist?.equipmentItems?.length ?? 0) > 0 && styles.checkCircleDone]}>
-              {(checklist?.equipmentItems?.length ?? 0) > 0 && <Text style={styles.checkMark}>âœ“</Text>}
+              {(checklist?.equipmentItems?.length ?? 0) > 0 && <Ionicons name="checkmark" size={14} color="#fff" />}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.checkLabel, (checklist?.equipmentItems?.length ?? 0) > 0 && styles.checkLabelComplete]}>
@@ -171,7 +172,7 @@ export default function OnboardingScreen() {
               {(checklist?.equipmentItems?.length ?? 0) > 0 ? (
                 checklist!.equipmentItems.map((eq) => (
                   <Text key={eq.id} style={styles.equipItem}>
-                    â€¢ {eq.name}{eq.serialNumber ? ` (S/N: ${eq.serialNumber})` : ''}{eq.returnedAt ? ' â€” Returned' : ''}
+                    • {eq.name}{eq.serialNumber ? ` (S/N: ${eq.serialNumber})` : ''}{eq.returnedAt ? ' — Returned' : ''}
                   </Text>
                 ))
               ) : (
@@ -181,40 +182,40 @@ export default function OnboardingScreen() {
           </View>
         </View>
 
-        {/* Section B â€” Office & Team */}
-        <Text style={styles.sectionTitle}>Section B â€” Office &amp; Team</Text>
+        {/* Section B — Office & Team */}
+        <Text style={styles.sectionTitle}>Section B — Office &amp; Team</Text>
         <View style={styles.card}>
           <TouchableOpacity
             style={[styles.checkRow, styles.checkRowBorder]}
             onPress={() => router.push('/office-manual' as never)}
           >
-            <View style={styles.navIcon}><Text style={styles.navIconText}>ðŸ“„</Text></View>
+            <View style={styles.navIcon}><Text style={styles.navIconText}>📄</Text></View>
             <Text style={styles.checkLabel}>Office Manual</Text>
-            <Text style={styles.chevron}>â€º</Text>
+            <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.checkRow, styles.checkRowBorder]}
             onPress={() => router.push('/training' as never)}
           >
-            <View style={styles.navIcon}><Text style={styles.navIconText}>ðŸ“š</Text></View>
+            <View style={styles.navIcon}><Text style={styles.navIconText}>📚</Text></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.checkLabel}>Training Schedule</Text>
               {training.length > 0 && (
                 <Text style={styles.subText}>{training.length} session{training.length > 1 ? 's' : ''} scheduled</Text>
               )}
             </View>
-            <Text style={styles.chevron}>â€º</Text>
+            <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
           </TouchableOpacity>
 
-          {/* Assigned Trainer â€” inline card */}
+          {/* Assigned Trainer — inline card */}
           <View style={[styles.checkRow, styles.checkRowBorder]}>
-            <View style={styles.navIcon}><Text style={styles.navIconText}>ðŸ‘¤</Text></View>
+            <View style={styles.navIcon}><Text style={styles.navIconText}>👤</Text></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.checkLabel}>Assigned Trainer</Text>
               {assignedTrainer ? (
                 <Text style={styles.subText}>
-                  {assignedTrainer.firstName} {assignedTrainer.lastName} Â· {assignedTrainer.role}
+                  {assignedTrainer.firstName} {assignedTrainer.lastName} · {assignedTrainer.role}
                 </Text>
               ) : (
                 <Text style={styles.subText}>No trainer assigned yet</Text>
@@ -226,31 +227,31 @@ export default function OnboardingScreen() {
             style={styles.checkRow}
             onPress={() => router.push('/team-directory' as never)}
           >
-            <View style={styles.navIcon}><Text style={styles.navIconText}>ðŸ¢</Text></View>
+            <View style={styles.navIcon}><Text style={styles.navIconText}>🏢</Text></View>
             <Text style={styles.checkLabel}>Team Directory</Text>
-            <Text style={styles.chevron}>â€º</Text>
+            <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
           </TouchableOpacity>
         </View>
 
-        {/* â”€â”€ Section C â€” My Records â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <Text style={styles.sectionTitle}>Section C â€” My Records</Text>
+        {/* â”€â”€ Section C — My Records â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <Text style={styles.sectionTitle}>Section C — My Records</Text>
         <View style={styles.card}>
           <TouchableOpacity
             style={styles.checkRow}
             onPress={() => router.push('/hr-documents' as never)}
           >
-            <View style={styles.navIcon}><Text style={styles.navIconText}>ðŸ“‹</Text></View>
+            <View style={styles.navIcon}><Text style={styles.navIconText}>📋</Text></View>
             <Text style={styles.checkLabel}>HR Documents</Text>
-            <Text style={styles.chevron}>â€º</Text>
+            <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.checkRow}
             onPress={() => router.push('/my-licenses' as never)}
           >
-            <View style={styles.navIcon}><Text style={styles.navIconText}>ðŸªª</Text></View>
+            <View style={styles.navIcon}><Text style={styles.navIconText}>🪪</Text></View>
             <Text style={styles.checkLabel}>My Licenses &amp; Certifications</Text>
-            <Text style={styles.chevron}>â€º</Text>
+            <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
           </TouchableOpacity>
         </View>
 
@@ -278,7 +279,7 @@ export default function OnboardingScreen() {
               {completingReview ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.modalBtnPrimaryText}>No Changes â€” Looks Good</Text>
+                <Text style={styles.modalBtnPrimaryText}>No Changes — Looks Good</Text>
               )}
             </TouchableOpacity>
             <TouchableOpacity
@@ -352,10 +353,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkCircleDone: { backgroundColor: '#1D9E75', borderColor: '#1D9E75' },
-  checkMark: { color: '#fff', fontSize: 13, fontWeight: '700' },
   checkLabel: { flex: 1, fontSize: 15, color: '#2C2C2A', fontWeight: '500' },
   checkLabelComplete: { flex: 1, fontSize: 15, color: '#1D9E75', fontWeight: '500' },
-  chevron: { fontSize: 20, color: '#C0C0C0', fontWeight: '300' },
   navIcon: {
     width: 32,
     height: 32,

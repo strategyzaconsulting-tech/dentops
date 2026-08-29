@@ -4,11 +4,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router, useFocusEffect } from 'expo-router'
+import { useFocusEffect } from 'expo-router'
 import BottomNav from '../components/BottomNav'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
@@ -66,13 +65,10 @@ export default function TrainingScreen() {
     <View style={styles.root}>
       {/* Header */}
       <SafeAreaView style={styles.header} edges={['top']}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>â† Back</Text>
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Training Schedule</Text>
         {!loading && (
           <Text style={styles.headerSub}>
-            {sessions.length} session{sessions.length !== 1 ? 's' : ''} Â· {completed.length} completed
+            {sessions.length} session{sessions.length !== 1 ? 's' : ''} · {completed.length} completed
           </Text>
         )}
       </SafeAreaView>
@@ -83,7 +79,7 @@ export default function TrainingScreen() {
         </View>
       ) : sessions.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyIcon}>ðŸ“š</Text>
+          <Text style={styles.emptyIcon}>📚</Text>
           <Text style={styles.emptyText}>No training sessions scheduled yet</Text>
           <Text style={styles.emptySubText}>Your manager will add sessions here when they are ready.</Text>
         </View>
@@ -138,7 +134,7 @@ function SessionCard({ session }: { session: TrainingSession }) {
         <View style={styles.trainerRow}>
           <Text style={styles.trainerLabel}>Trainer:</Text>
           <Text style={styles.trainerName}>
-            {session.trainer.firstName} {session.trainer.lastName} Â· {session.trainer.role}
+            {session.trainer.firstName} {session.trainer.lastName} · {session.trainer.role}
           </Text>
         </View>
       )}
@@ -164,8 +160,6 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingTop: 8,
   },
-  backBtn: { marginBottom: 8 },
-  backText: { color: 'rgba(255,255,255,0.85)', fontSize: 14 },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: '700', marginBottom: 2 },
   headerSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },

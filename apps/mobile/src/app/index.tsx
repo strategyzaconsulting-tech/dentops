@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
@@ -11,7 +11,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Vibration,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -28,7 +27,6 @@ const TEST_LOCATIONS = [
   { id: 'test-loc-2', name: 'Uptown Branch', address: '456 Park Ave', city: 'New York', state: 'NY' },
 ]
 
-const PRESET_TIMER_MINS = [30, 60] as const
 
 const LOG_LABELS: Record<string, string> = {
   clockIn: 'Clocked in',
@@ -45,21 +43,17 @@ const LOG_COLORS: Record<string, string> = {
 const ADJ_TYPES = ['missed_clock_in', 'missed_clock_out', 'begin_meal', 'end_meal', 'wrong_time', 'other'] as const
 type AdjType = (typeof ADJ_TYPES)[number]
 
-const ADJ_LABELS: Record<AdjType, string> = {
-  missed_clock_in: 'Missed Clock-In',
-  missed_clock_out: 'Missed Clock-Out',
-  begin_meal: 'Begin Meal',
-  end_meal: 'End Meal',
-  wrong_time: 'Wrong Time',
-  other: 'Other',
-}
+const CORR_TYPES = ['clock_in', 'clock_out', 'begin_meal', 'end_meal'] as const
+type CorrType = (typeof CORR_TYPES)[number]
+const CORR_LABELS: Record<CorrType, string> = { clock_in: 'Clock In', clock_out: 'Clock Out', begin_meal: 'Begin Meal', end_meal: 'End Meal' }
+const CORR_TO_ADJ: Record<CorrType, AdjType> = { clock_in: 'missed_clock_in', clock_out: 'missed_clock_out', begin_meal: 'begin_meal', end_meal: 'end_meal' }
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 interface Location { id: string; name: string; address?: string; city?: string; state?: string }
 interface TimePunch { id: string; punchIn: string; locationId: string; specialty?: string; isTardy?: boolean }
 interface LogEntry { event: 'clockIn' | 'breakStart' | 'breakEnd'; time: Date }
-type TimerOption = 'none' | number | 'custom'
+interface CorrEntry { id: string; dateStr: string; type: CorrType; time: string }
 
 interface WeekPunch {
   id: string
@@ -92,21 +86,38 @@ function getWeekDays(): Date[] {
   })
 }
 
+function todayDateStr(): string {
+  const d = new Date()
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`
+}
+
+function parseDateStr(str: string): Date | null {
+  const parts = str.trim().split('/')
+  if (parts.length < 3) return null
+  const month = parseInt(parts[0], 10) - 1
+  const day = parseInt(parts[1], 10)
+  const y = parseInt(parts[2], 10)
+  if (isNaN(month) || isNaN(day) || isNaN(y)) return null
+  const year = y < 100 ? 2000 + y : y
+  if (month < 0 || month > 11 || day < 1 || day > 31) return null
+  const d = new Date(year, month, day)
+  if (d.getMonth() !== month || d.getDate() !== day) return null
+  if (d > new Date()) return null
+  return d
+}
+
 function parseTimeStr(str: string, base: Date): Date | null {
-  const s = str.trim()
-  const ampm = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
-  if (ampm) {
-    let h = parseInt(ampm[1], 10)
-    const m = parseInt(ampm[2], 10)
-    if (ampm[3].toUpperCase() === 'PM' && h !== 12) h += 12
-    if (ampm[3].toUpperCase() === 'AM' && h === 12) h = 0
-    const d = new Date(base); d.setHours(h, m, 0, 0); return d
-  }
-  const hhmm = s.match(/^(\d{1,2}):(\d{2})$/)
-  if (hhmm) {
-    const d = new Date(base); d.setHours(parseInt(hhmm[1], 10), parseInt(hhmm[2], 10), 0, 0); return d
-  }
-  return null
+  const s = str.trim().toUpperCase()
+  const m = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/)
+  if (!m) return null
+  let h = parseInt(m[1], 10)
+  const min = parseInt(m[2], 10)
+  if (h < 1 || h > 12 || min < 0 || min > 59) return null
+  if (m[3] === 'PM' && h !== 12) h += 12
+  if (m[3] === 'AM' && h === 12) h = 0
+  const d = new Date(base)
+  d.setHours(h, min, 0, 0)
+  return d
 }
 
 function punchDurationMs(p: WeekPunch): number {
@@ -127,13 +138,6 @@ function formatHours(ms: number): string {
   return h > 0 ? `${h}h ${rem}m` : `${rem}m`
 }
 
-function formatElapsed(punchIn: Date): string {
-  const secs = Math.floor((Date.now() - punchIn.getTime()) / 1000)
-  const h = Math.floor(secs / 3600).toString().padStart(2, '0')
-  const m = Math.floor((secs % 3600) / 60).toString().padStart(2, '0')
-  const s = (secs % 60).toString().padStart(2, '0')
-  return `${h}:${m}:${s}`
-}
 
 function formatTime(date: Date): string {
   const h = date.getHours()
@@ -163,12 +167,6 @@ function formatDate(date: Date): string {
 
 function formatShortDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-function formatCountdown(secs: number): string {
-  const m = Math.floor(secs / 60).toString().padStart(2, '0')
-  const s = (secs % 60).toString().padStart(2, '0')
-  return `${m}:${s}`
 }
 
 function bezierWavePoints(p0: Pt, p1: Pt, p2: Pt, p3: Pt, p4: Pt, n = 8): Pt[] {
@@ -218,17 +216,10 @@ export default function HomeScreen() {
   const [showSpecialtyDropdown, setShowSpecialtyDropdown] = useState(false)
   const [clockingIn, setClockingIn] = useState(false)
   const [punch, setPunch] = useState<TimePunch | null>(null)
-  const [elapsed, setElapsed] = useState('00:00:00')
   const [onBreak, setOnBreak] = useState(false)
   const [clockingOut, setClockingOut] = useState(false)
   const [breakLoading, setBreakLoading] = useState(false)
   const [breakLog, setBreakLog] = useState<LogEntry[]>([])
-  const [timerOption, setTimerOption] = useState<TimerOption>('none')
-  const [customInput, setCustomInput] = useState('')
-  const [mealTimerRemaining, setMealTimerRemaining] = useState<number | null>(null)
-  const [alertVibrate, setAlertVibrate] = useState(true)
-  const mealTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Specialty
   const [requireSpecialty, setRequireSpecialty] = useState(false)
@@ -242,10 +233,8 @@ export default function HomeScreen() {
 
   // Adjustment request
   const [showAdjModal, setShowAdjModal] = useState(false)
-  const [adjDate, setAdjDate] = useState(new Date())
-  const [adjType, setAdjType] = useState<AdjType>('missed_clock_in')
-  const [adjInTime, setAdjInTime] = useState('')
-  const [adjOutTime, setAdjOutTime] = useState('')
+  const [corrections, setCorrections] = useState<CorrEntry[]>([{ id: '1', dateStr: todayDateStr(), type: 'clock_in', time: '' }])
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [adjNotes, setAdjNotes] = useState('')
   const [adjSubmitting, setAdjSubmitting] = useState(false)
 
@@ -321,51 +310,6 @@ export default function HomeScreen() {
       .finally(() => setTimesheetLoading(false))
   }, [showTimesheet, practiceId, userId])
 
-  // Elapsed timer while clocked in
-  useEffect(() => {
-    if (punch) {
-      const punchInDate = new Date(punch.punchIn)
-      setElapsed(formatElapsed(punchInDate))
-      elapsedRef.current = setInterval(() => setElapsed(formatElapsed(punchInDate)), 1000)
-    }
-    return () => { if (elapsedRef.current) clearInterval(elapsedRef.current) }
-  }, [punch])
-
-  useEffect(() => {
-    return () => { if (mealTimerRef.current) clearInterval(mealTimerRef.current) }
-  }, [])
-
-  function resolvedTimerMins(): number | null {
-    if (timerOption === 'none') return null
-    if (timerOption === 'custom') {
-      const v = parseInt(customInput, 10)
-      return Number.isFinite(v) && v > 0 ? v : null
-    }
-    return timerOption as number
-  }
-
-  function startMealTimer(minutes: number, withVibrate: boolean) {
-    let remaining = minutes * 60
-    setMealTimerRemaining(remaining)
-    if (mealTimerRef.current) clearInterval(mealTimerRef.current)
-    mealTimerRef.current = setInterval(() => {
-      remaining--
-      if (remaining <= 0) {
-        clearInterval(mealTimerRef.current!)
-        mealTimerRef.current = null
-        setMealTimerRemaining(null)
-        if (withVibrate) Vibration.vibrate([0, 500, 150, 500, 150, 700])
-        Alert.alert('Meal Break Over', `Your ${minutes}-minute meal break has ended.`)
-      } else {
-        setMealTimerRemaining(remaining)
-      }
-    }, 1000)
-  }
-
-  function stopMealTimer() {
-    if (mealTimerRef.current) { clearInterval(mealTimerRef.current); mealTimerRef.current = null }
-    setMealTimerRemaining(null)
-  }
 
   async function handleClockIn(): Promise<boolean> {
     if (!selectedLocation || !practiceId || !userId) return false
@@ -470,13 +414,6 @@ export default function HomeScreen() {
 
   async function handleBeginMeal() {
     if (!punch || onBreak) return
-    if (timerOption === 'custom') {
-      const v = parseInt(customInput, 10)
-      if (!Number.isFinite(v) || v <= 0 || v > 480) {
-        Alert.alert('Invalid timer', 'Enter a number of minutes between 1 and 480.')
-        return
-      }
-    }
     setBreakLoading(true)
     try {
       const n = new Date()
@@ -485,8 +422,6 @@ export default function HomeScreen() {
         body: JSON.stringify({ breakStart: n.toISOString() }),
       })
       setBreakLog(prev => [...prev, { event: 'breakStart', time: n }])
-      const mins = resolvedTimerMins()
-      if (mins !== null) startMealTimer(mins, alertVibrate)
       setOnBreak(true)
     } catch { /* swallow */ }
     finally { setBreakLoading(false) }
@@ -502,7 +437,6 @@ export default function HomeScreen() {
         body: JSON.stringify({ breakEnd: n.toISOString() }),
       })
       setBreakLog(prev => [...prev, { event: 'breakEnd', time: n }])
-      stopMealTimer()
       setOnBreak(false)
     } catch { /* swallow */ }
     finally { setBreakLoading(false) }
@@ -511,11 +445,8 @@ export default function HomeScreen() {
   async function handleClockOut() {
     if (!punch) return
     setClockingOut(true)
-    stopMealTimer()
-    if (elapsedRef.current) clearInterval(elapsedRef.current)
     const punchId = punch.id
     setPunch(null); setOnBreak(false); setBreakLog([])
-    setTimerOption('none'); setCustomInput('')
     setSelectedLocation(null); setSelectedSpecialty(null)
     setClockingOut(false)
     if (!punchId.startsWith('local-')) {
@@ -528,39 +459,58 @@ export default function HomeScreen() {
     }
   }
 
+  function addCorr() {
+    setCorrections(prev => [...prev, { id: String(Date.now()), dateStr: todayDateStr(), type: 'clock_in', time: '' }])
+  }
+
+  function removeCorr(id: string) {
+    setCorrections(prev => prev.filter(c => c.id !== id))
+  }
+
+  function updateCorr<K extends keyof CorrEntry>(id: string, key: K, value: CorrEntry[K]) {
+    setCorrections(prev => prev.map(c => c.id === id ? { ...c, [key]: value } : c))
+  }
+
   async function handleSubmitAdj() {
-    const corrIn = adjInTime.trim() ? parseTimeStr(adjInTime, adjDate) : null
-    const corrOut = adjOutTime.trim() ? parseTimeStr(adjOutTime, adjDate) : null
-    if (adjInTime.trim() && !corrIn) {
-      Alert.alert('Invalid time', 'Use format like "9:00 AM" or "14:30"')
-      return
-    }
-    if (adjOutTime.trim() && !corrOut) {
-      Alert.alert('Invalid time', 'Use format like "5:00 PM" or "17:00"')
-      return
+    for (const c of corrections) {
+      if (!parseDateStr(c.dateStr)) {
+        Alert.alert('Invalid date', `"${c.dateStr}" — use format M/D/YYYY (e.g. 8/28/2026)`)
+        return
+      }
+      if (!c.time.trim()) {
+        Alert.alert('Missing time', 'Enter a time for each correction row.')
+        return
+      }
+      const baseDate = parseDateStr(c.dateStr)!
+      if (!parseTimeStr(c.time, baseDate)) {
+        Alert.alert('Invalid time', `"${c.time}" — use H:MM AM or H:MM PM (e.g. 9:00 AM)`)
+        return
+      }
     }
     setAdjSubmitting(true)
     try {
-      const res = await apiFetch('/api/clock-adjustments', {
-        method: 'POST',
-        body: JSON.stringify({
-          practiceId,
-          userId,
-          date: adjDate.toISOString().split('T')[0],
-          type: adjType,
-          notes: adjNotes.trim() || ADJ_LABELS[adjType],
-          correctedPunchIn: corrIn?.toISOString() ?? null,
-          correctedPunchOut: corrOut?.toISOString() ?? null,
-        }),
-      })
-      if (res.ok) {
-        Alert.alert('Submitted', 'Your time correction has been sent to your manager.')
-        setShowAdjModal(false)
-        setAdjNotes(''); setAdjInTime(''); setAdjOutTime('')
-        setAdjDate(new Date()); setAdjType('missed_clock_in')
-      } else {
-        Alert.alert('Error', 'Could not submit. Please try again.')
+      for (const c of corrections) {
+        const baseDate = parseDateStr(c.dateStr)!
+        const parsed = parseTimeStr(c.time, baseDate)!
+        const isIn = c.type === 'clock_in' || c.type === 'begin_meal'
+        await apiFetch('/api/clock-adjustments', {
+          method: 'POST',
+          body: JSON.stringify({
+            practiceId,
+            userId,
+            date: baseDate.toISOString().split('T')[0],
+            type: CORR_TO_ADJ[c.type],
+            notes: adjNotes.trim() || CORR_LABELS[c.type],
+            correctedPunchIn: isIn ? parsed.toISOString() : null,
+            correctedPunchOut: isIn ? null : parsed.toISOString(),
+          }),
+        })
       }
+      Alert.alert('Submitted', 'Your time correction has been sent to your manager.')
+      setShowAdjModal(false)
+      setCorrections([{ id: '1', dateStr: todayDateStr(), type: 'clock_in', time: '' }])
+      setAdjNotes('')
+      setOpenDropdownId(null)
     } catch {
       Alert.alert('Error', 'Could not submit. Please try again.')
     } finally {
@@ -583,8 +533,6 @@ export default function HomeScreen() {
   const totalWeekMs = weekPunches.reduce((sum, p) => sum + punchDurationMs(p), 0)
 
   const activeLocation = locations.find(l => l.id === punch?.locationId)
-  const isCustomTimerInvalid = timerOption === 'custom' && customInput.length > 0 &&
-    (isNaN(parseInt(customInput, 10)) || parseInt(customInput, 10) <= 0)
   const canClockIn = !!selectedLocation && (!requireSpecialty || !!selectedSpecialty) && !clockingIn
 
   // ---- ACTIVE STATE ----
@@ -592,49 +540,12 @@ export default function HomeScreen() {
     return (
       <View style={styles.activeRoot}>
         <SafeAreaView style={styles.activeTealSection} edges={['top']}>
-          <Text style={styles.clockedInLabel}>CLOCKED IN</Text>
-          <Text style={styles.elapsedText}>{elapsed}</Text>
+          <Text style={styles.clockedInLabel}>{onBreak ? 'Lunch' : 'Clocked In'}</Text>
           <Text style={styles.activeSubtitle}>{activeLocation?.name ?? ''}</Text>
         </SafeAreaView>
 
         <ScrollView contentContainerStyle={styles.activeScroll} keyboardShouldPersistTaps="handled">
           <View style={styles.activeCard}>
-            {!onBreak && (
-              <View style={styles.timerSection}>
-                <Text style={styles.timerSectionLabel}>Meal timer</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timerChipRow}>
-                  {(['none', ...PRESET_TIMER_MINS, 'custom'] as const).map(opt => (
-                    <TouchableOpacity key={String(opt)} style={timerOption === opt ? styles.timerChipSelected : styles.timerChip} onPress={() => setTimerOption(opt)}>
-                      <Text style={timerOption === opt ? styles.timerChipTextSelected : styles.timerChipText}>
-                        {opt === 'none' ? 'None' : opt === 'custom' ? 'Custom' : `${opt}m`}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-                {timerOption === 'custom' && (
-                  <View style={styles.customInputRow}>
-                    <TextInput style={[styles.customInput, isCustomTimerInvalid && styles.customInputError]} placeholder="Minutes" placeholderTextColor="#bbb" value={customInput} onChangeText={setCustomInput} keyboardType="number-pad" maxLength={3} />
-                    <Text style={styles.customInputUnit}>min</Text>
-                  </View>
-                )}
-                {timerOption !== 'none' && (
-                  <View style={styles.alertToggleRow}>
-                    <Text style={styles.alertToggleLabel}>Alert with</Text>
-                    <TouchableOpacity style={alertVibrate ? styles.alertChipSelected : styles.alertChip} onPress={() => setAlertVibrate(v => !v)}>
-                      <Text style={alertVibrate ? styles.alertChipTextSelected : styles.alertChipText}>ðŸ“³ Vibrate</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            )}
-
-            {onBreak && mealTimerRemaining !== null && (
-              <View style={styles.countdownRow}>
-                <View style={styles.countdownDot} />
-                <Text style={styles.countdownText}>Break ends in {formatCountdown(mealTimerRemaining)}</Text>
-              </View>
-            )}
-
             <View style={styles.punchActionRow}>
               <TouchableOpacity
                 style={[styles.mealBtn, onBreak && styles.mealBtnDisabled]}
@@ -708,6 +619,12 @@ export default function HomeScreen() {
             <Text style={styles.timeText}>{formatTime(now)}</Text>
             <Text style={styles.dateText}>{formatDate(now)}</Text>
           </View>
+
+          {weekPunches.some(p => new Date(p.punchIn).toDateString() === today.toDateString() && p.punchOut !== null) && (
+            <View style={styles.clockedOutBadge}>
+              <Text style={styles.clockedOutBadgeText}>Clocked Out</Text>
+            </View>
+          )}
 
           <TouchableOpacity
             style={styles.clockInBtn}
@@ -811,76 +728,92 @@ export default function HomeScreen() {
       {/* Adjustment request modal */}
       <Modal visible={showAdjModal} transparent animationType="slide" onRequestClose={() => setShowAdjModal(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end' }}>
-          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowAdjModal(false)}>
+          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => { setShowAdjModal(false); setOpenDropdownId(null) }}>
             <TouchableOpacity style={styles.adjSheet} activeOpacity={1}>
               <View style={styles.locationSheetHandle} />
               <Text style={styles.adjSheetTitle}>REQUEST TIME CORRECTION</Text>
 
-              {/* Date */}
-              <View style={styles.adjField}>
-                <Text style={styles.adjFieldLabel}>Date</Text>
-                <View style={styles.adjDateRow}>
-                  <TouchableOpacity onPress={() => {
-                    const d = new Date(adjDate); d.setDate(d.getDate() - 1); setAdjDate(d)
-                  }} style={styles.adjDateArrow}>
-                    <Text style={styles.adjDateArrowText}>â€¹</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.adjDateText}>{adjDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
-                  <TouchableOpacity onPress={() => {
-                    const next = new Date(adjDate); next.setDate(next.getDate() + 1)
-                    if (next <= new Date()) setAdjDate(next)
-                  }} style={styles.adjDateArrow}>
-                    <Text style={styles.adjDateArrowText}>â€º</Text>
-                  </TouchableOpacity>
-                </View>
+              {/* Column headers */}
+              <View style={styles.corrHeaderRow}>
+                <Text style={[styles.adjFieldLabel, styles.corrColDate]}>Date</Text>
+                <Text style={[styles.adjFieldLabel, styles.corrColType]}>Correction</Text>
+                <Text style={[styles.adjFieldLabel, styles.corrColTime]}>Time</Text>
               </View>
 
-              {/* Type chips */}
-              <View style={styles.adjField}>
-                <Text style={styles.adjFieldLabel}>Type</Text>
-                <View style={styles.adjTypeRow}>
-                  {ADJ_TYPES.map(t => (
-                    <TouchableOpacity key={t} style={adjType === t ? styles.adjTypeChipSelected : styles.adjTypeChip} onPress={() => setAdjType(t)}>
-                      <Text style={adjType === t ? styles.adjTypeChipTextSelected : styles.adjTypeChipText}>{ADJ_LABELS[t]}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
+              {/* One row per correction */}
+              {corrections.map((c) => (
+                  <View key={c.id}>
+                    <View style={styles.corrRow}>
+                    {/* Date text input */}
+                    <TextInput
+                      style={[styles.adjTimeInput, styles.corrColDate]}
+                      placeholder="M/D/YYYY"
+                      placeholderTextColor="#555"
+                      value={c.dateStr}
+                      onChangeText={v => updateCorr(c.id, 'dateStr', v)}
+                      keyboardType="numbers-and-punctuation"
+                      maxLength={10}
+                    />
 
-              {/* Corrected times */}
-              <View style={styles.adjTimeRow}>
-                <View style={[styles.adjField, { flex: 1 }]}>
-                  <Text style={styles.adjFieldLabel}>Corrected In</Text>
-                  <TextInput
-                    style={styles.adjTimeInput}
-                    placeholder="e.g. 9:00 AM"
-                    placeholderTextColor="#888"
-                    value={adjInTime}
-                    onChangeText={setAdjInTime}
-                    autoCapitalize="characters"
-                  />
-                </View>
-                <View style={{ width: 12 }} />
-                <View style={[styles.adjField, { flex: 1 }]}>
-                  <Text style={styles.adjFieldLabel}>Corrected Out</Text>
-                  <TextInput
-                    style={styles.adjTimeInput}
-                    placeholder="e.g. 5:00 PM"
-                    placeholderTextColor="#888"
-                    value={adjOutTime}
-                    onChangeText={setAdjOutTime}
-                    autoCapitalize="characters"
-                  />
-                </View>
-              </View>
+                    {/* Type dropdown */}
+                    <View style={[styles.corrColType, { zIndex: openDropdownId === c.id ? 10 : 1 }]}>
+                      <TouchableOpacity
+                        style={styles.corrTypeBtn}
+                        onPress={() => setOpenDropdownId(openDropdownId === c.id ? null : c.id)}
+                      >
+                        <Text style={styles.corrTypeBtnText} numberOfLines={1}>{CORR_LABELS[c.type]}</Text>
+                        <Text style={styles.corrDropArrow}>▾</Text>
+                      </TouchableOpacity>
+                      {openDropdownId === c.id && (
+                        <View style={styles.corrDropdown}>
+                          {CORR_TYPES.map(t => (
+                            <TouchableOpacity
+                              key={t}
+                              style={styles.corrDropItem}
+                              onPress={() => { updateCorr(c.id, 'type', t); setOpenDropdownId(null) }}
+                            >
+                              <Text style={[styles.corrDropItemText, c.type === t && styles.corrDropItemSelected]}>
+                                {CORR_LABELS[t]}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Time input */}
+                    <TextInput
+                      style={[styles.adjTimeInput, styles.corrColTime]}
+                      placeholder="9:00 AM"
+                      placeholderTextColor="#555"
+                      value={c.time}
+                      onChangeText={v => updateCorr(c.id, 'time', v)}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                    />
+
+                    {/* Remove */}
+                    {corrections.length > 1 && (
+                      <TouchableOpacity onPress={() => removeCorr(c.id)} style={styles.corrRemoveBtn}>
+                        <Text style={styles.corrRemoveText}>×</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  </View>
+              ))}
+
+              {/* Add row */}
+              <TouchableOpacity style={styles.addCorrBtn} onPress={addCorr}>
+                <Text style={styles.addCorrText}>+ Add Correction</Text>
+              </TouchableOpacity>
 
               {/* Notes */}
               <View style={styles.adjField}>
                 <Text style={styles.adjFieldLabel}>Notes</Text>
                 <TextInput
                   style={styles.adjNotesInput}
-                  placeholder="Describe what happenedâ€¦"
-                  placeholderTextColor="#888"
+                  placeholder="Describe what happened…"
+                  placeholderTextColor="#555"
                   value={adjNotes}
                   onChangeText={setAdjNotes}
                   multiline
@@ -890,7 +823,7 @@ export default function HomeScreen() {
 
               {/* Actions */}
               <View style={styles.adjActions}>
-                <TouchableOpacity style={styles.adjCancelBtn} onPress={() => setShowAdjModal(false)}>
+                <TouchableOpacity style={styles.adjCancelBtn} onPress={() => { setShowAdjModal(false); setOpenDropdownId(null) }}>
                   <Text style={styles.adjCancelText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -926,6 +859,9 @@ const styles = StyleSheet.create({
   timeSection: { alignItems: 'center', paddingTop: 64, paddingBottom: 28 },
   timeText: { fontSize: 44, fontWeight: '200', color: '#FAF6EF', letterSpacing: 4 },
   dateText: { fontSize: 17, fontWeight: '300', color: '#9A9A96', marginTop: 8, letterSpacing: 2 },
+
+  clockedOutBadge: { alignSelf: 'center', backgroundColor: '#2A2A27', borderRadius: 20, paddingVertical: 6, paddingHorizontal: 18, marginBottom: 20 },
+  clockedOutBadgeText: { color: '#9A9A96', fontSize: 13, fontWeight: '500', letterSpacing: 1 },
 
   // Clock in button
   clockInBtn: { backgroundColor: '#1D9E75', borderRadius: 10, paddingVertical: 18, marginHorizontal: 90, alignItems: 'center' },
@@ -990,17 +926,7 @@ const styles = StyleSheet.create({
   adjSheetTitle: { fontSize: 11, fontWeight: '600', color: '#9A9A96', letterSpacing: 4, textAlign: 'center' },
   adjField: { gap: 6 },
   adjFieldLabel: { fontSize: 11, fontWeight: '600', color: '#8BAF9A', letterSpacing: 0.5 },
-  adjDateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
-  adjDateArrow: { padding: 8 },
-  adjDateArrowText: { fontSize: 22, color: '#8BAF9A', fontWeight: '300' },
-  adjDateText: { fontSize: 15, fontWeight: '500', color: '#FAF6EF', minWidth: 140, textAlign: 'center' },
-  adjTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  adjTypeChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: '#2E3D35', borderWidth: 1, borderColor: '#3D5045' },
-  adjTypeChipSelected: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: '#1D9E75', borderWidth: 1, borderColor: '#1D9E75' },
-  adjTypeChipText: { fontSize: 12, color: '#FAF6EF', fontWeight: '500' },
-  adjTypeChipTextSelected: { fontSize: 12, color: '#fff', fontWeight: '600' },
-  adjTimeRow: { flexDirection: 'row' },
-  adjTimeInput: { borderWidth: 1, borderColor: '#3D5045', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#FAF6EF', backgroundColor: '#2C3E3A' },
+  adjTimeInput: { borderWidth: 1, borderColor: '#3D5045', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 9, fontSize: 13, color: '#FAF6EF', backgroundColor: '#2C3E3A' },
   adjNotesInput: { borderWidth: 1, borderColor: '#3D5045', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#FAF6EF', backgroundColor: '#2C3E3A', minHeight: 70, textAlignVertical: 'top' },
   adjActions: { flexDirection: 'row', gap: 12, marginTop: 4 },
   adjCancelBtn: { flex: 1, borderWidth: 1, borderColor: '#3D5045', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
@@ -1009,34 +935,34 @@ const styles = StyleSheet.create({
   adjSubmitBtnDisabled: { opacity: 0.5 },
   adjSubmitText: { fontSize: 14, color: '#fff', fontWeight: '600' },
 
+  // Correction rows
+  corrHeaderRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 2, gap: 8 },
+  corrRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  corrColDate: { width: 110 },
+  corrColType: { flex: 1 },
+  corrColTime: { width: 80 },
+  corrDateText: { fontSize: 12, fontWeight: '500', color: '#FAF6EF' },
+  corrTypeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#3D5045', borderRadius: 8, backgroundColor: '#2C3E3A', paddingHorizontal: 10, paddingVertical: 9 },
+  corrTypeBtnText: { fontSize: 13, color: '#FAF6EF', flex: 1 },
+  corrDropArrow: { fontSize: 11, color: '#8BAF9A', marginLeft: 4 },
+  corrDropdown: { position: 'absolute', top: 40, left: 0, right: 0, backgroundColor: '#2C3E3A', borderWidth: 1, borderColor: '#3D5045', borderRadius: 8, zIndex: 100, marginTop: 2 },
+  corrDropItem: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#3D5045' },
+  corrDropItemText: { fontSize: 13, color: '#9A9A96' },
+  corrDropItemSelected: { color: '#1D9E75', fontWeight: '600' },
+  corrRemoveBtn: { paddingHorizontal: 6, paddingVertical: 4 },
+  corrRemoveText: { fontSize: 20, color: '#9A9A96', lineHeight: 22 },
+  addCorrBtn: { alignSelf: 'flex-start', paddingVertical: 4 },
+  addCorrText: { fontSize: 13, color: '#1D9E75', fontWeight: '500' },
+
   // Active state
   activeRoot: { flex: 1, backgroundColor: '#4A5C52' },
   activeTealSection: { backgroundColor: '#1D9E75', paddingBottom: 32, alignItems: 'center', paddingTop: 48 },
   clockedInLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '500', marginBottom: 8, letterSpacing: 5 },
-  elapsedText: { color: '#fff', fontSize: 52, fontWeight: '200', letterSpacing: 4 },
+
   activeSubtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '300', letterSpacing: 2, marginTop: 10 },
   tardyText: { fontSize: 12, color: '#DC2626', fontStyle: 'italic', marginLeft: 4 },
   activeScroll: { paddingTop: 16, paddingBottom: 40 },
   activeCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginHorizontal: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, elevation: 4, gap: 12 },
-
-  // Meal timer
-  timerSection: { borderBottomWidth: 1, borderBottomColor: '#F0F0F0', paddingBottom: 16, gap: 10 },
-  timerSectionLabel: { fontSize: 11, fontWeight: '700', color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 },
-  timerChipRow: { gap: 8, paddingRight: 4 },
-  timerChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#F5F5F5', borderWidth: 1, borderColor: '#E0E0E0' },
-  timerChipSelected: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#D97706', borderWidth: 1, borderColor: '#D97706' },
-  timerChipText: { fontSize: 13, color: '#555', fontWeight: '500' },
-  timerChipTextSelected: { fontSize: 13, color: '#fff', fontWeight: '700' },
-  customInputRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  customInput: { borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10, fontSize: 16, fontWeight: '600', color: '#2C2C2A', backgroundColor: '#FAFAFA', width: 90, textAlign: 'center' },
-  customInputError: { borderColor: '#EF4444' },
-  customInputUnit: { fontSize: 14, color: '#888', fontWeight: '500' },
-  alertToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  alertToggleLabel: { fontSize: 12, color: '#888', fontWeight: '500', marginRight: 4 },
-  alertChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#F5F5F5', borderWidth: 1, borderColor: '#E0E0E0' },
-  alertChipSelected: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#1D9E75', borderWidth: 1, borderColor: '#1D9E75' },
-  alertChipText: { fontSize: 12, color: '#555', fontWeight: '500' },
-  alertChipTextSelected: { fontSize: 12, color: '#fff', fontWeight: '600' },
 
   // Punch actions (Begin Meal / End Meal / Clock Out)
   punchActionRow: { flexDirection: 'row', gap: 8, alignItems: 'stretch' },
@@ -1044,9 +970,7 @@ const styles = StyleSheet.create({
   mealBtnDisabled: { borderColor: '#E0E0E0', backgroundColor: '#F9F9F9' },
   mealBtnText: { color: '#D97706', fontSize: 13, fontWeight: '600' },
   mealBtnTextDisabled: { color: '#C0C0C0' },
-  countdownRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 4 },
-  countdownDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#D97706' },
-  countdownText: { fontSize: 15, fontWeight: '700', color: '#D97706' },
+
   clockOutBtn: { flex: 1, backgroundColor: '#A32D2D', borderRadius: 10, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
   clockOutBtnDisabled: { flex: 1, backgroundColor: '#C97070', borderRadius: 10, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
   clockOutBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },

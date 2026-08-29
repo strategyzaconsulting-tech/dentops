@@ -95,12 +95,9 @@ export default function OfficeManualScreen() {
     <View style={styles.root}>
       {/* Header */}
       <SafeAreaView style={styles.header} edges={['top']}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>â† Back</Text>
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Office Manual</Text>
         {manual && (
-          <Text style={styles.headerSub}>v{manual.version} Â· Updated {fmtDate(manual.updatedAt)}</Text>
+          <Text style={styles.headerSub}>v{manual.version} · Updated {fmtDate(manual.updatedAt)}</Text>
         )}
       </SafeAreaView>
 
@@ -132,7 +129,7 @@ export default function OfficeManualScreen() {
         <SafeAreaView style={styles.bottomBar} edges={['bottom']}>
           {mySig ? (
             <View style={styles.signedBadge}>
-              <Text style={styles.signedText}>âœ“ Signed on {fmtDate(mySig.signedAt)}</Text>
+              <Text style={styles.signedText}>✓ Signed on {fmtDate(mySig.signedAt)}</Text>
             </View>
           ) : (
             <TouchableOpacity
@@ -165,8 +162,6 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingTop: 8,
   },
-  backBtn: { marginBottom: 8 },
-  backText: { color: 'rgba(255,255,255,0.85)', fontSize: 14 },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: '700', marginBottom: 2 },
   headerSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },

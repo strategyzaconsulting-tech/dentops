@@ -1,4 +1,4 @@
-﻿import { useEffect, useLayoutEffect, useState } from 'react'
+import { useCallback, useLayoutEffect, useState } from 'react'
 import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
@@ -6,15 +6,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
+import { useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { markAnnouncementsSeen } from '../store/announcementStore'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const API_BASE = 'http://192.168.0.139:3000'
+import { useAuth } from '../lib/AuthContext'
+import { apiFetch } from '../lib/api'
 
 interface Announcement {
   id: string
@@ -30,13 +29,17 @@ function formatDate(iso: string) {
 }
 
 export default function AnnouncementsScreen() {
+  const { user } = useAuth()
+  const practiceId = user?.practiceId ?? ''
+
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
   async function fetchAnnouncements() {
+    if (!practiceId) return
     try {
-      const res = await fetch(`${API_BASE}/api/announcements?practiceId=${PRACTICE_ID}`)
+      const res = await apiFetch(`/api/announcements?practiceId=${practiceId}`)
       const data: Announcement[] = await res.json()
       if (Array.isArray(data)) setAnnouncements(data)
     } catch { /* silent */ }
@@ -48,7 +51,7 @@ export default function AnnouncementsScreen() {
 
   useLayoutEffect(() => { markAnnouncementsSeen() }, [])
 
-  useEffect(() => { fetchAnnouncements() }, [])
+  useFocusEffect(useCallback(() => { fetchAnnouncements() }, [practiceId]))
 
   function onRefresh() {
     setRefreshing(true)
@@ -58,9 +61,6 @@ export default function AnnouncementsScreen() {
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.header} edges={['top']}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>â† Back</Text>
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Announcements</Text>
       </SafeAreaView>
 
@@ -75,7 +75,7 @@ export default function AnnouncementsScreen() {
         >
           {announcements.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>ðŸ“¢</Text>
+              <Ionicons name="megaphone-outline" size={48} color="#ccc" />
               <Text style={styles.emptyText}>No announcements yet</Text>
             </View>
           ) : (
@@ -104,13 +104,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
-  backBtn: { marginBottom: 8 },
-  backText: { color: 'rgba(255,255,255,0.8)', fontSize: 14 },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: '700' },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 16, gap: 12, paddingBottom: 40 },
   emptyContainer: { alignItems: 'center', paddingTop: 80, gap: 12 },
-  emptyIcon: { fontSize: 48 },
   emptyText: { fontSize: 15, color: '#999' },
   card: {
     backgroundColor: '#fff',
