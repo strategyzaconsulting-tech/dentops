@@ -367,10 +367,10 @@ export default function HomeScreen() {
     setMealTimerRemaining(null)
   }
 
-  async function handleClockIn() {
-    if (!selectedLocation) return
+  async function handleClockIn(): Promise<boolean> {
+    if (!selectedLocation || !practiceId || !userId) return false
     setClockingIn(true)
-    const punchIn = new Date()
+    const now = new Date()
     try {
       const res = await apiFetch('/api/time-punches', {
         method: 'POST',
@@ -379,21 +379,90 @@ export default function HomeScreen() {
           userId,
           locationId: selectedLocation,
           specialty: selectedSpecialty ?? undefined,
-          punchIn: punchIn.toISOString(),
+          punchIn: now.toISOString(),
         }),
       })
+
       if (res.status === 409) {
-        await loadActivePunch(practiceId, userId)
-        return
+        const body = await res.json().catch(() => ({}))
+        const staleId: string | undefined = body?.punchId
+
+        // Check live endpoint — only returns today's open punches
+        const liveRes = await apiFetch(`/api/time-punches/live?practiceId=${practiceId}`)
+        const liveData = liveRes.ok ? await liveRes.json().catch(() => []) : []
+        const todayPunch = Array.isArray(liveData)
+          ? liveData.find((p: { userId: string }) => p.userId === userId)
+          : null
+
+        if (todayPunch) {
+          // Restore today's active punch
+          setPunch({ id: todayPunch.id, punchIn: todayPunch.punchIn, locationId: todayPunch.locationId, specialty: todayPunch.specialty ?? undefined, isTardy: todayPunch.isTardy ?? false })
+          if (todayPunch.location) setLocations(prev => prev.find(l => l.id === todayPunch.locationId) ? prev : [...prev, { id: todayPunch.locationId, name: todayPunch.location.name }])
+          setOnBreak(!!(todayPunch.breakStart && !todayPunch.breakEnd))
+          const log: LogEntry[] = [{ event: 'clockIn', time: new Date(todayPunch.punchIn) }]
+          if (todayPunch.breakStart) log.push({ event: 'breakStart', time: new Date(todayPunch.breakStart) })
+          if (todayPunch.breakEnd) log.push({ event: 'breakEnd', time: new Date(todayPunch.breakEnd) })
+          setBreakLog(log)
+          return true
+        }
+
+        // Stale open punch from a previous day — offer to close it
+        if (staleId) {
+          return new Promise<boolean>((resolve) => {
+            Alert.alert(
+              'Unclosed Punch Found',
+              'You have an open punch from a previous shift. Close it to clock in now?',
+              [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                {
+                  text: 'Close & Clock In',
+                  onPress: async () => {
+                    try {
+                      await apiFetch(`/api/time-punches/${staleId}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ punchOut: new Date().toISOString() }),
+                      })
+                      const res2 = await apiFetch('/api/time-punches', {
+                        method: 'POST',
+                        body: JSON.stringify({ practiceId, userId, locationId: selectedLocation, specialty: selectedSpecialty ?? undefined, punchIn: new Date().toISOString() }),
+                      })
+                      if (res2.ok) {
+                        const data: TimePunch = await res2.json()
+                        setPunch(data)
+                        setBreakLog([{ event: 'clockIn', time: new Date() }])
+                        resolve(true)
+                      } else {
+                        Alert.alert('Error', 'Could not clock in after closing previous punch.')
+                        resolve(false)
+                      }
+                    } catch {
+                      Alert.alert('Error', 'Could not close previous punch.')
+                      resolve(false)
+                    }
+                  },
+                },
+              ]
+            )
+          })
+        }
+
+        return false
       }
+
       if (res.ok) {
         const data: TimePunch = await res.json()
         setPunch(data)
-        setBreakLog([{ event: 'clockIn', time: punchIn }])
+        setBreakLog([{ event: 'clockIn', time: now }])
+        return true
       }
+
+      let msg = `Server error (${res.status})`
+      try { const e = await res.json(); if (e?.error) msg = e.error } catch {}
+      Alert.alert('Clock-In Failed', msg)
+      return false
     } catch {
-      setPunch({ id: `local-${Date.now()}`, punchIn: punchIn.toISOString(), locationId: selectedLocation })
-      setBreakLog([{ event: 'clockIn', time: punchIn }])
+      Alert.alert('Connection Error', 'Could not reach the server. Check that the app and API are on the same network.')
+      return false
     } finally {
       setClockingIn(false)
     }
@@ -783,7 +852,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               style={[styles.clockInBtn, !canClockIn && styles.clockInBtnDisabled, { marginHorizontal: 0, marginTop: 8 }]}
-              onPress={async () => { await handleClockIn(); setShowClockInModal(false) }}
+              onPress={async () => { const ok = await handleClockIn(); if (ok) setShowClockInModal(false) }}
               disabled={!canClockIn}
             >
               {clockingIn ? <ActivityIndicator color="#fff" /> : <Text style={styles.clockInBtnText}>CONFIRM CLOCK IN</Text>}
