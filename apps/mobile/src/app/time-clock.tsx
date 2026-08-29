@@ -95,15 +95,6 @@ function formatElapsed(punchIn: string): string {
   return `${h}:${m}:${s}`
 }
 
-function formatDuration(punchIn: string, punchOut: string | null, breakStart: string | null, breakEnd: string | null): string {
-  if (!punchOut) return 'Active'
-  let ms = new Date(punchOut).getTime() - new Date(punchIn).getTime()
-  if (breakStart && breakEnd) ms -= new Date(breakEnd).getTime() - new Date(breakStart).getTime()
-  if (ms < 0) ms = 0
-  const h = Math.floor(ms / 3600000)
-  const m = Math.floor((ms % 3600000) / 60000)
-  return h > 0 ? `${h}h ${m}m` : `${m}m`
-}
 
 function isSameDay(iso: string, day: Date): boolean {
   const d = new Date(iso)
@@ -311,43 +302,73 @@ export default function TimeClockScreen() {
           ) : (
             weekDays.map((day) => {
               const dayPunches = punches.filter((p) => isSameDay(p.punchIn, day))
+              const today = new Date(); today.setHours(0, 0, 0, 0)
+              const isPast = day < today
               const isToday = isSameDay(new Date().toISOString(), day)
+              const iso = toISODate(day)
+              const isAbsent = isPast && absentDates.includes(iso)
+
+              // Skip future days with no punches
+              if (!isToday && !isPast && dayPunches.length === 0) return null
+
+              // Show absent days as a slim row, no full card
+              if (dayPunches.length === 0 && isAbsent) {
+                return (
+                  <View key={day.toISOString()} style={styles.absentRow}>
+                    <Text style={styles.absentRowDay}>{formatDayHeader(day)}</Text>
+                    <Text style={styles.absentRowTag}>Absent</Text>
+                  </View>
+                )
+              }
+
+              // Skip past days with no punches and not absent
+              if (dayPunches.length === 0) return null
+
+              const totalDuration = dayPunches.reduce((sum, p) => {
+                if (!p.punchOut) return sum
+                let ms = new Date(p.punchOut).getTime() - new Date(p.punchIn).getTime()
+                if (p.breakStart && p.breakEnd) ms -= new Date(p.breakEnd).getTime() - new Date(p.breakStart).getTime()
+                return sum + Math.max(0, ms)
+              }, 0)
+              const totalH = Math.floor(totalDuration / 3600000)
+              const totalM = Math.floor((totalDuration % 3600000) / 60000)
+              const totalStr = totalDuration > 0 ? (totalH > 0 ? `${totalH}h ${totalM}m` : `${totalM}m`) : ''
 
               return (
                 <View key={day.toISOString()} style={styles.daySection}>
                   <View style={styles.dayHeader}>
                     <Text style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
-                      {formatDayHeader(day)}{isToday ? '  · Today' : ''}
+                      {formatDayHeader(day)}{isToday ? ' · Today' : ''}
                     </Text>
                   </View>
 
-                  {dayPunches.length === 0 ? (
-                    (() => {
-                      const iso = toISODate(day)
-                      const today = new Date(); today.setHours(0, 0, 0, 0)
-                      const isAbsent = day < today && absentDates.includes(iso)
-                      return (
-                        <Text style={isAbsent ? styles.absentText : styles.noPunches}>
-                          {isAbsent ? 'Absent' : 'No punches recorded'}
-                        </Text>
-                      )
-                    })()
-                  ) : (
-                    dayPunches.map((p) => (
-                      <View key={p.id} style={styles.punchRow}>
-                        <View style={styles.punchTimes}>
-                          <Text style={styles.punchTime}>{formatTime(p.punchIn)}</Text>
+                  {(() => {
+                    const firstIn = dayPunches[0].punchIn
+                    const lastPunch = dayPunches[dayPunches.length - 1]
+                    const lastOut = lastPunch.punchOut
+                    const isTardy = dayPunches.some((p) => p.isTardy)
+                    const breakPunch = dayPunches.find((p) => p.breakStart && p.breakEnd)
+                    const breakStr = breakPunch?.breakStart && breakPunch?.breakEnd
+                      ? `Break ${formatTime(breakPunch.breakStart)}–${formatTime(breakPunch.breakEnd)}`
+                      : null
+                    return (
+                      <View style={styles.punchRow}>
+                        <Text style={styles.punchTime}>{formatTime(firstIn)}</Text>
+                        {breakStr ? (
+                          <>
+                            <Text style={styles.punchArrow}>→</Text>
+                            <Text style={styles.punchBreak}>{breakStr}</Text>
+                            <Text style={styles.punchArrow}>→</Text>
+                          </>
+                        ) : (
                           <Text style={styles.punchArrow}>→</Text>
-                          <Text style={styles.punchTime}>{p.punchOut ? formatTime(p.punchOut) : '—'}</Text>
-                          {p.isTardy && <Text style={styles.tardyTag}>Tardy</Text>}
-                        </View>
-                        <View style={styles.punchMeta}>
-                          <Text style={styles.punchDuration}>{formatDuration(p.punchIn, p.punchOut, p.breakStart, p.breakEnd)}</Text>
-                          <Text style={styles.punchLocation}>{p.location.name}</Text>
-                        </View>
+                        )}
+                        <Text style={styles.punchTime}>{lastOut ? formatTime(lastOut) : '—'}</Text>
+                        {totalStr ? <Text style={styles.punchDuration}>{totalStr}</Text> : null}
+                        {isTardy && <Text style={styles.tardyTag}>Tardy</Text>}
                       </View>
-                    ))
-                  )}
+                    )
+                  })()}
                 </View>
               )
             })
@@ -411,21 +432,21 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
   weekLabel: { fontSize: 11, fontWeight: '700', color: '#888', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  daySection: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 10, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F0F0F0' },
-  dayLabel: { fontSize: 13, fontWeight: '700', color: '#2C2C2A' },
+  daySection: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 8, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
+  dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F0F0F0' },
+  dayLabel: { fontSize: 12, fontWeight: '700', color: '#2C2C2A' },
   dayLabelToday: { color: '#1D9E75' },
-  noPunches: { fontSize: 13, color: '#bbb', padding: 16, fontStyle: 'italic' },
-  absentText: { fontSize: 13, color: '#DC2626', padding: 16, fontStyle: 'italic', fontWeight: '600' },
 
-  punchRow: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F5F5F5', gap: 4 },
-  punchTimes: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  punchTime: { fontSize: 15, fontWeight: '600', color: '#2C2C2A' },
-  punchArrow: { fontSize: 13, color: '#bbb' },
-  tardyTag: { fontSize: 12, color: '#DC2626', fontStyle: 'italic', marginLeft: 4 },
-  punchMeta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
-  punchDuration: { fontSize: 12, color: '#888', fontWeight: '500' },
-  punchLocation: { fontSize: 12, color: '#aaa', flex: 1 },
+  absentRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 8, marginBottom: 4 },
+  absentRowDay: { fontSize: 12, color: '#aaa' },
+  absentRowTag: { fontSize: 11, fontWeight: '700', color: '#DC2626', textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  punchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F5F5F5' },
+  punchTime: { fontSize: 13, fontWeight: '600', color: '#2C2C2A' },
+  punchArrow: { fontSize: 11, color: '#ccc' },
+  punchBreak: { fontSize: 11, color: '#aaa', fontStyle: 'italic' },
+  punchDuration: { fontSize: 12, color: '#888', marginLeft: 'auto' as unknown as number },
+  tardyTag: { fontSize: 11, color: '#DC2626', fontStyle: 'italic' },
 
   adjSection: { marginTop: 8 },
   adjSectionTitle: { fontSize: 11, fontWeight: '700', color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
