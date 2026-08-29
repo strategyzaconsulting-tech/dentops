@@ -1,4 +1,4 @@
-﻿import { useEffect, useLayoutEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
@@ -14,24 +14,35 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
+import { useFocusEffect } from 'expo-router'
 import { markModuleSeen } from '../store/navBadgeStore'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.139:3000'
+import { apiFetch } from '../lib/api'
+import { useAuth } from '../lib/AuthContext'
 
 const ADJUSTMENT_TYPES = [
-  { key: 'missed_clock_in', label: 'Missed Clock-In' },
+  { key: 'missed_clock_in',  label: 'Missed Clock-In'  },
   { key: 'missed_clock_out', label: 'Missed Clock-Out' },
-  { key: 'wrong_time', label: 'Wrong Time' },
-  { key: 'other', label: 'Other' },
+  { key: 'begin_meal',       label: 'Begin Meal'       },
+  { key: 'end_meal',         label: 'End Meal'         },
+  { key: 'wrong_time',       label: 'Wrong Time'       },
+  { key: 'other',            label: 'Other'            },
 ]
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: '#D97706',
+  pending:  '#D97706',
   approved: '#1D9E75',
-  denied: '#EF4444',
+  denied:   '#EF4444',
+}
+
+interface ActivePunch {
+  id: string
+  punchIn: string
+  locationId: string
+  location: { name: string } | null
+  specialty: string | null
+  breakStart: string | null
+  breakEnd:   string | null
+  isTardy: boolean
 }
 
 interface MyPunch {
@@ -42,7 +53,7 @@ interface MyPunch {
   specialty: string | null
   isTardy: boolean
   breakStart: string | null
-  breakEnd: string | null
+  breakEnd:   string | null
 }
 
 interface Adjustment {
@@ -78,8 +89,15 @@ function formatTime(iso: string): string {
   const d = new Date(iso)
   const h = d.getHours()
   const m = d.getMinutes().toString().padStart(2, '0')
-  const ampm = h >= 12 ? 'PM' : 'AM'
-  return `${h % 12 || 12}:${m} ${ampm}`
+  return `${h % 12 || 12}:${m} ${h >= 12 ? 'PM' : 'AM'}`
+}
+
+function formatElapsed(punchIn: string): string {
+  const secs = Math.floor((Date.now() - new Date(punchIn).getTime()) / 1000)
+  const h = Math.floor(secs / 3600).toString().padStart(2, '0')
+  const m = Math.floor((secs % 3600) / 60).toString().padStart(2, '0')
+  const s = (secs % 60).toString().padStart(2, '0')
+  return `${h}:${m}:${s}`
 }
 
 function formatDuration(punchIn: string, punchOut: string | null, breakStart: string | null, breakEnd: string | null): string {
@@ -108,12 +126,45 @@ function formatUSDate(isoDate: string): string {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
+function parseTimeToISO(dateStr: string, timeStr: string): string | null {
+  const t = timeStr.trim()
+  const ampm = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+  if (ampm) {
+    let h = parseInt(ampm[1])
+    const m = parseInt(ampm[2])
+    if (ampm[3].toUpperCase() === 'AM' && h === 12) h = 0
+    if (ampm[3].toUpperCase() === 'PM' && h !== 12) h += 12
+    const d = new Date(dateStr); d.setHours(h, m, 0, 0)
+    return d.toISOString()
+  }
+  const hhmm = t.match(/^(\d{1,2}):(\d{2})$/)
+  if (hhmm) {
+    const d = new Date(dateStr); d.setHours(parseInt(hhmm[1]), parseInt(hhmm[2]), 0, 0)
+    return d.toISOString()
+  }
+  return null
+}
+
 export default function TimeClockScreen() {
+  const { user } = useAuth()
+  const practiceId = user?.practiceId ?? ''
+  const userId = user?.id ?? ''
+
+  // Active punch
+  const [activePunch, setActivePunch] = useState<ActivePunch | null>(null)
+  const [onBreak, setOnBreak] = useState(false)
+  const [elapsed, setElapsed] = useState('00:00:00')
+  const [breakLoading, setBreakLoading] = useState(false)
+  const [clockOutLoading, setClockOutLoading] = useState(false)
+  const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Weekly history
   const [punches, setPunches] = useState<MyPunch[]>([])
   const [absentDates, setAbsentDates] = useState<string[]>([])
   const [adjustments, setAdjustments] = useState<Adjustment[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Adjustment modal
   const [modalVisible, setModalVisible] = useState(false)
   const [adjDate, setAdjDate] = useState('')
   const [adjPunchId, setAdjPunchId] = useState<string | undefined>()
@@ -128,30 +179,105 @@ export default function TimeClockScreen() {
 
   useLayoutEffect(() => { markModuleSeen('timeClock') }, [])
 
+  // Elapsed ticker
   useEffect(() => {
-    async function load() {
-      setLoading(true)
-      try {
-        const [pRes, aRes] = await Promise.all([
-          fetch(`${API_BASE}/api/time-punches/mine?practiceId=${PRACTICE_ID}&userId=${USER_ID}&weekStart=${toISODate(weekStart)}`),
-          fetch(`${API_BASE}/api/clock-adjustments?practiceId=${PRACTICE_ID}&userId=${USER_ID}`),
-        ])
-        const [pData, aData] = await Promise.all([pRes.json(), aRes.json()])
-        if (Array.isArray(pData)) {
-          setPunches(pData)
-        } else if (pData?.punches && Array.isArray(pData.punches)) {
-          setPunches(pData.punches)
-          setAbsentDates(pData.absentDates ?? [])
-        }
-        if (Array.isArray(aData)) setAdjustments(aData)
-      } catch {
-        // silent
-      } finally {
-        setLoading(false)
-      }
+    if (activePunch) {
+      setElapsed(formatElapsed(activePunch.punchIn))
+      elapsedRef.current = setInterval(() => setElapsed(formatElapsed(activePunch.punchIn)), 1000)
+    } else {
+      if (elapsedRef.current) clearInterval(elapsedRef.current)
     }
-    load()
-  }, [])
+    return () => { if (elapsedRef.current) clearInterval(elapsedRef.current) }
+  }, [activePunch])
+
+  useFocusEffect(useCallback(() => {
+    if (practiceId && userId) {
+      loadActivePunch()
+      loadHistory()
+    }
+  }, [practiceId, userId]))
+
+  async function loadActivePunch() {
+    try {
+      const res = await apiFetch(`/api/time-punches/live?practiceId=${practiceId}`)
+      if (!res.ok) return
+      const data = await res.json()
+      if (!Array.isArray(data)) return
+      const active = data.find((p: { userId: string }) => p.userId === userId)
+      if (active) {
+        setActivePunch(active)
+        setOnBreak(!!(active.breakStart && !active.breakEnd))
+      } else {
+        setActivePunch(null)
+        setOnBreak(false)
+      }
+    } catch { /* silent */ }
+  }
+
+  async function loadHistory() {
+    setLoading(true)
+    try {
+      const [pRes, aRes] = await Promise.all([
+        apiFetch(`/api/time-punches/mine?practiceId=${practiceId}&userId=${userId}&weekStart=${toISODate(weekStart)}`),
+        apiFetch(`/api/clock-adjustments?practiceId=${practiceId}&userId=${userId}`),
+      ])
+      const [pData, aData] = await Promise.all([pRes.json(), aRes.json()])
+      if (pData?.punches && Array.isArray(pData.punches)) {
+        setPunches(pData.punches)
+        setAbsentDates(pData.absentDates ?? [])
+      } else if (Array.isArray(pData)) {
+        setPunches(pData)
+      }
+      if (Array.isArray(aData)) setAdjustments(aData)
+    } catch { /* silent */ }
+    finally { setLoading(false) }
+  }
+
+  async function handleBeginMeal() {
+    if (!activePunch || onBreak) return
+    setBreakLoading(true)
+    try {
+      const n = new Date()
+      await apiFetch(`/api/time-punches/${activePunch.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ breakStart: n.toISOString() }),
+      })
+      setActivePunch(prev => prev ? { ...prev, breakStart: n.toISOString(), breakEnd: null } : prev)
+      setOnBreak(true)
+    } catch { /* silent */ }
+    finally { setBreakLoading(false) }
+  }
+
+  async function handleEndMeal() {
+    if (!activePunch || !onBreak) return
+    setBreakLoading(true)
+    try {
+      const n = new Date()
+      await apiFetch(`/api/time-punches/${activePunch.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ breakEnd: n.toISOString() }),
+      })
+      setActivePunch(prev => prev ? { ...prev, breakEnd: n.toISOString() } : prev)
+      setOnBreak(false)
+    } catch { /* silent */ }
+    finally { setBreakLoading(false) }
+  }
+
+  async function handleClockOut() {
+    if (!activePunch) return
+    setClockOutLoading(true)
+    const id = activePunch.id
+    setActivePunch(null)
+    setOnBreak(false)
+    try {
+      await apiFetch(`/api/time-punches/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ punchOut: new Date().toISOString() }),
+      })
+      await loadHistory()
+    } catch { /* silent */ }
+    finally { setClockOutLoading(false) }
+  }
 
   function openModal(date: Date, punchId?: string) {
     setAdjDate(toISODate(date))
@@ -163,61 +289,36 @@ export default function TimeClockScreen() {
     setModalVisible(true)
   }
 
-  function parseTimeToISO(dateStr: string, timeStr: string): string | null {
-    const t = timeStr.trim()
-    const ampm = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
-    if (ampm) {
-      let h = parseInt(ampm[1])
-      const m = parseInt(ampm[2])
-      if (ampm[3].toUpperCase() === 'AM' && h === 12) h = 0
-      if (ampm[3].toUpperCase() === 'PM' && h !== 12) h += 12
-      const d = new Date(dateStr)
-      d.setHours(h, m, 0, 0)
-      return d.toISOString()
-    }
-    const hhmm = t.match(/^(\d{1,2}):(\d{2})$/)
-    if (hhmm) {
-      const d = new Date(dateStr)
-      d.setHours(parseInt(hhmm[1]), parseInt(hhmm[2]), 0, 0)
-      return d.toISOString()
-    }
-    return null
-  }
-
   async function submitAdjustment() {
-    const hasCorrectedTime = adjCorrectedIn.trim() || adjCorrectedOut.trim()
-    const hasNotes = adjNotes.trim()
-    if (!hasCorrectedTime && !hasNotes) {
+    if (!adjNotes.trim() && !adjCorrectedIn.trim() && !adjCorrectedOut.trim()) {
       Alert.alert('Required', 'Please enter a corrected time or describe the adjustment needed.')
       return
     }
     setSubmitting(true)
     try {
-      const res = await fetch(`${API_BASE}/api/clock-adjustments`, {
+      const res = await apiFetch('/api/clock-adjustments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          practiceId: PRACTICE_ID,
-          userId: USER_ID,
+          practiceId,
+          userId,
           punchId: adjPunchId,
           date: adjDate,
           type: adjType,
           notes: adjNotes.trim(),
-          correctedPunchIn: adjCorrectedIn.trim() ? parseTimeToISO(adjDate, adjCorrectedIn.trim()) : undefined,
+          correctedPunchIn:  adjCorrectedIn.trim()  ? parseTimeToISO(adjDate, adjCorrectedIn.trim())  : undefined,
           correctedPunchOut: adjCorrectedOut.trim() ? parseTimeToISO(adjDate, adjCorrectedOut.trim()) : undefined,
         }),
       })
       if (res.ok) {
         const data: Adjustment = await res.json()
-        setAdjustments((prev) => [data, ...prev])
+        setAdjustments(prev => [data, ...prev])
         setModalVisible(false)
         Alert.alert('Submitted', 'Your adjustment request has been sent to your manager.')
       } else {
-        const err = await res.json().catch(() => ({}))
-        Alert.alert('Could not submit', (err as { error?: string }).error ?? `Server error (${res.status}). Make sure the clock_adjustments table has been created in Supabase.`)
+        Alert.alert('Error', 'Could not submit request. Please try again.')
       }
-    } catch (e) {
-      Alert.alert('Connection error', 'Could not reach the server. Check that the API is running.')
+    } catch {
+      Alert.alert('Connection error', 'Could not reach the server.')
     } finally {
       setSubmitting(false)
     }
@@ -228,21 +329,69 @@ export default function TimeClockScreen() {
       <SafeAreaView style={styles.topArea} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>â† Back</Text>
-          </TouchableOpacity>
           <Text style={styles.headerTitle}>Time Clock</Text>
-          <View style={styles.headerRight} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll}>
+
+          {/* Active punch card */}
+          {activePunch ? (
+            <View style={styles.activeCard}>
+              <View style={styles.activeCardTop}>
+                <View style={styles.activeDot} />
+                <Text style={styles.activeLabel}>CLOCKED IN</Text>
+                <Text style={styles.activeElapsed}>{elapsed}</Text>
+              </View>
+              {activePunch.location && (
+                <Text style={styles.activeLocation}>{activePunch.location.name}</Text>
+              )}
+              {onBreak && (
+                <View style={styles.breakBadge}>
+                  <Text style={styles.breakBadgeText}>On meal break</Text>
+                </View>
+              )}
+              <View style={styles.punchActionRow}>
+                <TouchableOpacity
+                  style={[styles.mealBtn, onBreak && styles.mealBtnOff]}
+                  onPress={handleBeginMeal}
+                  disabled={onBreak || breakLoading}
+                >
+                  {breakLoading && !onBreak
+                    ? <ActivityIndicator color="#D97706" size="small" />
+                    : <Text style={[styles.mealBtnText, onBreak && styles.mealBtnTextOff]}>Begin Meal</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.mealBtn, !onBreak && styles.mealBtnOff]}
+                  onPress={handleEndMeal}
+                  disabled={!onBreak || breakLoading}
+                >
+                  {breakLoading && onBreak
+                    ? <ActivityIndicator color="#D97706" size="small" />
+                    : <Text style={[styles.mealBtnText, !onBreak && styles.mealBtnTextOff]}>End Meal</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.clockOutBtn, clockOutLoading && { opacity: 0.6 }]}
+                  onPress={handleClockOut}
+                  disabled={clockOutLoading}
+                >
+                  {clockOutLoading
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Text style={styles.clockOutBtnText}>Clock Out</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.notClockedCard}>
+              <Text style={styles.notClockedText}>Not clocked in</Text>
+              <Text style={styles.notClockedSub}>Use the home screen to clock in</Text>
+            </View>
+          )}
+
           {/* Week label */}
-          <Text style={styles.weekLabel}>
-            Week of {formatDayHeader(weekStart)}
-          </Text>
+          <Text style={styles.weekLabel}>Week of {formatDayHeader(weekStart)}</Text>
 
           {loading ? (
-            <ActivityIndicator color="#1D9E75" style={{ marginTop: 40 }} />
+            <ActivityIndicator color="#1D9E75" style={{ marginTop: 24 }} />
           ) : (
             weekDays.map((day) => {
               const dayPunches = punches.filter((p) => isSameDay(p.punchIn, day))
@@ -252,8 +401,7 @@ export default function TimeClockScreen() {
                 <View key={day.toISOString()} style={styles.daySection}>
                   <View style={styles.dayHeader}>
                     <Text style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
-                      {formatDayHeader(day)}
-                      {isToday && <Text style={styles.todayTag}> Â· Today</Text>}
+                      {formatDayHeader(day)}{isToday ? '  · Today' : ''}
                     </Text>
                     <TouchableOpacity onPress={() => openModal(day)} style={styles.requestBtn}>
                       <Text style={styles.requestBtnText}>+ Request</Text>
@@ -276,16 +424,12 @@ export default function TimeClockScreen() {
                       <View key={p.id} style={styles.punchRow}>
                         <View style={styles.punchTimes}>
                           <Text style={styles.punchTime}>{formatTime(p.punchIn)}</Text>
-                          <Text style={styles.punchArrow}>â†’</Text>
-                          <Text style={styles.punchTime}>
-                            {p.punchOut ? formatTime(p.punchOut) : 'â€”'}
-                          </Text>
+                          <Text style={styles.punchArrow}>→</Text>
+                          <Text style={styles.punchTime}>{p.punchOut ? formatTime(p.punchOut) : '—'}</Text>
                           {p.isTardy && <Text style={styles.tardyTag}>Tardy</Text>}
                         </View>
                         <View style={styles.punchMeta}>
-                          <Text style={styles.punchDuration}>
-                            {formatDuration(p.punchIn, p.punchOut, p.breakStart, p.breakEnd)}
-                          </Text>
+                          <Text style={styles.punchDuration}>{formatDuration(p.punchIn, p.punchOut, p.breakStart, p.breakEnd)}</Text>
                           <Text style={styles.punchLocation}>{p.location.name}</Text>
                           <TouchableOpacity onPress={() => openModal(new Date(p.punchIn), p.id)}>
                             <Text style={styles.adjustLink}>Adjust</Text>
@@ -299,7 +443,7 @@ export default function TimeClockScreen() {
             })
           )}
 
-          {/* Past adjustment requests */}
+          {/* Past adjustments */}
           {adjustments.length > 0 && (
             <View style={styles.adjSection}>
               <Text style={styles.adjSectionTitle}>My Adjustment Requests</Text>
@@ -321,7 +465,7 @@ export default function TimeClockScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Adjustment request modal */}
+      {/* Adjustment modal */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
           <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setModalVisible(false)} />
@@ -330,7 +474,6 @@ export default function TimeClockScreen() {
             <Text style={styles.modalTitle}>Request Adjustment</Text>
             <Text style={styles.modalDate}>{adjDate ? formatUSDate(adjDate) : ''}</Text>
 
-            {/* Type selector */}
             <Text style={styles.fieldLabel}>Type</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeChips}>
               {ADJUSTMENT_TYPES.map((t) => (
@@ -339,69 +482,38 @@ export default function TimeClockScreen() {
                   style={adjType === t.key ? styles.typeChipSelected : styles.typeChip}
                   onPress={() => setAdjType(t.key)}
                 >
-                  <Text style={adjType === t.key ? styles.typeChipTextSelected : styles.typeChipText}>
-                    {t.label}
-                  </Text>
+                  <Text style={adjType === t.key ? styles.typeChipTextSelected : styles.typeChipText}>{t.label}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
-            {/* Corrected times */}
             {(adjType === 'missed_clock_in' || adjType === 'wrong_time') && (
               <>
-                <Text style={styles.fieldLabel}>Corrected Clock-In Time</Text>
-                <TextInput
-                  style={styles.timeInput}
-                  placeholder="e.g. 9:00 AM"
-                  placeholderTextColor="#bbb"
-                  value={adjCorrectedIn}
-                  onChangeText={setAdjCorrectedIn}
-                  keyboardType="default"
-                  autoCapitalize="characters"
-                />
+                <Text style={styles.fieldLabel}>Corrected Clock-In</Text>
+                <TextInput style={styles.timeInput} placeholder="e.g. 9:00 AM" placeholderTextColor="#bbb" value={adjCorrectedIn} onChangeText={setAdjCorrectedIn} autoCapitalize="characters" />
               </>
             )}
             {(adjType === 'missed_clock_out' || adjType === 'wrong_time') && (
               <>
-                <Text style={styles.fieldLabel}>Corrected Clock-Out Time</Text>
-                <TextInput
-                  style={styles.timeInput}
-                  placeholder="e.g. 5:30 PM"
-                  placeholderTextColor="#bbb"
-                  value={adjCorrectedOut}
-                  onChangeText={setAdjCorrectedOut}
-                  keyboardType="default"
-                  autoCapitalize="characters"
-                />
+                <Text style={styles.fieldLabel}>Corrected Clock-Out</Text>
+                <TextInput style={styles.timeInput} placeholder="e.g. 5:30 PM" placeholderTextColor="#bbb" value={adjCorrectedOut} onChangeText={setAdjCorrectedOut} autoCapitalize="characters" />
               </>
             )}
 
-            {/* Notes */}
             <Text style={styles.fieldLabel}>Notes</Text>
-            <TextInput
-              style={styles.notesInput}
-              placeholder="Additional context for your managerâ€¦"
-              placeholderTextColor="#bbb"
-              multiline
-              numberOfLines={3}
-              value={adjNotes}
-              onChangeText={setAdjNotes}
-            />
+            <TextInput style={styles.notesInput} placeholder="Additional context for your manager..." placeholderTextColor="#bbb" multiline numberOfLines={3} value={adjNotes} onChangeText={setAdjNotes} />
 
             <TouchableOpacity
-              style={[styles.submitBtn, (submitting || !adjNotes.trim()) && styles.submitBtnDisabled]}
+              style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
               onPress={submitAdjustment}
-              disabled={submitting || !adjNotes.trim()}
+              disabled={submitting}
             >
-              {submitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.submitBtnText}>Submit Request</Text>
-              )}
+              {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Submit Request</Text>}
             </TouchableOpacity>
           </SafeAreaView>
         </KeyboardAvoidingView>
       </Modal>
+
       <BottomNav activeRoute="time-clock" />
     </View>
   )
@@ -410,56 +522,44 @@ export default function TimeClockScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#F1EFE8' },
   topArea: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E0E0E0',
-  },
-  backBtn: { width: 70 },
-  backText: { fontSize: 14, color: '#1D9E75', fontWeight: '600' },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', color: '#2C2C2A' },
-  headerRight: { width: 70 },
-  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
-  weekLabel: { fontSize: 13, fontWeight: '600', color: '#888', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
+  header: { paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#2C3E3A' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#FAF6EF' },
 
-  daySection: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  dayHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#F0F0F0',
-  },
+  // Active punch card
+  activeCard: { backgroundColor: '#1D9E75', borderRadius: 16, padding: 20, marginBottom: 20, gap: 12 },
+  activeCardTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
+  activeLabel: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.8)', letterSpacing: 2, flex: 1 },
+  activeElapsed: { fontSize: 22, fontWeight: '200', color: '#fff', letterSpacing: 2 },
+  activeLocation: { fontSize: 13, color: 'rgba(255,255,255,0.75)', fontWeight: '400' },
+  breakBadge: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  breakBadgeText: { fontSize: 12, color: '#fff', fontWeight: '600' },
+  punchActionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  mealBtn: { flex: 1, borderWidth: 1.5, borderColor: '#fff', borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
+  mealBtnOff: { borderColor: 'rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.05)' },
+  mealBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  mealBtnTextOff: { color: 'rgba(255,255,255,0.35)' },
+  clockOutBtn: { flex: 1, backgroundColor: '#A32D2D', borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
+  clockOutBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+
+  // Not clocked in
+  notClockedCard: { backgroundColor: '#fff', borderRadius: 14, padding: 20, marginBottom: 20, alignItems: 'center', gap: 4 },
+  notClockedText: { fontSize: 15, fontWeight: '600', color: '#374151' },
+  notClockedSub: { fontSize: 13, color: '#9CA3AF' },
+
+  scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
+  weekLabel: { fontSize: 11, fontWeight: '700', color: '#888', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  daySection: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 10, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F0F0F0' },
   dayLabel: { fontSize: 13, fontWeight: '700', color: '#2C2C2A' },
   dayLabelToday: { color: '#1D9E75' },
-  todayTag: { fontSize: 12, fontWeight: '500', color: '#1D9E75' },
   requestBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: '#E8F5F0' },
   requestBtnText: { fontSize: 12, fontWeight: '700', color: '#1D9E75' },
   noPunches: { fontSize: 13, color: '#bbb', padding: 16, fontStyle: 'italic' },
   absentText: { fontSize: 13, color: '#DC2626', padding: 16, fontStyle: 'italic', fontWeight: '600' },
 
-  punchRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#F5F5F5',
-    gap: 4,
-  },
+  punchRow: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F5F5F5', gap: 4 },
   punchTimes: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   punchTime: { fontSize: 15, fontWeight: '600', color: '#2C2C2A' },
   punchArrow: { fontSize: 13, color: '#bbb' },
@@ -471,69 +571,28 @@ const styles = StyleSheet.create({
 
   adjSection: { marginTop: 8 },
   adjSectionTitle: { fontSize: 11, fontWeight: '700', color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
-  adjRow: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
+  adjRow: { backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   adjRowLeft: { gap: 2 },
   adjDate: { fontSize: 13, fontWeight: '600', color: '#2C2C2A' },
   adjType: { fontSize: 12, color: '#888' },
   adjStatus: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
   adjStatusText: { fontSize: 12, fontWeight: '600' },
 
-  // Modal
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
-  modalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-    gap: 12,
-  },
+  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, gap: 12 },
   modalHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#E0E0E0', alignSelf: 'center', marginBottom: 4 },
   modalTitle: { fontSize: 17, fontWeight: '700', color: '#2C2C2A' },
   modalDate: { fontSize: 13, color: '#888', marginTop: -8 },
   fieldLabel: { fontSize: 11, fontWeight: '700', color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 },
   typeChips: { gap: 8, paddingBottom: 2 },
-  typeChip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: '#F5F5F5', borderWidth: 1, borderColor: '#E0E0E0',
-  },
-  typeChipSelected: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: '#1D9E75', borderWidth: 1, borderColor: '#1D9E75',
-  },
+  typeChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F5F5F5', borderWidth: 1, borderColor: '#E0E0E0' },
+  typeChipSelected: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#1D9E75', borderWidth: 1, borderColor: '#1D9E75' },
   typeChipText: { fontSize: 13, color: '#555', fontWeight: '500' },
   typeChipTextSelected: { fontSize: 13, color: '#fff', fontWeight: '600' },
-  timeInput: {
-    borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 16, fontWeight: '600' as const, color: '#2C2C2A', backgroundColor: '#FAFAFA',
-    letterSpacing: 0.5,
-  },
-  notesInput: {
-    borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: '#2C2C2A', backgroundColor: '#FAFAFA',
-    minHeight: 80, textAlignVertical: 'top' as const,
-  },
-  submitBtn: {
-    backgroundColor: '#1D9E75', borderRadius: 10,
-    paddingVertical: 16, alignItems: 'center', marginTop: 4, marginBottom: 8,
-  },
-  submitBtnDisabled: { backgroundColor: '#B0B0B0' },
+  timeInput: { borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontWeight: '600', color: '#2C2C2A', backgroundColor: '#FAFAFA', letterSpacing: 0.5 },
+  notesInput: { borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: '#2C2C2A', backgroundColor: '#FAFAFA', minHeight: 80, textAlignVertical: 'top' },
+  submitBtn: { backgroundColor: '#1D9E75', borderRadius: 10, paddingVertical: 16, alignItems: 'center', marginTop: 4, marginBottom: 8 },
+  submitBtnDisabled: { opacity: 0.5 },
   submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 })
