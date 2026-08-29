@@ -16,8 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFocusEffect } from 'expo-router'
 import { markModuleSeen } from '../store/navBadgeStore'
-import { apiFetch } from '../lib/api'
-import { useAuth } from '../lib/AuthContext'
+import { apiFetch, getUser } from '../lib/api'
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 
 // â”€â”€ Time-off types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -74,6 +73,8 @@ const SCHEDULE_TYPES = new Set<string>([
 interface PtoBalance {
   total: number
   used: number
+  pending: number
+  available: number
   remaining: number
 }
 
@@ -210,10 +211,6 @@ function DateInput({
 
 // â”€â”€ Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function TimeOffScreen() {
-  const { user } = useAuth()
-  const practiceId = user?.practiceId ?? ''
-  const userId = user?.id ?? ''
-
   const [balances, setBalances] = useState<ApiBalances | null>(null)
   const [myRequests, setMyRequests] = useState<Request[]>([])
   const [loadingBalance, setLoadingBalance] = useState(true)
@@ -232,12 +229,12 @@ export default function TimeOffScreen() {
   const [submittingAdjustment, setSubmittingAdjustment] = useState(false)
 
   async function fetchData() {
-    if (!practiceId || !userId) return
     setLoadingBalance(true)
     try {
+      const currentUser = await getUser()
       const [balRes, reqRes] = await Promise.all([
-        apiFetch(`/api/pto/balance?practiceId=${practiceId}&userId=${userId}`),
-        apiFetch(`/api/pto/requests?practiceId=${practiceId}&userId=${userId}`),
+        apiFetch(`/api/pto/balance?practiceId=${currentUser.practiceId}&userId=${currentUser.id}`),
+        apiFetch(`/api/pto/requests?practiceId=${currentUser.practiceId}&userId=${currentUser.id}`),
       ])
       const [bal, reqs] = await Promise.all([balRes.json(), reqRes.json()])
       const balData = bal as ApiBalances
@@ -252,7 +249,7 @@ export default function TimeOffScreen() {
 
   useLayoutEffect(() => { markModuleSeen('timeOff') }, [])
 
-  useFocusEffect(useCallback(() => { fetchData() }, [practiceId, userId]))
+  useFocusEffect(useCallback(() => { fetchData() }, []))
 
   async function handleTimeOffSubmit() {
     if (!isValidUSDate(startDate)) {
@@ -272,11 +269,12 @@ export default function TimeOffScreen() {
 
     setSubmittingTimeOff(true)
     try {
+      const currentUser = await getUser()
       const res = await apiFetch('/api/pto/requests', {
         method: 'POST',
         body: JSON.stringify({
-          practiceId,
-          userId,
+          practiceId: currentUser.practiceId,
+          userId: currentUser.id,
           startDate: isoStart,
           endDate: isoEnd,
           type: timeOffType,
@@ -314,6 +312,7 @@ export default function TimeOffScreen() {
 
     setSubmittingAdjustment(true)
     try {
+      const currentUser = await getUser()
       const isoDate = usDateToISO(adjustmentDate)
       const fullNotes = adjustmentNotes.trim()
         ? `${adjustmentDescription.trim()} — ${adjustmentNotes.trim()}`
@@ -322,8 +321,8 @@ export default function TimeOffScreen() {
       const res = await apiFetch('/api/pto/requests', {
         method: 'POST',
         body: JSON.stringify({
-          practiceId,
-          userId,
+          practiceId: currentUser.practiceId,
+          userId: currentUser.id,
           startDate: isoDate,
           endDate: isoDate,
           type: 'schedule_adjustment',
@@ -369,8 +368,37 @@ export default function TimeOffScreen() {
               <ActivityIndicator color="#1D9E75" style={{ marginVertical: 16 }} />
             ) : balances?.pto ? (
               <View style={styles.balCard}>
-                <Text style={styles.balRemaining}>{balances.pto.remaining}/{balances.pto.total}</Text>
-                <Text style={styles.balSub}>days remaining</Text>
+                <View style={styles.balHeaderRow}>
+                  <Text style={styles.balTitle}>PTO Balance</Text>
+                  <Text style={styles.balAllocation}>{balances.pto.total} days / year</Text>
+                </View>
+                <View style={styles.trackBar}>
+                  {balances.pto.used > 0 && (
+                    <View style={[styles.trackSegment, styles.trackUsed, { flex: balances.pto.used }]} />
+                  )}
+                  {balances.pto.pending > 0 && (
+                    <View style={[styles.trackSegment, styles.trackPending, { flex: balances.pto.pending }]} />
+                  )}
+                  {balances.pto.available > 0 && (
+                    <View style={[styles.trackSegment, styles.trackAvailable, { flex: balances.pto.available }]} />
+                  )}
+                </View>
+                <View style={styles.balLegend}>
+                  <View style={styles.balLegendItem}>
+                    <View style={[styles.balDot, styles.trackUsed]} />
+                    <Text style={styles.balLegendText}>{balances.pto.used} used</Text>
+                  </View>
+                  {balances.pto.pending > 0 && (
+                    <View style={styles.balLegendItem}>
+                      <View style={[styles.balDot, styles.trackPending]} />
+                      <Text style={styles.balLegendText}>{balances.pto.pending} pending</Text>
+                    </View>
+                  )}
+                  <View style={styles.balLegendItem}>
+                    <View style={[styles.balDot, styles.trackAvailable]} />
+                    <Text style={styles.balLegendText}>{balances.pto.available} available</Text>
+                  </View>
+                </View>
               </View>
             ) : (
               <Text style={styles.noDataText}>Balance unavailable</Text>
@@ -534,23 +562,30 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 22, fontWeight: '700', color: '#2C2C2A' },
 
-  // Balance
+  // Balance tracker
   balanceSection: { paddingHorizontal: 20, marginBottom: 16, marginTop: 8 },
   balCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 14,
-    alignItems: 'center',
-    borderTopWidth: 3,
-    borderTopColor: '#1D9E75',
+    padding: 16,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
-    gap: 2,
+    gap: 12,
   },
-  balRemaining: { fontSize: 28, fontWeight: '800', color: '#2C2C2A', lineHeight: 32 },
-  balSub: { fontSize: 12, color: '#888' },
+  balHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  balTitle: { fontSize: 13, fontWeight: '700', color: '#2C2C2A' },
+  balAllocation: { fontSize: 12, color: '#888' },
+  trackBar: { flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden', backgroundColor: '#E5E7EB' },
+  trackSegment: { height: 10 },
+  trackUsed: { backgroundColor: '#1D9E75' },
+  trackPending: { backgroundColor: '#F59E0B' },
+  trackAvailable: { backgroundColor: '#E5E7EB' },
+  balLegend: { flexDirection: 'row', gap: 16 },
+  balLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  balDot: { width: 8, height: 8, borderRadius: 4 },
+  balLegendText: { fontSize: 12, color: '#555' },
 
   // Cards
   card: {

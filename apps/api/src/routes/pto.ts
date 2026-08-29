@@ -47,14 +47,16 @@ export default async function ptoRoutes(server: FastifyInstance) {
       const yearStart = new Date(new Date().getFullYear(), 0, 1)
       const yearEnd = new Date(new Date().getFullYear(), 11, 31)
 
-      const [practice, staffUser, approved] = await Promise.all([
+      const PTO_TYPES = ['pto', 'vacation', 'sick', 'personal']
+
+      const [practice, staffUser, requests] = await Promise.all([
         prisma.practice.findUnique({ where: { id: practiceId }, select: { defaultPtoDays: true } }),
         prisma.user.findUnique({ where: { id: userId }, select: { ptoDaysPerYear: true } }),
         prisma.ptoRequest.findMany({
           where: {
             practiceId,
             userId,
-            status: 'approved',
+            status: { in: ['approved', 'pending'] },
             startDate: { gte: yearStart },
             endDate: { lte: yearEnd },
           },
@@ -64,14 +66,18 @@ export default async function ptoRoutes(server: FastifyInstance) {
       const total = staffUser?.ptoDaysPerYear ?? practice?.defaultPtoDays ?? 15
 
       let usedDays = 0
-      for (const req of approved) {
-        if (req.type === 'pto' || req.type === 'vacation' || req.type === 'sick' || req.type === 'personal') {
-          usedDays += daysBetween(req.startDate, req.endDate)
-        }
+      let pendingDays = 0
+      for (const req of requests) {
+        if (!PTO_TYPES.includes(req.type)) continue
+        const days = daysBetween(req.startDate, req.endDate)
+        if (req.status === 'approved') usedDays += days
+        else pendingDays += days
       }
 
+      const available = Math.max(0, total - usedDays - pendingDays)
+
       return reply.send({
-        pto: { total, used: usedDays, remaining: Math.max(0, total - usedDays) },
+        pto: { total, used: usedDays, pending: pendingDays, available, remaining: Math.max(0, total - usedDays) },
       })
     }
   )
