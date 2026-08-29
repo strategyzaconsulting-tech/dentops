@@ -1,4 +1,4 @@
-﻿import { useLayoutEffect, useState } from 'react'
+﻿import { useCallback, useLayoutEffect, useState } from 'react'
 import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
@@ -14,12 +14,11 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useFocusEffect } from 'expo-router'
 import { markModuleSeen } from '../store/navBadgeStore'
+import { apiFetch } from '../lib/api'
+import { useAuth } from '../lib/AuthContext'
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2' // Daniel Quiroga (staff)
-const API_BASE = 'http://192.168.0.139:3000'
 
 // â”€â”€ Time-off types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type TimeOffType = 'pto' | 'unpaid'
@@ -80,6 +79,8 @@ interface PtoBalance {
 
 interface ApiBalances {
   vacation?: PtoBalance
+  sick?: PtoBalance
+  personal?: PtoBalance
   [key: string]: PtoBalance | undefined
 }
 
@@ -208,7 +209,11 @@ function DateInput({
 
 // â”€â”€ Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function TimeOffScreen() {
-  const [ptoBalance, setPtoBalance] = useState<PtoBalance | null>(null)
+  const { user } = useAuth()
+  const practiceId = user?.practiceId ?? ''
+  const userId = user?.id ?? ''
+
+  const [balances, setBalances] = useState<ApiBalances | null>(null)
   const [myRequests, setMyRequests] = useState<Request[]>([])
   const [loadingBalance, setLoadingBalance] = useState(true)
 
@@ -226,18 +231,19 @@ export default function TimeOffScreen() {
   const [submittingAdjustment, setSubmittingAdjustment] = useState(false)
 
   async function fetchData() {
+    if (!practiceId || !userId) return
     setLoadingBalance(true)
     try {
       const [balRes, reqRes] = await Promise.all([
-        fetch(`${API_BASE}/api/pto/balance?practiceId=${PRACTICE_ID}&userId=${USER_ID}`),
-        fetch(`${API_BASE}/api/pto/requests?practiceId=${PRACTICE_ID}&userId=${USER_ID}`),
+        apiFetch(`/api/pto/balance?practiceId=${practiceId}&userId=${userId}`),
+        apiFetch(`/api/pto/requests?practiceId=${practiceId}&userId=${userId}`),
       ])
       const [bal, reqs] = await Promise.all([balRes.json(), reqRes.json()])
       const balData = bal as ApiBalances
-      if (balData?.vacation) setPtoBalance(balData.vacation)
+      if (balData && (balData.vacation || balData.sick || balData.personal)) setBalances(balData)
       if (Array.isArray(reqs)) setMyRequests(reqs)
     } catch {
-      // silent — API may not be running during testing
+      // silent
     } finally {
       setLoadingBalance(false)
     }
@@ -245,7 +251,7 @@ export default function TimeOffScreen() {
 
   useLayoutEffect(() => { markModuleSeen('timeOff') }, [])
 
-  useState(() => { fetchData() })
+  useFocusEffect(useCallback(() => { fetchData() }, [practiceId, userId]))
 
   async function handleTimeOffSubmit() {
     if (!isValidUSDate(startDate)) {
@@ -265,12 +271,11 @@ export default function TimeOffScreen() {
 
     setSubmittingTimeOff(true)
     try {
-      const res = await fetch(`${API_BASE}/api/pto/requests`, {
+      const res = await apiFetch('/api/pto/requests', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          practiceId: PRACTICE_ID,
-          userId: USER_ID,
+          practiceId,
+          userId,
           startDate: isoStart,
           endDate: isoEnd,
           type: timeOffType,
@@ -313,12 +318,11 @@ export default function TimeOffScreen() {
         ? `${adjustmentDescription.trim()} — ${adjustmentNotes.trim()}`
         : adjustmentDescription.trim()
 
-      const res = await fetch(`${API_BASE}/api/pto/requests`, {
+      const res = await apiFetch('/api/pto/requests', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          practiceId: PRACTICE_ID,
-          userId: USER_ID,
+          practiceId,
+          userId,
           startDate: isoDate,
           endDate: isoDate,
           type: 'schedule_adjustment',
@@ -362,17 +366,17 @@ export default function TimeOffScreen() {
           <View style={styles.balanceSection}>
             {loadingBalance ? (
               <ActivityIndicator color="#1D9E75" style={{ marginVertical: 16 }} />
-            ) : ptoBalance ? (
-              <View style={styles.balCard}>
-                <View style={styles.balLeft}>
-                  <Text style={styles.balLabel}>PTO Balance</Text>
-                  <Text style={styles.balDetail}>{ptoBalance.used} of {ptoBalance.total} days used</Text>
-                </View>
-                <View style={styles.balRight}>
-                  <Text style={styles.balRemaining}>{ptoBalance.remaining}</Text>
-                  <Text style={styles.balSub}>days left</Text>
-                </View>
-              </View>
+            ) : balances ? (
+              (() => {
+                const total = ['vacation', 'sick', 'personal'].reduce((s, k) => s + (balances[k]?.total ?? 0), 0)
+                const remaining = ['vacation', 'sick', 'personal'].reduce((s, k) => s + (balances[k]?.remaining ?? 0), 0)
+                return (
+                  <View style={styles.balCard}>
+                    <Text style={styles.balRemaining}>{remaining}/{total}</Text>
+                    <Text style={styles.balSub}>days remaining</Text>
+                  </View>
+                )
+              })()
             ) : (
               <Text style={styles.noDataText}>Balance unavailable</Text>
             )}
@@ -540,22 +544,17 @@ const styles = StyleSheet.create({
   balCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
+    padding: 14,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderLeftWidth: 4,
-    borderLeftColor: '#1D9E75',
+    borderTopWidth: 3,
+    borderTopColor: '#1D9E75',
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
+    gap: 2,
   },
-  balLeft: { gap: 4 },
-  balLabel: { fontSize: 13, fontWeight: '700', color: '#1D9E75', textTransform: 'uppercase', letterSpacing: 0.5 },
-  balDetail: { fontSize: 12, color: '#888' },
-  balRight: { alignItems: 'flex-end' },
-  balRemaining: { fontSize: 32, fontWeight: '800', color: '#2C2C2A', lineHeight: 36 },
+  balRemaining: { fontSize: 28, fontWeight: '800', color: '#2C2C2A', lineHeight: 32 },
   balSub: { fontSize: 12, color: '#888' },
 
   // Cards
