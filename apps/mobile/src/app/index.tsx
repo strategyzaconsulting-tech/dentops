@@ -366,9 +366,9 @@ export default function HomeScreen() {
     }
   }
 
-  async function handleBreakToggle() {
-    if (!punch) return
-    if (!onBreak && timerOption === 'custom') {
+  async function handleBeginMeal() {
+    if (!punch || onBreak) return
+    if (timerOption === 'custom') {
       const v = parseInt(customInput, 10)
       if (!Number.isFinite(v) || v <= 0 || v > 480) {
         Alert.alert('Invalid timer', 'Enter a number of minutes between 1 and 480.')
@@ -378,20 +378,30 @@ export default function HomeScreen() {
     setBreakLoading(true)
     try {
       const n = new Date()
-      const body = onBreak ? { breakEnd: n.toISOString() } : { breakStart: n.toISOString() }
       await apiFetch(`/api/time-punches/${punch.id}`, {
         method: 'PATCH',
-        body: JSON.stringify(body),
+        body: JSON.stringify({ breakStart: n.toISOString() }),
       })
-      if (!onBreak) {
-        setBreakLog(prev => [...prev, { event: 'breakStart', time: n }])
-        const mins = resolvedTimerMins()
-        if (mins !== null) startMealTimer(mins, alertVibrate)
-      } else {
-        setBreakLog(prev => [...prev, { event: 'breakEnd', time: n }])
-        stopMealTimer()
-      }
-      setOnBreak(prev => !prev)
+      setBreakLog(prev => [...prev, { event: 'breakStart', time: n }])
+      const mins = resolvedTimerMins()
+      if (mins !== null) startMealTimer(mins, alertVibrate)
+      setOnBreak(true)
+    } catch { /* swallow */ }
+    finally { setBreakLoading(false) }
+  }
+
+  async function handleEndMeal() {
+    if (!punch || !onBreak) return
+    setBreakLoading(true)
+    try {
+      const n = new Date()
+      await apiFetch(`/api/time-punches/${punch.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ breakEnd: n.toISOString() }),
+      })
+      setBreakLog(prev => [...prev, { event: 'breakEnd', time: n }])
+      stopMealTimer()
+      setOnBreak(false)
     } catch { /* swallow */ }
     finally { setBreakLoading(false) }
   }
@@ -516,12 +526,6 @@ export default function HomeScreen() {
               </View>
             )}
 
-            <TouchableOpacity style={onBreak ? styles.breakBtnActive : styles.breakBtnIdle} onPress={handleBreakToggle} disabled={breakLoading}>
-              {breakLoading ? <ActivityIndicator color={onBreak ? '#fff' : '#D97706'} /> : (
-                <Text style={onBreak ? styles.breakBtnActiveText : styles.breakBtnIdleText}>{onBreak ? 'End meal break' : 'Start meal break'}</Text>
-              )}
-            </TouchableOpacity>
-
             {onBreak && mealTimerRemaining !== null && (
               <View style={styles.countdownRow}>
                 <View style={styles.countdownDot} />
@@ -529,9 +533,37 @@ export default function HomeScreen() {
               </View>
             )}
 
-            <TouchableOpacity style={clockingOut ? styles.clockOutBtnDisabled : styles.clockOutBtn} onPress={handleClockOut} disabled={clockingOut}>
-              {clockingOut ? <ActivityIndicator color="#fff" /> : <Text style={styles.clockOutBtnText}>Clock out</Text>}
-            </TouchableOpacity>
+            <View style={styles.punchActionRow}>
+              <TouchableOpacity
+                style={[styles.mealBtn, onBreak && styles.mealBtnDisabled]}
+                onPress={handleBeginMeal}
+                disabled={onBreak || breakLoading}
+              >
+                {breakLoading && !onBreak
+                  ? <ActivityIndicator color="#D97706" size="small" />
+                  : <Text style={[styles.mealBtnText, onBreak && styles.mealBtnTextDisabled]}>Begin Meal</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.mealBtn, !onBreak && styles.mealBtnDisabled]}
+                onPress={handleEndMeal}
+                disabled={!onBreak || breakLoading}
+              >
+                {breakLoading && onBreak
+                  ? <ActivityIndicator color="#D97706" size="small" />
+                  : <Text style={[styles.mealBtnText, !onBreak && styles.mealBtnTextDisabled]}>End Meal</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.clockOutBtn, clockingOut && styles.clockOutBtnDisabled]}
+                onPress={handleClockOut}
+                disabled={clockingOut}
+              >
+                {clockingOut
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.clockOutBtnText}>Clock Out</Text>}
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.logCard}>
@@ -957,17 +989,18 @@ const styles = StyleSheet.create({
   alertChipText: { fontSize: 12, color: '#555', fontWeight: '500' },
   alertChipTextSelected: { fontSize: 12, color: '#fff', fontWeight: '600' },
 
-  // Break
-  breakBtnIdle: { borderWidth: 1.5, borderColor: '#D97706', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
-  breakBtnActive: { backgroundColor: '#D97706', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
-  breakBtnIdleText: { color: '#D97706', fontSize: 16, fontWeight: '600' },
-  breakBtnActiveText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  // Punch actions (Begin Meal / End Meal / Clock Out)
+  punchActionRow: { flexDirection: 'row', gap: 8, alignItems: 'stretch' },
+  mealBtn: { flex: 1, borderWidth: 1.5, borderColor: '#D97706', borderRadius: 10, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
+  mealBtnDisabled: { borderColor: '#E0E0E0', backgroundColor: '#F9F9F9' },
+  mealBtnText: { color: '#D97706', fontSize: 13, fontWeight: '600' },
+  mealBtnTextDisabled: { color: '#C0C0C0' },
   countdownRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 4 },
   countdownDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#D97706' },
   countdownText: { fontSize: 15, fontWeight: '700', color: '#D97706' },
-  clockOutBtn: { backgroundColor: '#A32D2D', borderRadius: 10, paddingVertical: 16, alignItems: 'center' },
-  clockOutBtnDisabled: { backgroundColor: '#C97070', borderRadius: 10, paddingVertical: 16, alignItems: 'center' },
-  clockOutBtnText: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  clockOutBtn: { flex: 1, backgroundColor: '#A32D2D', borderRadius: 10, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
+  clockOutBtnDisabled: { flex: 1, backgroundColor: '#C97070', borderRadius: 10, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
+  clockOutBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 
   // Log
   logCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginHorizontal: 20, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 3, gap: 12 },

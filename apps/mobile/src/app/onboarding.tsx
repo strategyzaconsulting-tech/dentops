@@ -11,10 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import BottomNav from '../components/BottomNav'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.139:3000'
+import { apiFetch } from '../lib/api'
+import { useAuth } from '../lib/AuthContext'
 
 interface EquipmentItem {
   id: string
@@ -45,6 +43,10 @@ interface TrainingSession {
 
 
 export default function OnboardingScreen() {
+  const { user } = useAuth()
+  const practiceId = user?.practiceId ?? ''
+  const userId = user?.id ?? ''
+
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [training, setTraining] = useState<TrainingSession[]>([])
   const [loading, setLoading] = useState(true)
@@ -53,8 +55,8 @@ export default function OnboardingScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadData()
-    }, [])
+      if (practiceId && userId) loadData()
+    }, [practiceId, userId])
   )
 
   async function loadData() {
@@ -62,9 +64,9 @@ export default function OnboardingScreen() {
     try {
       const year = new Date().getFullYear()
       const [cl, tr, rev] = await Promise.allSettled([
-        fetch(`${API_BASE}/api/onboarding?practiceId=${PRACTICE_ID}&userId=${USER_ID}`).then((r) => r.json()),
-        fetch(`${API_BASE}/api/training?practiceId=${PRACTICE_ID}&userId=${USER_ID}`).then((r) => r.json()),
-        fetch(`${API_BASE}/api/w4-review/status?practiceId=${PRACTICE_ID}&userId=${USER_ID}&year=${year}`).then((r) => r.json()),
+        apiFetch(`/api/onboarding?practiceId=${practiceId}&userId=${userId}`).then((r) => r.json()),
+        apiFetch(`/api/training?practiceId=${practiceId}&userId=${userId}`).then((r) => r.json()),
+        apiFetch(`/api/w4-review/status?practiceId=${practiceId}&userId=${userId}&year=${year}`).then((r) => r.json()),
       ])
       if (cl.status === 'fulfilled' && cl.value?.id) setChecklist(cl.value)
       if (tr.status === 'fulfilled' && Array.isArray(tr.value)) setTraining(tr.value)
@@ -78,10 +80,9 @@ export default function OnboardingScreen() {
   async function handleW4ReviewComplete(changed: boolean) {
     setCompletingReview(true)
     try {
-      await fetch(`${API_BASE}/api/w4-review/complete`, {
+      await apiFetch('/api/w4-review/complete', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ practiceId: PRACTICE_ID, userId: USER_ID, changed }),
+        body: JSON.stringify({ practiceId, userId, changed }),
       })
       setW4ReviewRequired(false)
       if (changed) {
