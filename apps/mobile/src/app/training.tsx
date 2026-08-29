@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+﻿import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
   ScrollView,
@@ -13,7 +13,7 @@ import BottomNav from '../components/BottomNav'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.137:3000'
+const API_BASE = 'http://192.168.0.139:3000'
 
 interface TrainingSession {
   id: string
@@ -67,12 +67,12 @@ export default function TrainingScreen() {
       {/* Header */}
       <SafeAreaView style={styles.header} edges={['top']}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>â† Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Training Schedule</Text>
         {!loading && (
           <Text style={styles.headerSub}>
-            {sessions.length} session{sessions.length !== 1 ? 's' : ''} · {completed.length} completed
+            {sessions.length} session{sessions.length !== 1 ? 's' : ''} Â· {completed.length} completed
           </Text>
         )}
       </SafeAreaView>
@@ -83,7 +83,7 @@ export default function TrainingScreen() {
         </View>
       ) : sessions.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyIcon}>📚</Text>
+          <Text style={styles.emptyIcon}>ðŸ“š</Text>
           <Text style={styles.emptyText}>No training sessions scheduled yet</Text>
           <Text style={styles.emptySubText}>Your manager will add sessions here when they are ready.</Text>
         </View>
@@ -138,7 +138,7 @@ function SessionCard({ session }: { session: TrainingSession }) {
         <View style={styles.trainerRow}>
           <Text style={styles.trainerLabel}>Trainer:</Text>
           <Text style={styles.trainerName}>
-            {session.trainer.firstName} {session.trainer.lastName} · {session.trainer.role}
+            {session.trainer.firstName} {session.trainer.lastName} Â· {session.trainer.role}
           </Text>
         </View>
       )}

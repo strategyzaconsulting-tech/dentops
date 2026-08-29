@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+﻿import { useCallback, useState } from 'react'
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -20,7 +20,7 @@ import BottomNav from '../components/BottomNav'
 import { apiFetch } from '../lib/api'
 import { useAuth } from '../lib/AuthContext'
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const LICENSE_TYPES = [
   { key: 'dental_license',   label: 'Dental License',        hasState: true  },
@@ -37,7 +37,7 @@ const LICENSE_TYPES = [
 
 const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC']
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface License {
   id: string
@@ -67,7 +67,7 @@ interface FormState {
   photoName: string
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function fmtDate(iso: string) {
   return new Date(iso.split('T')[0] + 'T12:00:00').toLocaleDateString('en-US', {
@@ -112,7 +112,7 @@ const emptyForm = (): FormState => ({
   photoName: 'license.jpg',
 })
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function MyLicensesScreen() {
   const { user } = useAuth()
@@ -147,7 +147,7 @@ export default function MyLicensesScreen() {
     finally { setLoading(false) }
   }
 
-  // ── Photo capture ────────────────────────────────────────────────────────
+  // â”€â”€ Photo capture â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async function pickPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -213,7 +213,7 @@ export default function MyLicensesScreen() {
     }
   }
 
-  // ── Save ─────────────────────────────────────────────────────────────────
+  // â”€â”€ Save â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async function handleSave() {
     if (!form.type) return
@@ -273,13 +273,13 @@ export default function MyLicensesScreen() {
     return st === 'expired' || st === 'expiring'
   }).length
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={s.back}>← Back</Text>
+          <Text style={s.back}>â† Back</Text>
         </TouchableOpacity>
         <Text style={s.title}>My Licenses</Text>
         {expiring > 0 && (
@@ -294,7 +294,7 @@ export default function MyLicensesScreen() {
         <View style={s.center}><ActivityIndicator color="#1D9E75" size="large" /></View>
       ) : licenses.length === 0 ? (
         <View style={s.center}>
-          <Text style={s.emptyIcon}>🪪</Text>
+          <Text style={s.emptyIcon}>ðŸªª</Text>
           <Text style={s.empty}>No licenses on file</Text>
           <Text style={s.emptySub}>Tap + Add to upload your first certification</Text>
           <TouchableOpacity style={s.emptyAddBtn} onPress={() => { setForm(emptyForm()); setShowAdd(true) }}>
@@ -305,7 +305,7 @@ export default function MyLicensesScreen() {
         <ScrollView contentContainerStyle={s.list}>
           {expiring > 0 && (
             <View style={s.alertBanner}>
-              <Text style={s.alertText}>⚠ {expiring} license{expiring > 1 ? 's' : ''} need{expiring === 1 ? 's' : ''} attention</Text>
+              <Text style={s.alertText}>âš  {expiring} license{expiring > 1 ? 's' : ''} need{expiring === 1 ? 's' : ''} attention</Text>
             </View>
           )}
           {licenses.map(lic => {
@@ -352,7 +352,7 @@ export default function MyLicensesScreen() {
 
       <BottomNav activeRoute="onboarding" />
 
-      {/* ── Add License Modal ──────────────────────────────────────────────── */}
+      {/* â”€â”€ Add License Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <Modal visible={showAdd} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={s.safe}>
           <View style={s.modalHeader}>
@@ -365,13 +365,13 @@ export default function MyLicensesScreen() {
               disabled={saving || !form.type}
               style={[s.modalSave, (saving || !form.type) && s.modalSaveDis]}
             >
-              <Text style={s.modalSaveText}>{saving ? 'Saving…' : 'Save'}</Text>
+              <Text style={s.modalSaveText}>{saving ? 'Savingâ€¦' : 'Save'}</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView contentContainerStyle={s.formScroll} keyboardShouldPersistTaps="handled">
 
-            {/* Photo section — camera/gallery at top */}
+            {/* Photo section â€” camera/gallery at top */}
             <View style={s.photoSection}>
               {form.photoUri ? (
                 <View style={s.photoPreviewWrap}>
@@ -382,18 +382,18 @@ export default function MyLicensesScreen() {
                 </View>
               ) : (
                 <TouchableOpacity style={s.photoPlaceholder} onPress={showPhotoOptions}>
-                  <Text style={s.photoIcon}>📷</Text>
+                  <Text style={s.photoIcon}>ðŸ“·</Text>
                   <Text style={s.photoLabel}>Scan or Photo</Text>
                   <Text style={s.photoSub}>Take a photo or choose from library</Text>
                 </TouchableOpacity>
               )}
               <View style={s.photoBtns}>
                 <TouchableOpacity style={s.photoBtn} onPress={takePhoto}>
-                  <Text style={s.photoBtnIcon}>📷</Text>
+                  <Text style={s.photoBtnIcon}>ðŸ“·</Text>
                   <Text style={s.photoBtnText}>Camera</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.photoBtn} onPress={pickPhoto}>
-                  <Text style={s.photoBtnIcon}>🖼</Text>
+                  <Text style={s.photoBtnIcon}>ðŸ–¼</Text>
                   <Text style={s.photoBtnText}>Library</Text>
                 </TouchableOpacity>
               </View>
@@ -403,8 +403,8 @@ export default function MyLicensesScreen() {
             <View style={s.field}>
               <Text style={s.label}>License type <Text style={s.req}>*</Text></Text>
               <TouchableOpacity style={s.picker} onPress={() => setShowTypePicker(true)}>
-                <Text style={s.pickerText}>{selectedType?.label ?? 'Select type…'}</Text>
-                <Text style={s.pickerChev}>›</Text>
+                <Text style={s.pickerText}>{selectedType?.label ?? 'Select typeâ€¦'}</Text>
+                <Text style={s.pickerChev}>â€º</Text>
               </TouchableOpacity>
             </View>
 
@@ -440,7 +440,7 @@ export default function MyLicensesScreen() {
               />
             </View>
 
-            {/* State — only for state-specific types */}
+            {/* State â€” only for state-specific types */}
             {selectedType?.hasState && (
               <View style={s.field}>
                 <Text style={s.label}>State<Text style={s.optional}> (optional)</Text></Text>
@@ -448,7 +448,7 @@ export default function MyLicensesScreen() {
                   <Text style={[s.pickerText, !form.state && { color: '#9CA3AF' }]}>
                     {form.state || 'Not state-specific'}
                   </Text>
-                  <Text style={s.pickerChev}>›</Text>
+                  <Text style={s.pickerChev}>â€º</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -511,7 +511,7 @@ export default function MyLicensesScreen() {
                     onPress={() => { setForm(f => ({ ...f, type: t.key })); setShowTypePicker(false) }}
                   >
                     <Text style={[s.sheetRowText, form.type === t.key && s.sheetRowTextSelected]}>{t.label}</Text>
-                    {form.type === t.key && <Text style={s.sheetCheck}>✓</Text>}
+                    {form.type === t.key && <Text style={s.sheetCheck}>âœ“</Text>}
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -533,7 +533,7 @@ export default function MyLicensesScreen() {
                   onPress={() => { setForm(f => ({ ...f, state: '' })); setShowStatePicker(false) }}
                 >
                   <Text style={[s.sheetRowText, !form.state && s.sheetRowTextSelected]}>Not state-specific</Text>
-                  {!form.state && <Text style={s.sheetCheck}>✓</Text>}
+                  {!form.state && <Text style={s.sheetCheck}>âœ“</Text>}
                 </TouchableOpacity>
                 {US_STATES.map(st => (
                   <TouchableOpacity
@@ -542,7 +542,7 @@ export default function MyLicensesScreen() {
                     onPress={() => { setForm(f => ({ ...f, state: st })); setShowStatePicker(false) }}
                   >
                     <Text style={[s.sheetRowText, form.state === st && s.sheetRowTextSelected]}>{st}</Text>
-                    {form.state === st && <Text style={s.sheetCheck}>✓</Text>}
+                    {form.state === st && <Text style={s.sheetCheck}>âœ“</Text>}
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -554,7 +554,7 @@ export default function MyLicensesScreen() {
   )
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F5F0E8' },

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
@@ -42,12 +42,14 @@ const LOG_COLORS: Record<string, string> = {
   breakEnd: '#3B82F6',
 }
 
-const ADJ_TYPES = ['missed_clock_in', 'missed_clock_out', 'wrong_time', 'other'] as const
+const ADJ_TYPES = ['missed_clock_in', 'missed_clock_out', 'begin_meal', 'end_meal', 'wrong_time', 'other'] as const
 type AdjType = (typeof ADJ_TYPES)[number]
 
 const ADJ_LABELS: Record<AdjType, string> = {
   missed_clock_in: 'Missed Clock-In',
   missed_clock_out: 'Missed Clock-Out',
+  begin_meal: 'Begin Meal',
+  end_meal: 'End Meal',
   wrong_time: 'Wrong Time',
   other: 'Other',
 }
@@ -211,8 +213,10 @@ export default function HomeScreen() {
   const [practiceName, setPracticeName] = useState<string | null>(null)
   const [locations, setLocations] = useState<Location[]>([])
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
+  const [showClockInModal, setShowClockInModal] = useState(false)
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false)
+  const [showSpecialtyDropdown, setShowSpecialtyDropdown] = useState(false)
   const [clockingIn, setClockingIn] = useState(false)
-  const [showLocationPicker, setShowLocationPicker] = useState(false)
   const [punch, setPunch] = useState<TimePunch | null>(null)
   const [elapsed, setElapsed] = useState('00:00:00')
   const [onBreak, setOnBreak] = useState(false)
@@ -505,7 +509,7 @@ export default function HomeScreen() {
                   <View style={styles.alertToggleRow}>
                     <Text style={styles.alertToggleLabel}>Alert with</Text>
                     <TouchableOpacity style={alertVibrate ? styles.alertChipSelected : styles.alertChip} onPress={() => setAlertVibrate(v => !v)}>
-                      <Text style={alertVibrate ? styles.alertChipTextSelected : styles.alertChipText}>📳 Vibrate</Text>
+                      <Text style={alertVibrate ? styles.alertChipTextSelected : styles.alertChipText}>ðŸ“³ Vibrate</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -571,7 +575,10 @@ export default function HomeScreen() {
             <Text style={styles.dateText}>{formatDate(now)}</Text>
           </View>
 
-          <TouchableOpacity style={styles.clockInBtn} onPress={() => { setSelectedLocation(null); setSelectedSpecialty(null); setShowLocationPicker(true) }}>
+          <TouchableOpacity
+            style={styles.clockInBtn}
+            onPress={() => { setSelectedLocation(null); setSelectedSpecialty(null); setShowLocationDropdown(false); setShowSpecialtyDropdown(false); setShowClockInModal(true) }}
+          >
             <Text style={styles.clockInBtnText}>CLOCK IN</Text>
           </TouchableOpacity>
 
@@ -586,7 +593,7 @@ export default function HomeScreen() {
               <Text style={styles.timesheetTitle}>MY HOURS THIS WEEK</Text>
               <View style={styles.timesheetHeaderRight}>
                 {totalWeekMs > 0 && <Text style={styles.timesheetTotal}>{formatHours(totalWeekMs)}</Text>}
-                <Text style={styles.timesheetChevron}>{showTimesheet ? '▲' : '▼'}</Text>
+                <Text style={styles.timesheetChevron}>{showTimesheet ? 'â–²' : 'â–¼'}</Text>
               </View>
             </TouchableOpacity>
 
@@ -610,7 +617,7 @@ export default function HomeScreen() {
                           {p ? (
                             <>
                               <Text style={styles.timesheetPunchTimes}>
-                                {formatHm(p.punchIn)} – {p.punchOut ? formatHm(p.punchOut) : 'Active'}
+                                {formatHm(p.punchIn)} â€“ {p.punchOut ? formatHm(p.punchOut) : 'Active'}
                               </Text>
                               {punchDurationMs(p) > 0 && (
                                 <Text style={styles.timesheetPunchDuration}>{formatHours(punchDurationMs(p))}</Text>
@@ -619,11 +626,11 @@ export default function HomeScreen() {
                           ) : absent ? (
                             <Text style={styles.timesheetAbsent}>Absent</Text>
                           ) : isFuture ? (
-                            <Text style={styles.timesheetFuture}>—</Text>
+                            <Text style={styles.timesheetFuture}>â€”</Text>
                           ) : isToday ? (
                             <Text style={styles.timesheetFuture}>Not yet clocked in</Text>
                           ) : (
-                            <Text style={styles.timesheetFuture}>—</Text>
+                            <Text style={styles.timesheetFuture}>â€”</Text>
                           )}
                         </View>
                       </View>
@@ -638,46 +645,80 @@ export default function HomeScreen() {
 
       <BottomNav />
 
-      {/* Location + specialty picker modal */}
-      <Modal visible={showLocationPicker} transparent animationType="slide" onRequestClose={() => setShowLocationPicker(false)}>
-        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowLocationPicker(false)}>
-          <TouchableOpacity style={styles.locationSheet} activeOpacity={1}>
+      {/* Clock-in modal with location + specialty dropdowns */}
+      <Modal visible={showClockInModal} transparent animationType="slide" onRequestClose={() => setShowClockInModal(false)}>
+        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowClockInModal(false)}>
+          <TouchableOpacity style={styles.clockInSheet} activeOpacity={1}>
             <View style={styles.locationSheetHandle} />
-            <Text style={styles.locationSheetTitle}>SELECT LOCATION</Text>
-            {locations.length === 0 ? (
-              <ActivityIndicator color="#1D9E75" style={{ marginVertical: 20 }} />
-            ) : (
-              <View style={styles.locationChips}>
-                {locations.map(loc => {
-                  const selected = selectedLocation === loc.id
-                  return (
-                    <TouchableOpacity key={loc.id} style={selected ? styles.chipSelected : styles.chip} onPress={() => setSelectedLocation(loc.id)}>
-                      <Text style={selected ? styles.chipTextSelected : styles.chipText}>{loc.name}</Text>
-                    </TouchableOpacity>
-                  )
-                })}
-              </View>
-            )}
+            <Text style={styles.clockInSheetTitle}>CLOCK IN</Text>
 
-            {requireSpecialty && (
-              <>
-                <Text style={[styles.locationSheetTitle, { marginTop: 16 }]}>SELECT SPECIALTY</Text>
-                <View style={styles.locationChips}>
-                  {SPECIALTIES.map(sp => {
-                    const selected = selectedSpecialty === sp
-                    return (
-                      <TouchableOpacity key={sp} style={selected ? styles.chipSelected : styles.chip} onPress={() => setSelectedSpecialty(sp)}>
-                        <Text style={selected ? styles.chipTextSelected : styles.chipText}>{sp}</Text>
-                      </TouchableOpacity>
-                    )
-                  })}
+            {/* Location dropdown */}
+            <View style={styles.adjField}>
+              <Text style={styles.adjFieldLabel}>Location</Text>
+              <TouchableOpacity
+                style={styles.dropdownTrigger}
+                onPress={() => { setShowLocationDropdown(v => !v); setShowSpecialtyDropdown(false) }}
+              >
+                <Text style={selectedLocation ? styles.dropdownValue : styles.dropdownPlaceholder}>
+                  {selectedLocation ? (locations.find(l => l.id === selectedLocation)?.name ?? 'Select location') : 'Select location'}
+                </Text>
+                {locations.length === 0
+                  ? <ActivityIndicator size="small" color="#8BAF9A" />
+                  : <Text style={styles.dropdownArrow}>{showLocationDropdown ? '▲' : '▼'}</Text>}
+              </TouchableOpacity>
+              {showLocationDropdown && (
+                <View style={styles.dropdownList}>
+                  {locations.map((loc, i) => (
+                    <TouchableOpacity
+                      key={loc.id}
+                      style={[styles.dropdownItem, i < locations.length - 1 && styles.dropdownItemBorder]}
+                      onPress={() => { setSelectedLocation(loc.id); setShowLocationDropdown(false) }}
+                    >
+                      <Text style={[styles.dropdownItemText, selectedLocation === loc.id && styles.dropdownItemTextSelected]}>
+                        {loc.name}
+                      </Text>
+                      {selectedLocation === loc.id && <Text style={styles.dropdownItemCheck}>{'✓'}</Text>}
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              </>
+              )}
+            </View>
+
+            {/* Specialty dropdown — only when required */}
+            {requireSpecialty && (
+              <View style={styles.adjField}>
+                <Text style={styles.adjFieldLabel}>Specialty</Text>
+                <TouchableOpacity
+                  style={styles.dropdownTrigger}
+                  onPress={() => { setShowSpecialtyDropdown(v => !v); setShowLocationDropdown(false) }}
+                >
+                  <Text style={selectedSpecialty ? styles.dropdownValue : styles.dropdownPlaceholder}>
+                    {selectedSpecialty ?? 'Select specialty'}
+                  </Text>
+                  <Text style={styles.dropdownArrow}>{showSpecialtyDropdown ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
+                {showSpecialtyDropdown && (
+                  <View style={styles.dropdownList}>
+                    {SPECIALTIES.map((sp, i) => (
+                      <TouchableOpacity
+                        key={sp}
+                        style={[styles.dropdownItem, i < SPECIALTIES.length - 1 && styles.dropdownItemBorder]}
+                        onPress={() => { setSelectedSpecialty(sp); setShowSpecialtyDropdown(false) }}
+                      >
+                        <Text style={[styles.dropdownItemText, selectedSpecialty === sp && styles.dropdownItemTextSelected]}>
+                          {sp}
+                        </Text>
+                        {selectedSpecialty === sp && <Text style={styles.dropdownItemCheck}>{'✓'}</Text>}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
             )}
 
             <TouchableOpacity
               style={[styles.clockInBtn, !canClockIn && styles.clockInBtnDisabled, { marginHorizontal: 0, marginTop: 8 }]}
-              onPress={async () => { await handleClockIn(); setShowLocationPicker(false) }}
+              onPress={async () => { await handleClockIn(); setShowClockInModal(false) }}
               disabled={!canClockIn}
             >
               {clockingIn ? <ActivityIndicator color="#fff" /> : <Text style={styles.clockInBtnText}>CONFIRM CLOCK IN</Text>}
@@ -701,14 +742,14 @@ export default function HomeScreen() {
                   <TouchableOpacity onPress={() => {
                     const d = new Date(adjDate); d.setDate(d.getDate() - 1); setAdjDate(d)
                   }} style={styles.adjDateArrow}>
-                    <Text style={styles.adjDateArrowText}>‹</Text>
+                    <Text style={styles.adjDateArrowText}>â€¹</Text>
                   </TouchableOpacity>
                   <Text style={styles.adjDateText}>{adjDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
                   <TouchableOpacity onPress={() => {
                     const next = new Date(adjDate); next.setDate(next.getDate() + 1)
                     if (next <= new Date()) setAdjDate(next)
                   }} style={styles.adjDateArrow}>
-                    <Text style={styles.adjDateArrowText}>›</Text>
+                    <Text style={styles.adjDateArrowText}>â€º</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -757,7 +798,7 @@ export default function HomeScreen() {
                 <Text style={styles.adjFieldLabel}>Notes</Text>
                 <TextInput
                   style={styles.adjNotesInput}
-                  placeholder="Describe what happened…"
+                  placeholder="Describe what happenedâ€¦"
                   placeholderTextColor="#888"
                   value={adjNotes}
                   onChangeText={setAdjNotes}
@@ -809,6 +850,24 @@ const styles = StyleSheet.create({
   clockInBtn: { backgroundColor: '#1D9E75', borderRadius: 10, paddingVertical: 18, marginHorizontal: 90, alignItems: 'center' },
   clockInBtnDisabled: { backgroundColor: '#5A6B61' },
   clockInBtnText: { color: '#fff', fontSize: 13, fontWeight: '500', letterSpacing: 5 },
+
+  // Clock-in modal sheet
+  clockInSheet: { backgroundColor: '#1E1E1C', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 16 },
+  clockInSheetTitle: { fontSize: 11, fontWeight: '600', color: '#9A9A96', letterSpacing: 4, textAlign: 'center' },
+
+  // Location / specialty dropdown (used inside modal)
+  dropdownSection: { marginHorizontal: 24, marginBottom: 12 },
+  dropdownLabel: { fontSize: 11, fontWeight: '600', color: '#8BAF9A', letterSpacing: 1.5, marginBottom: 6 },
+  dropdownTrigger: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#2C3E3A', borderWidth: 1, borderColor: '#3D5045', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 14 },
+  dropdownPlaceholder: { fontSize: 15, color: '#6B7B72', flex: 1 },
+  dropdownValue: { fontSize: 15, color: '#FAF6EF', fontWeight: '500', flex: 1 },
+  dropdownArrow: { fontSize: 10, color: '#8BAF9A', marginLeft: 8 },
+  dropdownList: { backgroundColor: '#2C3E3A', borderWidth: 1, borderColor: '#3D5045', borderRadius: 10, marginTop: 4, overflow: 'hidden' },
+  dropdownItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 },
+  dropdownItemBorder: { borderBottomWidth: 1, borderBottomColor: '#3D5045' },
+  dropdownItemText: { fontSize: 15, color: '#C8D5CF', fontWeight: '400' },
+  dropdownItemTextSelected: { color: '#FAF6EF', fontWeight: '600' },
+  dropdownItemCheck: { fontSize: 14, color: '#1D9E75', fontWeight: '700' },
 
   // Adjustment link
   adjLink: { alignItems: 'center', paddingTop: 14, paddingBottom: 4 },

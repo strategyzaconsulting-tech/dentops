@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'react'
+﻿import { useEffect, useLayoutEffect, useState } from 'react'
 import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
@@ -19,7 +19,7 @@ import { markModuleSeen } from '../store/navBadgeStore'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.137:3000'
+const API_BASE = 'http://192.168.0.139:3000'
 
 const ADJUSTMENT_TYPES = [
   { key: 'missed_clock_in', label: 'Missed Clock-In' },
@@ -229,7 +229,7 @@ export default function TimeClockScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>â† Back</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Time Clock</Text>
           <View style={styles.headerRight} />
@@ -253,7 +253,7 @@ export default function TimeClockScreen() {
                   <View style={styles.dayHeader}>
                     <Text style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
                       {formatDayHeader(day)}
-                      {isToday && <Text style={styles.todayTag}> · Today</Text>}
+                      {isToday && <Text style={styles.todayTag}> Â· Today</Text>}
                     </Text>
                     <TouchableOpacity onPress={() => openModal(day)} style={styles.requestBtn}>
                       <Text style={styles.requestBtnText}>+ Request</Text>
@@ -276,9 +276,9 @@ export default function TimeClockScreen() {
                       <View key={p.id} style={styles.punchRow}>
                         <View style={styles.punchTimes}>
                           <Text style={styles.punchTime}>{formatTime(p.punchIn)}</Text>
-                          <Text style={styles.punchArrow}>→</Text>
+                          <Text style={styles.punchArrow}>â†’</Text>
                           <Text style={styles.punchTime}>
-                            {p.punchOut ? formatTime(p.punchOut) : '—'}
+                            {p.punchOut ? formatTime(p.punchOut) : 'â€”'}
                           </Text>
                           {p.isTardy && <Text style={styles.tardyTag}>Tardy</Text>}
                         </View>
@@ -380,7 +380,7 @@ export default function TimeClockScreen() {
             <Text style={styles.fieldLabel}>Notes</Text>
             <TextInput
               style={styles.notesInput}
-              placeholder="Additional context for your manager…"
+              placeholder="Additional context for your managerâ€¦"
               placeholderTextColor="#bbb"
               multiline
               numberOfLines={3}

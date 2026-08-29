@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'react'
+﻿import { useEffect, useLayoutEffect, useState } from 'react'
 import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
@@ -15,7 +15,7 @@ import { markModuleSeen } from '../store/navBadgeStore'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.137:3000'
+const API_BASE = 'http://192.168.0.139:3000'
 
 const CLAIM_STATUS_COLORS: Record<string, string> = {
   pending: '#D97706',
@@ -116,7 +116,7 @@ export default function OpenShiftsScreen() {
       <SafeAreaView style={styles.topArea} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>â† Back</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Open Shifts</Text>
           <View style={styles.headerRight} />
@@ -150,7 +150,7 @@ export default function OpenShiftsScreen() {
                       <View style={styles.shiftTop}>
                         <View style={styles.shiftInfo}>
                           <Text style={styles.shiftDate}>{formatDate(shift.date)}</Text>
-                          <Text style={styles.shiftTime}>{formatTime12h(shift.startTime)} – {formatTime12h(shift.endTime)}</Text>
+                          <Text style={styles.shiftTime}>{formatTime12h(shift.startTime)} â€“ {formatTime12h(shift.endTime)}</Text>
                           <Text style={styles.shiftLocation}>{shift.location.name}</Text>
                           {shift.specialty && <Text style={styles.shiftSpecialty}>{shift.specialty}</Text>}
                           {shift.notes && <Text style={styles.shiftNotes}>{shift.notes}</Text>}
@@ -189,7 +189,7 @@ export default function OpenShiftsScreen() {
                     <View key={claim.id} style={styles.claimRow}>
                       <View style={styles.claimRowLeft}>
                         <Text style={styles.claimRowDate}>{formatDate(claim.openShift.date)}</Text>
-                        <Text style={styles.claimRowTime}>{formatTime12h(claim.openShift.startTime)} – {formatTime12h(claim.openShift.endTime)}</Text>
+                        <Text style={styles.claimRowTime}>{formatTime12h(claim.openShift.startTime)} â€“ {formatTime12h(claim.openShift.endTime)}</Text>
                         <Text style={styles.claimRowLocation}>{claim.openShift.location.name}</Text>
                       </View>
                       <View style={[styles.claimBadge, { backgroundColor: (CLAIM_STATUS_COLORS[claim.status] ?? '#888') + '20' }]}>

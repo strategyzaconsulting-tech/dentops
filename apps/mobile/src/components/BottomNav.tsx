@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+﻿import { useCallback, useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
@@ -7,15 +7,15 @@ import { timeClockHasBadge, openShiftsHasBadge, timeOffHasBadge } from '../store
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.137:3000'
+const API_BASE = 'http://192.168.0.139:3000'
 
 const TABS = [
-  { route: 'time-clock',    label: 'Clock',    icon: '🕐' },
-  { route: 'open-shifts',   label: 'Shifts',   icon: '📋' },
-  { route: 'pto',           label: 'Time Off',  icon: '🌴' },
-  { route: 'announcements', label: 'News',     icon: '📢' },
-  { route: 'benefits',      label: 'Benefits', icon: '💼' },
-  { route: 'onboarding',    label: 'Profile',  icon: '👤' },
+  { route: 'time-clock',    label: 'Clock',    icon: 'ðŸ•' },
+  { route: 'open-shifts',   label: 'Shifts',   icon: 'ðŸ“‹' },
+  { route: 'pto',           label: 'Time Off',  icon: 'ðŸŒ´' },
+  { route: 'announcements', label: 'News',     icon: 'ðŸ“¢' },
+  { route: 'benefits',      label: 'Benefits', icon: 'ðŸ’¼' },
+  { route: 'onboarding',    label: 'Profile',  icon: 'ðŸ‘¤' },
 ] as const
 
 type Route = typeof TABS[number]['route']

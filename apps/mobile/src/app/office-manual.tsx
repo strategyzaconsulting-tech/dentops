@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+﻿import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -14,7 +14,7 @@ import BottomNav from '../components/BottomNav'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.137:3000'
+const API_BASE = 'http://192.168.0.139:3000'
 
 interface OfficeManual {
   id: string
@@ -96,11 +96,11 @@ export default function OfficeManualScreen() {
       {/* Header */}
       <SafeAreaView style={styles.header} edges={['top']}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>â† Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Office Manual</Text>
         {manual && (
-          <Text style={styles.headerSub}>v{manual.version} · Updated {fmtDate(manual.updatedAt)}</Text>
+          <Text style={styles.headerSub}>v{manual.version} Â· Updated {fmtDate(manual.updatedAt)}</Text>
         )}
       </SafeAreaView>
 
@@ -132,7 +132,7 @@ export default function OfficeManualScreen() {
         <SafeAreaView style={styles.bottomBar} edges={['bottom']}>
           {mySig ? (
             <View style={styles.signedBadge}>
-              <Text style={styles.signedText}>✓ Signed on {fmtDate(mySig.signedAt)}</Text>
+              <Text style={styles.signedText}>âœ“ Signed on {fmtDate(mySig.signedAt)}</Text>
             </View>
           ) : (
             <TouchableOpacity

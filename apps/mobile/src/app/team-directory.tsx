@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+﻿import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
   ScrollView,
@@ -12,7 +12,7 @@ import { router, useFocusEffect } from 'expo-router'
 import BottomNav from '../components/BottomNav'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const API_BASE = 'http://192.168.0.137:3000'
+const API_BASE = 'http://192.168.0.139:3000'
 
 interface StaffMember {
   id: string
@@ -72,7 +72,7 @@ export default function TeamDirectoryScreen() {
       {/* Header */}
       <SafeAreaView style={styles.header} edges={['top']}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>â† Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Team Directory</Text>
         {!loading && <Text style={styles.headerSub}>{staff.length} team members</Text>}

@@ -1,4 +1,4 @@
-export const API_BASE = 'http://192.168.0.137:3000'
+﻿export const API_BASE = 'http://192.168.0.139:3000'
 
 const USER_EMAIL = 'dan@smile.com'
 const USER_PASS  = 'Brisa2026!'
@@ -16,7 +16,8 @@ let _token: string | null = null
 let _user: AuthUser | null = null
 
 function decodeJwt(token: string): { userId: string; practiceId: string; role: string; email: string } {
-  const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+  let b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+  while (b64.length % 4) b64 += '='
   return JSON.parse(atob(b64))
 }
 

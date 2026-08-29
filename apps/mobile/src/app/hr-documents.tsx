@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+﻿import { useCallback, useState } from 'react'
 import {
   ActivityIndicator, Alert, Modal, ScrollView, StyleSheet,
   Text, TextInput, TouchableOpacity, View,
@@ -102,7 +102,7 @@ export default function HRDocumentsScreen() {
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={s.back}>← Back</Text>
+          <Text style={s.back}>â† Back</Text>
         </TouchableOpacity>
         <Text style={s.title}>HR Documents</Text>
         {unacked > 0 && (
@@ -120,7 +120,7 @@ export default function HRDocumentsScreen() {
         <ScrollView contentContainerStyle={s.list}>
           {unacked > 0 && (
             <View style={s.alertBanner}>
-              <Text style={s.alertText}>⚠ {unacked} document{unacked > 1 ? 's' : ''} require your acknowledgment</Text>
+              <Text style={s.alertText}>âš  {unacked} document{unacked > 1 ? 's' : ''} require your acknowledgment</Text>
             </View>
           )}
           {docs.map(doc => {
@@ -143,9 +143,9 @@ export default function HRDocumentsScreen() {
                   )}
                   <View style={s.statusRow}>
                     {doc.staffAcknowledgedAt ? (
-                      <Text style={s.acked}>✓ Acknowledged</Text>
+                      <Text style={s.acked}>âœ“ Acknowledged</Text>
                     ) : (
-                      <Text style={s.pending}>⏳ Acknowledgment required</Text>
+                      <Text style={s.pending}>â³ Acknowledgment required</Text>
                     )}
                   </View>
                 </View>
@@ -161,7 +161,7 @@ export default function HRDocumentsScreen() {
           <SafeAreaView style={s.safe}>
             <View style={s.modalHeader}>
               <TouchableOpacity onPress={() => setViewing(null)}>
-                <Text style={s.modalClose}>✕ Close</Text>
+                <Text style={s.modalClose}>âœ• Close</Text>
               </TouchableOpacity>
               <View style={[s.typePill, { backgroundColor: (TYPE_COLOR[viewing.type] ?? '#6B7280') + '20' }]}>
                 <Text style={[s.typeLabel, { color: TYPE_COLOR[viewing.type] ?? '#6B7280' }]}>{TYPE_LABEL[viewing.type]}</Text>
@@ -182,9 +182,9 @@ export default function HRDocumentsScreen() {
                 <Text style={s.sectionLabel}>MANAGER ATTESTATION</Text>
                 {viewing.managerSignatureName ? (
                   <>
-                    <Text style={s.sigName}>✓ {viewing.managerSignatureName}</Text>
+                    <Text style={s.sigName}>âœ“ {viewing.managerSignatureName}</Text>
                     {viewing.manager && (
-                      <Text style={s.sigRole}>{viewing.manager.firstName} {viewing.manager.lastName} · {viewing.manager.role.replace('_', ' ')}</Text>
+                      <Text style={s.sigRole}>{viewing.manager.firstName} {viewing.manager.lastName} Â· {viewing.manager.role.replace('_', ' ')}</Text>
                     )}
                     {viewing.managerSignedAt && (
                       <Text style={s.sigDate}>{fmtTs(viewing.managerSignedAt)}</Text>
@@ -200,7 +200,7 @@ export default function HRDocumentsScreen() {
                 <Text style={s.sectionLabel}>YOUR ACKNOWLEDGMENT</Text>
                 {viewing.staffAcknowledgedAt ? (
                   <>
-                    <Text style={s.sigName}>✓ {viewing.staffSignatureName}</Text>
+                    <Text style={s.sigName}>âœ“ {viewing.staffSignatureName}</Text>
                     <Text style={s.sigDate}>{fmtTs(viewing.staffAcknowledgedAt)}</Text>
                     <Text style={s.ackNote}>By signing, you confirmed receipt of this document. Acknowledgment does not imply agreement.</Text>
                   </>
@@ -221,7 +221,7 @@ export default function HRDocumentsScreen() {
                       onPress={acknowledge}
                       disabled={!ackName.trim() || savingAck}
                     >
-                      <Text style={s.ackBtnText}>{savingAck ? 'Saving…' : 'Acknowledge Document'}</Text>
+                      <Text style={s.ackBtnText}>{savingAck ? 'Savingâ€¦' : 'Acknowledge Document'}</Text>
                     </TouchableOpacity>
                   </>
                 )}

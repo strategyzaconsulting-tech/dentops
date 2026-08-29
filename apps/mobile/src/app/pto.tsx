@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react'
+﻿import { useLayoutEffect, useState } from 'react'
 import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
@@ -20,9 +20,9 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2' // Daniel Quiroga (staff)
-const API_BASE = 'http://192.168.0.137:3000'
+const API_BASE = 'http://192.168.0.139:3000'
 
-// ── Time-off types ──────────────────────────────────────────────────────────
+// â”€â”€ Time-off types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type TimeOffType = 'pto' | 'unpaid'
 
 const TIME_OFF_TYPES: TimeOffType[] = ['pto', 'unpaid']
@@ -37,7 +37,7 @@ const TIME_OFF_COLORS: Record<TimeOffType, string> = {
   unpaid: '#6B7280',
 }
 
-// ── Shared lookup for My Requests list ──────────────────────────────────────
+// â”€â”€ Shared lookup for My Requests list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ALL_TYPE_LABELS: Record<string, string> = {
   pto: 'PTO',
   unpaid: 'Unpaid',
@@ -72,7 +72,7 @@ const SCHEDULE_TYPES = new Set<string>([
   'schedule_adjustment', 'late_arrival', 'early_departure', 'long_lunch',
 ])
 
-// ── Data types ──────────────────────────────────────────────────────────────
+// â”€â”€ Data types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface PtoBalance {
   total: number
   used: number
@@ -93,7 +93,7 @@ interface Request {
   notes: string | null
 }
 
-// ── Date helpers ─────────────────────────────────────────────────────────────
+// â”€â”€ Date helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function toUSDate(date: Date): string {
   return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`
 }
@@ -121,7 +121,7 @@ function formatDisplayDate(iso: string): string {
   })
 }
 
-// ── DateInput component ──────────────────────────────────────────────────────
+// â”€â”€ DateInput component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function DateInput({
   label,
   value,
@@ -134,7 +134,7 @@ function DateInput({
   topSpacing?: boolean
 }) {
   const [show, setShow] = useState(false)
-  // Draft only used on iOS — committed on Done
+  // Draft only used on iOS â€” committed on Done
   const [draft, setDraft] = useState<Date>(new Date())
 
   const current = isValidUSDate(value) ? parseUSDate(value) : new Date()
@@ -165,7 +165,7 @@ function DateInput({
         <Text style={value ? styles.dateBtnText : styles.dateBtnPlaceholder}>
           {value || 'Select date'}
         </Text>
-        <Text style={styles.calIcon}>📅</Text>
+        <Text style={styles.calIcon}>ðŸ“…</Text>
       </TouchableOpacity>
 
       {/* Android: renders as a native dialog automatically */}
@@ -207,7 +207,7 @@ function DateInput({
   )
 }
 
-// ── Screen ────────────────────────────────────────────────────────────────────
+// â”€â”€ Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function TimeOffScreen() {
   const [ptoBalance, setPtoBalance] = useState<PtoBalance | null>(null)
   const [myRequests, setMyRequests] = useState<Request[]>([])
@@ -238,7 +238,7 @@ export default function TimeOffScreen() {
       if (balData?.vacation) setPtoBalance(balData.vacation)
       if (Array.isArray(reqs)) setMyRequests(reqs)
     } catch {
-      // silent — API may not be running during testing
+      // silent â€” API may not be running during testing
     } finally {
       setLoadingBalance(false)
     }
@@ -311,7 +311,7 @@ export default function TimeOffScreen() {
     try {
       const isoDate = usDateToISO(adjustmentDate)
       const fullNotes = adjustmentNotes.trim()
-        ? `${adjustmentDescription.trim()} — ${adjustmentNotes.trim()}`
+        ? `${adjustmentDescription.trim()} â€” ${adjustmentNotes.trim()}`
         : adjustmentDescription.trim()
 
       const res = await fetch(`${API_BASE}/api/pto/requests`, {
@@ -357,7 +357,7 @@ export default function TimeOffScreen() {
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backText}>← Back</Text>
+              <Text style={styles.backText}>â† Back</Text>
             </TouchableOpacity>
             <Text style={styles.title}>Time Off</Text>
           </View>
@@ -382,7 +382,7 @@ export default function TimeOffScreen() {
             )}
           </View>
 
-          {/* ── Time Off Request ─────────────────────────────────────── */}
+          {/* â”€â”€ Time Off Request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Time Off Request</Text>
 
@@ -410,7 +410,7 @@ export default function TimeOffScreen() {
             <Text style={[styles.label, styles.topSpacing]}>Notes (optional)</Text>
             <TextInput
               style={[styles.input, styles.notesInput]}
-              placeholder="Any details for your manager…"
+              placeholder="Any details for your managerâ€¦"
               placeholderTextColor="#aaa"
               value={timeOffNotes}
               onChangeText={setTimeOffNotes}
@@ -432,7 +432,7 @@ export default function TimeOffScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* ── Schedule Adjustment ──────────────────────────────────── */}
+          {/* â”€â”€ Schedule Adjustment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Schedule Adjustment</Text>
             <Text style={styles.cardSubtitle}>For days when your schedule differs from normal</Text>
@@ -440,7 +440,7 @@ export default function TimeOffScreen() {
             <Text style={[styles.label, { marginTop: 4 }]}>Description</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. Late arrival, early departure, extended lunch…"
+              placeholder="e.g. Late arrival, early departure, extended lunchâ€¦"
               placeholderTextColor="#aaa"
               value={adjustmentDescription}
               onChangeText={setAdjustmentDescription}
@@ -451,7 +451,7 @@ export default function TimeOffScreen() {
             <Text style={[styles.label, styles.topSpacing]}>Notes (optional)</Text>
             <TextInput
               style={[styles.input, styles.notesInput]}
-              placeholder="Any details for your manager…"
+              placeholder="Any details for your managerâ€¦"
               placeholderTextColor="#aaa"
               value={adjustmentNotes}
               onChangeText={setAdjustmentNotes}
@@ -473,7 +473,7 @@ export default function TimeOffScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* ── My Requests ──────────────────────────────────────────── */}
+          {/* â”€â”€ My Requests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>My Requests</Text>
             {myRequests.length === 0 ? (
@@ -500,7 +500,7 @@ export default function TimeOffScreen() {
                       <Text style={styles.reqDates}>
                         {isSchedule || sameDay
                           ? formatDisplayDate(req.startDate)
-                          : `${formatDisplayDate(req.startDate)} – ${formatDisplayDate(req.endDate)}`}
+                          : `${formatDisplayDate(req.startDate)} â€“ ${formatDisplayDate(req.endDate)}`}
                       </Text>
                       {req.notes ? (
                         <Text style={styles.reqNotes} numberOfLines={2}>{req.notes}</Text>

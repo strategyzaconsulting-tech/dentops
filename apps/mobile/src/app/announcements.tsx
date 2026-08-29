@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'react'
+﻿import { useEffect, useLayoutEffect, useState } from 'react'
 import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
@@ -14,7 +14,7 @@ import { router } from 'expo-router'
 import { markAnnouncementsSeen } from '../store/announcementStore'
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const API_BASE = 'http://192.168.0.137:3000'
+const API_BASE = 'http://192.168.0.139:3000'
 
 interface Announcement {
   id: string
@@ -59,7 +59,7 @@ export default function AnnouncementsScreen() {
     <View style={styles.root}>
       <SafeAreaView style={styles.header} edges={['top']}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>â† Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Announcements</Text>
       </SafeAreaView>
@@ -75,7 +75,7 @@ export default function AnnouncementsScreen() {
         >
           {announcements.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📢</Text>
+              <Text style={styles.emptyIcon}>ðŸ“¢</Text>
               <Text style={styles.emptyText}>No announcements yet</Text>
             </View>
           ) : (

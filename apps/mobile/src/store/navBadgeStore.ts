@@ -1,4 +1,4 @@
-type Module = 'timeClock' | 'openShifts' | 'timeOff'
+﻿type Module = 'timeClock' | 'openShifts' | 'timeOff'
 
 const seen = new Set<Module>()
 

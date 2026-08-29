@@ -1,4 +1,4 @@
-let lastSeenAt: string | null = null
+﻿let lastSeenAt: string | null = null
 
 export function markAnnouncementsSeen() {
   lastSeenAt = new Date().toISOString()

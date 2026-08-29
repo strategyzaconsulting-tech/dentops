@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+﻿import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -29,7 +29,7 @@ const REQUIRES_SIGNATURE: FormType[] = ['i9', 'w4']
 
 const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.137:3000'
+const API_BASE = 'http://192.168.0.139:3000'
 
 type FormType = 'i9' | 'w4' | 'personal-info' | 'emergency-contact' | 'direct-deposit'
 
@@ -68,7 +68,7 @@ const FORM_TITLES: Record<FormType, string> = {
   'direct-deposit':    'Direct Deposit',
 }
 
-// ─── Chip helper ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Chip helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Chips({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
   return (
@@ -111,7 +111,7 @@ function SectionHeader({ number, title, subtitle }: { number?: string; title: st
   )
 }
 
-// ─── Form components ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Form components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function I9Form({ data, onChange }: { data: Record<string, string>; onChange: (k: string, v: string) => void }) {
   const status = data.citizenshipStatus ?? ''
@@ -285,7 +285,7 @@ function W4Form({ data, onChange }: { data: Record<string, unknown>; onChange: (
       <Field label="I have multiple jobs or my spouse works">
         <View style={styles.toggleRow}>
           <Text style={[styles.toggleTitle, { flex: 1 }]}>
-            {data.multipleJobs ? 'Yes — apply higher withholding rate' : 'No'}
+            {data.multipleJobs ? 'Yes â€” apply higher withholding rate' : 'No'}
           </Text>
           <Switch
             value={!!data.multipleJobs}
@@ -298,10 +298,10 @@ function W4Form({ data, onChange }: { data: Record<string, unknown>; onChange: (
 
       {/* Step 3 */}
       <SectionHeader number="Step 3" title="Claim Dependents" subtitle="If your total income is $200,000 or less ($400,000 or less if MFJ)." />
-      <Field label="Qualifying children under 17 (multiply × $2,000)">
+      <Field label="Qualifying children under 17 (multiply Ã— $2,000)">
         <Input value={str('qualifyingChildren')} onChangeText={(v) => onChange('qualifyingChildren', v)} placeholder="0" keyboardType="decimal-pad" />
       </Field>
-      <Field label="Other dependents (multiply × $500)">
+      <Field label="Other dependents (multiply Ã— $500)">
         <Input value={str('otherDependents')} onChangeText={(v) => onChange('otherDependents', v)} placeholder="0" keyboardType="decimal-pad" />
       </Field>
       <Field label="Total ($)">
@@ -345,7 +345,7 @@ function PersonalInfoForm({ data, onChange }: { data: Record<string, string>; on
         <View style={styles.toggleRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.toggleTitle}>
-              {data.birthdayPrivacy === 'private' ? '🔒 Keep private' : '🎉 Celebrate with the team'}
+              {data.birthdayPrivacy === 'private' ? 'ðŸ”’ Keep private' : 'ðŸŽ‰ Celebrate with the team'}
             </Text>
             <Text style={styles.toggleSub}>
               {data.birthdayPrivacy === 'private'
@@ -410,7 +410,7 @@ function DirectDepositForm({ data, onChange }: { data: Record<string, string>; o
   )
 }
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function OnboardingFormScreen() {
   const { type } = useLocalSearchParams<{ type: FormType }>()
@@ -509,7 +509,7 @@ export default function OnboardingFormScreen() {
       <View style={styles.root}>
         <SafeAreaView style={styles.header} edges={['top']}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>â† Back</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{title}</Text>
         </SafeAreaView>
@@ -526,19 +526,19 @@ export default function OnboardingFormScreen() {
       <View style={styles.root}>
         <SafeAreaView style={styles.header} edges={['top']}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>â† Back</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{title}</Text>
         </SafeAreaView>
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={styles.submittedBadge}>
-            <Text style={styles.submittedText}>✓ Submitted</Text>
+            <Text style={styles.submittedText}>âœ“ Submitted</Text>
           </View>
           <View style={styles.card}>
             {Object.entries(existingData).map(([k, v]) => {
               const labelMap = FIELD_LABELS[formType] ?? {}
               const label = labelMap[k] ?? k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())
-              const display = k === 'birthdayPrivacy' ? (v === 'private' ? '🔒 Keep private' : '🎉 Celebrate with team') : String(v)
+              const display = k === 'birthdayPrivacy' ? (v === 'private' ? 'ðŸ”’ Keep private' : 'ðŸŽ‰ Celebrate with team') : String(v)
               return (
                 <View key={k} style={styles.readOnlyRow}>
                   <Text style={styles.readOnlyKey}>{label}</Text>
@@ -549,7 +549,7 @@ export default function OnboardingFormScreen() {
           </View>
           {needsSignature && !!existingData?.signatureName && (
             <View style={[styles.signedBadge, { marginTop: 8 }]}>
-              <Text style={styles.signedBadgeText}>✓ Electronically signed by {String(existingData.signatureName)}</Text>
+              <Text style={styles.signedBadgeText}>âœ“ Electronically signed by {String(existingData.signatureName)}</Text>
             </View>
           )}
           <TouchableOpacity style={styles.editBtn} onPress={() => setIsEditMode(true)}>
@@ -564,7 +564,7 @@ export default function OnboardingFormScreen() {
   if (success) {
     return (
       <View style={[styles.root, { alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={{ fontSize: 48 }}>✅</Text>
+        <Text style={{ fontSize: 48 }}>âœ…</Text>
         <Text style={{ fontSize: 18, fontWeight: '700', color: '#1D9E75', marginTop: 12 }}>Saved!</Text>
       </View>
     )
@@ -574,7 +574,7 @@ export default function OnboardingFormScreen() {
     <View style={styles.root}>
       <SafeAreaView style={styles.header} edges={['top']}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>â† Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{title}</Text>
       </SafeAreaView>
@@ -619,7 +619,7 @@ export default function OnboardingFormScreen() {
               style={styles.pdfBtn}
               onPress={() => WebBrowser.openBrowserAsync(PDF_URLS[formType]!)}
             >
-              <Text style={styles.pdfBtnText}>📄 View Official {formType === 'i9' ? 'I-9' : 'W-4'} Form (PDF)</Text>
+              <Text style={styles.pdfBtnText}>ðŸ“„ View Official {formType === 'i9' ? 'I-9' : 'W-4'} Form (PDF)</Text>
             </TouchableOpacity>
 
             <View style={styles.signatureSection}>
@@ -640,7 +640,7 @@ export default function OnboardingFormScreen() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.checkbox, signatureAgreed && styles.checkboxChecked]}>
-                  {signatureAgreed && <Text style={styles.checkboxTick}>✓</Text>}
+                  {signatureAgreed && <Text style={styles.checkboxTick}>âœ“</Text>}
                 </View>
                 <Text style={styles.agreementText}>
                   I certify that the information I have provided is true and correct to the best of my knowledge, and I intend this to serve as my electronic signature.
@@ -649,7 +649,7 @@ export default function OnboardingFormScreen() {
 
               {isSigned && (
                 <View style={styles.signedBadge}>
-                  <Text style={styles.signedBadgeText}>✓ Ready to submit — signed by {signatureName.trim()}</Text>
+                  <Text style={styles.signedBadgeText}>âœ“ Ready to submit â€” signed by {signatureName.trim()}</Text>
                 </View>
               )}
             </View>
