@@ -14,7 +14,6 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
 import { markModuleSeen } from '../store/navBadgeStore'
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 
@@ -41,7 +40,7 @@ const TIME_OFF_COLORS: Record<TimeOffType, string> = {
 const ALL_TYPE_LABELS: Record<string, string> = {
   pto: 'PTO',
   unpaid: 'Unpaid',
-  schedule_adjustment: 'Schedule Adjustment',
+  schedule_adjustment: 'Schedule Adjustment Request',
   vacation: 'Vacation',
   sick: 'Sick Day',
   personal: 'Personal',
@@ -134,7 +133,7 @@ function DateInput({
   topSpacing?: boolean
 }) {
   const [show, setShow] = useState(false)
-  // Draft only used on iOS â€” committed on Done
+  // Draft only used on iOS — committed on Done
   const [draft, setDraft] = useState<Date>(new Date())
 
   const current = isValidUSDate(value) ? parseUSDate(value) : new Date()
@@ -165,7 +164,7 @@ function DateInput({
         <Text style={value ? styles.dateBtnText : styles.dateBtnPlaceholder}>
           {value || 'Select date'}
         </Text>
-        <Text style={styles.calIcon}>ðŸ“…</Text>
+        <Text style={styles.calIcon}>📅</Text>
       </TouchableOpacity>
 
       {/* Android: renders as a native dialog automatically */}
@@ -238,7 +237,7 @@ export default function TimeOffScreen() {
       if (balData?.vacation) setPtoBalance(balData.vacation)
       if (Array.isArray(reqs)) setMyRequests(reqs)
     } catch {
-      // silent â€” API may not be running during testing
+      // silent — API may not be running during testing
     } finally {
       setLoadingBalance(false)
     }
@@ -311,7 +310,7 @@ export default function TimeOffScreen() {
     try {
       const isoDate = usDateToISO(adjustmentDate)
       const fullNotes = adjustmentNotes.trim()
-        ? `${adjustmentDescription.trim()} â€” ${adjustmentNotes.trim()}`
+        ? `${adjustmentDescription.trim()} — ${adjustmentNotes.trim()}`
         : adjustmentDescription.trim()
 
       const res = await fetch(`${API_BASE}/api/pto/requests`, {
@@ -356,9 +355,6 @@ export default function TimeOffScreen() {
 
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backText}>â† Back</Text>
-            </TouchableOpacity>
             <Text style={styles.title}>Time Off</Text>
           </View>
 
@@ -410,7 +406,7 @@ export default function TimeOffScreen() {
             <Text style={[styles.label, styles.topSpacing]}>Notes (optional)</Text>
             <TextInput
               style={[styles.input, styles.notesInput]}
-              placeholder="Any details for your managerâ€¦"
+              placeholder="Any details for your manager…"
               placeholderTextColor="#aaa"
               value={timeOffNotes}
               onChangeText={setTimeOffNotes}
@@ -434,13 +430,13 @@ export default function TimeOffScreen() {
 
           {/* â”€â”€ Schedule Adjustment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Schedule Adjustment</Text>
+            <Text style={styles.cardTitle}>Schedule Adjustment Request</Text>
             <Text style={styles.cardSubtitle}>For days when your schedule differs from normal</Text>
 
             <Text style={[styles.label, { marginTop: 4 }]}>Description</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. Late arrival, early departure, extended lunchâ€¦"
+              placeholder="e.g. Late arrival, early departure, extended lunch…"
               placeholderTextColor="#aaa"
               value={adjustmentDescription}
               onChangeText={setAdjustmentDescription}
@@ -451,7 +447,7 @@ export default function TimeOffScreen() {
             <Text style={[styles.label, styles.topSpacing]}>Notes (optional)</Text>
             <TextInput
               style={[styles.input, styles.notesInput]}
-              placeholder="Any details for your managerâ€¦"
+              placeholder="Any details for your manager…"
               placeholderTextColor="#aaa"
               value={adjustmentNotes}
               onChangeText={setAdjustmentNotes}
@@ -500,7 +496,7 @@ export default function TimeOffScreen() {
                       <Text style={styles.reqDates}>
                         {isSchedule || sameDay
                           ? formatDisplayDate(req.startDate)
-                          : `${formatDisplayDate(req.startDate)} â€“ ${formatDisplayDate(req.endDate)}`}
+                          : `${formatDisplayDate(req.startDate)} – ${formatDisplayDate(req.endDate)}`}
                       </Text>
                       {req.notes ? (
                         <Text style={styles.reqNotes} numberOfLines={2}>{req.notes}</Text>
@@ -537,8 +533,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  backBtn: { paddingVertical: 4 },
-  backText: { fontSize: 14, color: '#1D9E75', fontWeight: '600' },
   title: { fontSize: 22, fontWeight: '700', color: '#2C2C2A' },
 
   // Balance
