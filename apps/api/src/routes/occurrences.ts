@@ -8,15 +8,24 @@ const FORMAL_TYPES = new Set(['verbal_warning', 'written_warning', 'performance_
 const managerSelect = { id: true, firstName: true, lastName: true, role: true }
 
 export default async function occurrenceRoutes(server: FastifyInstance) {
-  // GET /api/occurrences?practiceId=&userId=
-  server.get<{ Querystring: { practiceId: string; userId?: string } }>(
+  // GET /api/occurrences?practiceId=&userId=&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+  server.get<{ Querystring: { practiceId: string; userId?: string; startDate?: string; endDate?: string } }>(
     '/occurrences',
     async (request, reply) => {
-      const { practiceId, userId } = request.query
+      const { practiceId, userId, startDate, endDate } = request.query
       if (!practiceId) return reply.status(400).send({ error: 'practiceId is required' })
 
+      const dateFilter = startDate || endDate
+        ? {
+            date: {
+              ...(startDate ? { gte: new Date(startDate) } : {}),
+              ...(endDate ? { lte: new Date(endDate) } : {}),
+            },
+          }
+        : {}
+
       const occurrences = await prisma.employeeOccurrence.findMany({
-        where: { practiceId, ...(userId ? { userId } : {}) },
+        where: { practiceId, ...(userId ? { userId } : {}), ...dateFilter },
         include: {
           user: { select: { id: true, firstName: true, lastName: true } },
           manager: { select: managerSelect },

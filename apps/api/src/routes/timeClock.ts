@@ -239,6 +239,41 @@ export default async function timeclockRoutes(server: FastifyInstance) {
     return reply.send(result)
   })
 
+  // GET /api/time-punches/range?start=YYYY-MM-DD&end=YYYY-MM-DD&userId=optional
+  server.get<{ Querystring: { start: string; end: string; userId?: string } }>(
+    '/time-punches/range',
+    async (request, reply) => {
+      const practiceId = request.user.practiceId
+      const { start, end, userId } = request.query
+      if (!start || !end) return reply.status(400).send({ error: 'start and end are required' })
+
+      const startDate = new Date(start)
+      startDate.setHours(0, 0, 0, 0)
+      const endDate = new Date(end)
+      endDate.setHours(23, 59, 59, 999)
+
+      const punches = await prisma.timePunch.findMany({
+        where: {
+          practiceId,
+          punchIn: { gte: startDate, lte: endDate },
+          ...(userId ? { userId } : {}),
+        },
+        select: {
+          id: true, userId: true,
+          user: { select: { firstName: true, lastName: true, role: true } },
+          locationId: true,
+          location: { select: { name: true } },
+          specialty: true,
+          punchIn: true, punchOut: true,
+          breakStart: true, breakEnd: true,
+        },
+        orderBy: [{ userId: 'asc' }, { punchIn: 'asc' }],
+      })
+
+      return reply.send(punches)
+    }
+  )
+
   // GET /api/time-punches/today?practiceId=...
   server.get<{ Querystring: { practiceId: string } }>('/time-punches/today', async (request, reply) => {
     const { practiceId } = request.query
