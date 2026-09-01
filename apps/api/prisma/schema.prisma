@@ -78,6 +78,7 @@ model User {
   probationCompletedAt DateTime? @map("probation_completed_at") @db.Date
   probationAlertDays Int?      @map("probation_alert_days")
   benefitsEligibleAt DateTime? @map("benefits_eligible_at") @db.Date
+  seasonedEmployee   Boolean   @default(false) @map("seasoned_employee")
 
   practice         Practice          @relation(fields: [practiceId], references: [id])
   manager          User?             @relation("ManagerRelation", fields: [managerId], references: [id])

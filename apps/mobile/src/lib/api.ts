@@ -10,6 +10,7 @@ export interface AuthUser {
   email: string
   firstName: string
   lastName: string
+  seasonedEmployee: boolean
 }
 
 let _token: string | null = null
@@ -50,6 +51,7 @@ export async function getUser(): Promise<AuthUser> {
     email: payload.email,
     firstName: me.firstName,
     lastName: me.lastName,
+    seasonedEmployee: me.seasonedEmployee ?? false,
   }
   return _user
 }

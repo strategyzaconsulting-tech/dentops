@@ -47,6 +47,7 @@ interface StaffMember {
   probationAlertDays: number | null
   benefitsEligibleAt: string | null
   ptoDaysPerYear: number | null
+  seasonedEmployee: boolean
 }
 
 interface PtoItem {
@@ -96,6 +97,7 @@ interface FormState {
   probationEndDate: string
   probationAlertDays: string
   ptoDaysPerYear: string
+  seasonedEmployee: boolean
 }
 
 const emptyForm: FormState = {
@@ -115,6 +117,7 @@ const emptyForm: FormState = {
   probationEndDate: '',
   probationAlertDays: '14',
   ptoDaysPerYear: '',
+  seasonedEmployee: false,
 }
 
 function fmt12h(t: string | null) {
@@ -291,6 +294,7 @@ export default function Staff() {
       probationEndDate: member.probationEndDate ? member.probationEndDate.split('T')[0] : '',
       probationAlertDays: String(member.probationAlertDays ?? 14),
       ptoDaysPerYear: member.ptoDaysPerYear != null ? String(member.ptoDaysPerYear) : '',
+      seasonedEmployee: member.seasonedEmployee ?? false,
     })
     setShowNewBenefitInput(false)
     setNewBenefitName('')
@@ -358,6 +362,7 @@ export default function Staff() {
         probationStatus: (form.probationPreset || form.probationEndDate) ? 'active' : null,
         probationAlertDays: form.probationAlertDays ? parseInt(form.probationAlertDays) : 14,
         ptoDaysPerYear: form.ptoDaysPerYear ? parseInt(form.ptoDaysPerYear) : null,
+        seasonedEmployee: form.seasonedEmployee,
       }
       if (modal?.mode === 'add') {
         await apiFetch(`/api/staff`, {
@@ -640,6 +645,11 @@ export default function Staff() {
                           <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} />
                           {st.label}
                         </span>
+                        {member.seasonedEmployee && (
+                          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600">
+                            Seasoned
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -756,9 +766,16 @@ export default function Staff() {
                     <p className="text-sm font-semibold text-gray-900 truncate">
                       {member.firstName} {member.lastName}
                     </p>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${ROLE_STYLES[member.role] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {member.role.replace('_', ' ')}
-                    </span>
+                    <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${ROLE_STYLES[member.role] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {member.role.replace('_', ' ')}
+                      </span>
+                      {member.seasonedEmployee && (
+                        <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600">
+                          Seasoned
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Email */}
@@ -958,6 +975,21 @@ export default function Staff() {
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Seasoned employee toggle */}
+              <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">Seasoned Employee</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Skip new-hire onboarding forms (I-9, W-4, etc.) in the mobile app</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, seasonedEmployee: !f.seasonedEmployee }))}
+                  className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus:outline-none ${form.seasonedEmployee ? 'bg-[#1D9E75]' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${form.seasonedEmployee ? 'translate-x-[18px]' : 'translate-x-[3px]'}`} />
+                </button>
               </div>
 
               <div>

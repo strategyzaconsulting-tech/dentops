@@ -66,7 +66,7 @@ const selectCls = inputCls + ' bg-white'
 export default function PracticeProfile() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'manager'
 
   const [form, setForm] = useState<PracticeData | null>(null)
   const [loading, setLoading] = useState(true)

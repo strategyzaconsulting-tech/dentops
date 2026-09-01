@@ -111,6 +111,15 @@ export default function OnboardingScreen() {
     { type: 'direct-deposit',   label: 'Direct Deposit',              done: !!checklist?.directDepositCompletedAt },
   ]
 
+  const allSectionAComplete =
+    !!checklist?.i9CompletedAt &&
+    !!checklist?.w4CompletedAt &&
+    !!checklist?.personalInfoCompletedAt &&
+    !!checklist?.emergencyContactCompletedAt &&
+    !!checklist?.directDepositCompletedAt
+
+  const hideSectionA = user?.seasonedEmployee || allSectionAComplete
+
   if (loading) {
     return (
       <View style={styles.root}>
@@ -132,55 +141,65 @@ export default function OnboardingScreen() {
       {/* Teal header */}
       <SafeAreaView style={styles.header} edges={['top']}>
         <Text style={styles.headerTitle}>My Profile</Text>
-        <Text style={styles.headerSub}>{totalComplete} of 6 new hire forms complete</Text>
-        {/* Progress bar */}
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
-        </View>
-        <Text style={styles.progressLabel}>{progressPct}% complete</Text>
+        {!hideSectionA && (
+          <>
+            <Text style={styles.headerSub}>{totalComplete} of 6 new hire forms complete</Text>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
+            </View>
+            <Text style={styles.progressLabel}>{progressPct}% complete</Text>
+          </>
+        )}
+        {allSectionAComplete && !user?.seasonedEmployee && (
+          <Text style={styles.headerSub}>Onboarding complete</Text>
+        )}
       </SafeAreaView>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Section A — HR Forms */}
-        <Text style={styles.sectionTitle}>Section A — HR Forms</Text>
-        <View style={styles.card}>
-          {SECTION_A.map((item, idx) => (
-            <TouchableOpacity
-              key={item.type}
-              style={[styles.checkRow, idx < SECTION_A.length - 1 && styles.checkRowBorder]}
-              onPress={() => router.push(`/onboarding-form?type=${item.type}` as never)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.checkCircle, item.done && styles.checkCircleDone]}>
-                {item.done && <Ionicons name="checkmark" size={14} color="#fff" />}
-              </View>
-              <Text style={[styles.checkLabel, item.done && styles.checkLabelComplete]}>{item.label}</Text>
-              <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
-            </TouchableOpacity>
-          ))}
+        {/* Section A — HR Forms (hidden for seasoned employees and once completed) */}
+        {!hideSectionA && (
+          <>
+            <Text style={styles.sectionTitle}>Section A — HR Forms</Text>
+            <View style={styles.card}>
+              {SECTION_A.map((item, idx) => (
+                <TouchableOpacity
+                  key={item.type}
+                  style={[styles.checkRow, idx < SECTION_A.length - 1 && styles.checkRowBorder]}
+                  onPress={() => router.push(`/onboarding-form?type=${item.type}` as never)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.checkCircle, item.done && styles.checkCircleDone]}>
+                    {item.done && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  </View>
+                  <Text style={[styles.checkLabel, item.done && styles.checkLabelComplete]}>{item.label}</Text>
+                  <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
+                </TouchableOpacity>
+              ))}
 
-          {/* Equipment log — read-only */}
-          <View style={[styles.checkRow]}>
-            <View style={[styles.checkCircle, (checklist?.equipmentItems?.length ?? 0) > 0 && styles.checkCircleDone]}>
-              {(checklist?.equipmentItems?.length ?? 0) > 0 && <Ionicons name="checkmark" size={14} color="#fff" />}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.checkLabel, (checklist?.equipmentItems?.length ?? 0) > 0 && styles.checkLabelComplete]}>
-                Equipment Log
-              </Text>
-              {(checklist?.equipmentItems?.length ?? 0) > 0 ? (
-                checklist!.equipmentItems.map((eq) => (
-                  <Text key={eq.id} style={styles.equipItem}>
-                    • {eq.name}{eq.serialNumber ? ` (S/N: ${eq.serialNumber})` : ''}{eq.returnedAt ? ' — Returned' : ''}
+              {/* Equipment log — read-only */}
+              <View style={[styles.checkRow]}>
+                <View style={[styles.checkCircle, (checklist?.equipmentItems?.length ?? 0) > 0 && styles.checkCircleDone]}>
+                  {(checklist?.equipmentItems?.length ?? 0) > 0 && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.checkLabel, (checklist?.equipmentItems?.length ?? 0) > 0 && styles.checkLabelComplete]}>
+                    Equipment Log
                   </Text>
-                ))
-              ) : (
-                <Text style={styles.equipEmpty}>No equipment assigned yet</Text>
-              )}
+                  {(checklist?.equipmentItems?.length ?? 0) > 0 ? (
+                    checklist!.equipmentItems.map((eq) => (
+                      <Text key={eq.id} style={styles.equipItem}>
+                        • {eq.name}{eq.serialNumber ? ` (S/N: ${eq.serialNumber})` : ''}{eq.returnedAt ? ' — Returned' : ''}
+                      </Text>
+                    ))
+                  ) : (
+                    <Text style={styles.equipEmpty}>No equipment assigned yet</Text>
+                  )}
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
+          </>
+        )}
 
         {/* Section B — Office & Team */}
         <Text style={styles.sectionTitle}>Section B — Office &amp; Team</Text>
