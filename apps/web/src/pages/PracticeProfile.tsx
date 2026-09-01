@@ -22,6 +22,15 @@ const US_STATES = [
   'VA','WA','WV','WI','WY','DC',
 ]
 
+const PAYROLL_PERIODS = [
+  { value: 'weekly',      label: 'Weekly',       desc: '52 pay periods/year' },
+  { value: 'biweekly',   label: 'Bi-Weekly',    desc: '26 pay periods/year' },
+  { value: 'semimonthly',label: 'Semi-Monthly',  desc: '24 pay periods/year (e.g. 1st & 15th)' },
+  { value: 'monthly',    label: 'Monthly',       desc: '12 pay periods/year' },
+]
+
+const DAYS_OF_WEEK = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+
 interface PracticeData {
   id: string
   name: string
@@ -38,6 +47,9 @@ interface PracticeData {
   requireSpecialty: boolean
   defaultPtoDays: number
   ptoCustomAllowed: boolean
+  payrollPeriod: string | null
+  payrollStartDay: number | null
+  payrollNextDate: string | null
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -111,6 +123,9 @@ export default function PracticeProfile() {
           requireSpecialty: form.requireSpecialty,
           defaultPtoDays: form.defaultPtoDays,
           ptoCustomAllowed: form.ptoCustomAllowed,
+          payrollPeriod: form.payrollPeriod,
+          payrollStartDay: form.payrollStartDay,
+          payrollNextDate: form.payrollNextDate,
         }),
       })
       if (!res.ok) throw new Error()
@@ -287,6 +302,111 @@ export default function PracticeProfile() {
                   />
                 </div>
               </Field>
+            </Section>
+
+            {/* Payroll Schedule */}
+            <Section title="Payroll Schedule">
+              <Field label="Pay Period">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {PAYROLL_PERIODS.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => set('payrollPeriod', p.value)}
+                      className={`rounded-xl border-2 px-3 py-3 text-left transition-all ${
+                        form.payrollPeriod === p.value
+                          ? 'border-[#1D9E75] bg-[#F0FAF6]'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <p className={`text-sm font-semibold ${form.payrollPeriod === p.value ? 'text-[#1D9E75]' : 'text-gray-800'}`}>
+                        {p.label}
+                      </p>
+                      <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{p.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              {form.payrollPeriod && (
+                <>
+                  {(form.payrollPeriod === 'weekly' || form.payrollPeriod === 'biweekly') && (
+                    <Field label="Pay Day">
+                      <div className="flex flex-wrap gap-2">
+                        {DAYS_OF_WEEK.map((day, idx) => (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => set('payrollStartDay', idx)}
+                            className={`rounded-lg px-3 py-1.5 text-sm font-medium border transition-all ${
+                              form.payrollStartDay === idx
+                                ? 'bg-[#1D9E75] border-[#1D9E75] text-white'
+                                : 'border-gray-200 text-gray-600 hover:border-gray-400 bg-white'
+                            }`}
+                          >
+                            {day.slice(0, 3)}
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
+                  )}
+
+                  {form.payrollPeriod === 'semimonthly' && (
+                    <Field label="First Pay Date of Month">
+                      <div className="flex flex-wrap gap-2">
+                        {[1,5,10,15].map((d) => (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => set('payrollStartDay', d)}
+                            className={`rounded-lg px-4 py-1.5 text-sm font-medium border transition-all ${
+                              form.payrollStartDay === d
+                                ? 'bg-[#1D9E75] border-[#1D9E75] text-white'
+                                : 'border-gray-200 text-gray-600 hover:border-gray-400 bg-white'
+                            }`}
+                          >
+                            {d === 1 ? '1st' : d === 5 ? '5th' : d === 10 ? '10th' : '15th'}
+                          </button>
+                        ))}
+                        <span className="self-center text-xs text-gray-400">
+                          {form.payrollStartDay
+                            ? `→ pays on the ${form.payrollStartDay}${['','st','nd','rd'][form.payrollStartDay] ?? 'th'} & ${form.payrollStartDay + 15}${form.payrollStartDay + 15 > 28 ? ' (last day)' : 'th'}`
+                            : ''}
+                        </span>
+                      </div>
+                    </Field>
+                  )}
+
+                  {form.payrollPeriod === 'monthly' && (
+                    <Field label="Pay Date (day of month)">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          min={1}
+                          max={28}
+                          className={inputCls + ' w-24'}
+                          placeholder="1–28"
+                          value={form.payrollStartDay ?? ''}
+                          onChange={(e) => set('payrollStartDay', parseInt(e.target.value) || null)}
+                        />
+                        <span className="text-xs text-gray-400">day of each month</span>
+                      </div>
+                    </Field>
+                  )}
+
+                  <Field label="Next Pay Date">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="date"
+                        className={inputCls + ' w-48'}
+                        value={form.payrollNextDate ? form.payrollNextDate.split('T')[0] : ''}
+                        onChange={(e) => set('payrollNextDate', e.target.value || null)}
+                      />
+                      <span className="text-xs text-gray-400">anchors future pay periods</span>
+                    </div>
+                  </Field>
+                </>
+              )}
             </Section>
 
             {/* HR Settings */}

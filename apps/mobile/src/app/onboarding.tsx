@@ -205,7 +205,7 @@ export default function OnboardingScreen() {
         <Text style={styles.sectionTitle}>Section B — Office &amp; Team</Text>
         <View style={styles.card}>
           <TouchableOpacity
-            style={[styles.checkRow, styles.checkRowBorder]}
+            style={[styles.checkRow, (!user?.seasonedEmployee) && styles.checkRowBorder]}
             onPress={() => router.push('/office-manual' as never)}
           >
             <View style={styles.navIcon}><Text style={styles.navIconText}>📄</Text></View>
@@ -213,34 +213,38 @@ export default function OnboardingScreen() {
             <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.checkRow, styles.checkRowBorder]}
-            onPress={() => router.push('/training' as never)}
-          >
-            <View style={styles.navIcon}><Text style={styles.navIconText}>📚</Text></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.checkLabel}>Training Schedule</Text>
-              {training.length > 0 && (
-                <Text style={styles.subText}>{training.length} session{training.length > 1 ? 's' : ''} scheduled</Text>
-              )}
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
-          </TouchableOpacity>
+          {!user?.seasonedEmployee && (
+            <>
+              <TouchableOpacity
+                style={[styles.checkRow, styles.checkRowBorder]}
+                onPress={() => router.push('/training' as never)}
+              >
+                <View style={styles.navIcon}><Text style={styles.navIconText}>📚</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.checkLabel}>Training Schedule</Text>
+                  {training.length > 0 && (
+                    <Text style={styles.subText}>{training.length} session{training.length > 1 ? 's' : ''} scheduled</Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
+              </TouchableOpacity>
 
-          {/* Assigned Trainer — inline card */}
-          <View style={[styles.checkRow, styles.checkRowBorder]}>
-            <View style={styles.navIcon}><Text style={styles.navIconText}>👤</Text></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.checkLabel}>Assigned Trainer</Text>
-              {assignedTrainer ? (
-                <Text style={styles.subText}>
-                  {assignedTrainer.firstName} {assignedTrainer.lastName} · {assignedTrainer.role}
-                </Text>
-              ) : (
-                <Text style={styles.subText}>No trainer assigned yet</Text>
-              )}
-            </View>
-          </View>
+              {/* Assigned Trainer — inline card */}
+              <View style={[styles.checkRow, styles.checkRowBorder]}>
+                <View style={styles.navIcon}><Text style={styles.navIconText}>👤</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.checkLabel}>Assigned Trainer</Text>
+                  {assignedTrainer ? (
+                    <Text style={styles.subText}>
+                      {assignedTrainer.firstName} {assignedTrainer.lastName} · {assignedTrainer.role}
+                    </Text>
+                  ) : (
+                    <Text style={styles.subText}>No trainer assigned yet</Text>
+                  )}
+                </View>
+              </View>
+            </>
+          )}
 
           <TouchableOpacity
             style={styles.checkRow}

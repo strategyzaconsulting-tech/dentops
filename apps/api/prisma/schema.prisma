@@ -24,6 +24,9 @@ model Practice {
   requireSpecialty  Boolean  @default(false) @map("require_specialty")
   defaultPtoDays    Int      @default(15) @map("default_pto_days")
   ptoCustomAllowed  Boolean  @default(false) @map("pto_custom_allowed")
+  payrollPeriod     String?  @map("payroll_period")
+  payrollStartDay   Int?     @map("payroll_start_day")
+  payrollNextDate   DateTime? @map("payroll_next_date") @db.Date
   createdAt         DateTime @default(now()) @map("created_at")
 
   users         User[]

@@ -26,6 +26,9 @@ export default async function practiceRoutes(server: FastifyInstance) {
       requireSpecialty?: boolean
       defaultPtoDays?: number
       ptoCustomAllowed?: boolean
+      payrollPeriod?: string | null
+      payrollStartDay?: number | null
+      payrollNextDate?: string | null
     }
   }>(
     '/practice/:id',
@@ -35,6 +38,7 @@ export default async function practiceRoutes(server: FastifyInstance) {
         name, type, logoUrl, brandColor,
         phone, email, address, city, state, zip, website,
         requireSpecialty, defaultPtoDays, ptoCustomAllowed,
+        payrollPeriod, payrollStartDay, payrollNextDate,
       } = request.body
       const practice = await prisma.practice.update({
         where: { id },
@@ -53,6 +57,9 @@ export default async function practiceRoutes(server: FastifyInstance) {
           ...(requireSpecialty !== undefined && { requireSpecialty }),
           ...(defaultPtoDays !== undefined && { defaultPtoDays }),
           ...(ptoCustomAllowed !== undefined && { ptoCustomAllowed }),
+          ...(payrollPeriod !== undefined && { payrollPeriod: payrollPeriod ?? null }),
+          ...(payrollStartDay !== undefined && { payrollStartDay: payrollStartDay ?? null }),
+          ...(payrollNextDate !== undefined && { payrollNextDate: payrollNextDate ? new Date(payrollNextDate) : null }),
         },
       })
       return reply.send(practice)
