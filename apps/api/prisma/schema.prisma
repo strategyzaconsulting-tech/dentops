@@ -14,6 +14,13 @@ model Practice {
   logoUrl    String?  @map("logo_url")
   brandColor String?  @map("brand_color")
   type              String?
+  phone             String?
+  email             String?
+  address           String?
+  city              String?
+  state             String?
+  zip               String?
+  website           String?
   requireSpecialty  Boolean  @default(false) @map("require_specialty")
   defaultPtoDays    Int      @default(15) @map("default_pto_days")
   ptoCustomAllowed  Boolean  @default(false) @map("pto_custom_allowed")

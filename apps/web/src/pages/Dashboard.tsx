@@ -223,6 +223,33 @@ function PayrollIllustration() {
   )
 }
 
+function PracticeProfileIllustration() {
+  return (
+    <svg width="88" height="72" viewBox="0 0 88 72" fill="none">
+      {/* Building */}
+      <rect x="16" y="22" width="56" height="46" rx="5" fill="#F0FDF9" stroke="#6EE7B7" strokeWidth="2" />
+      <rect x="16" y="22" width="56" height="14" rx="5" fill="#1D9E75" />
+      <rect x="16" y="29" width="56" height="7" fill="#1D9E75" />
+      {/* Windows */}
+      {[0,1,2].map(i => (
+        <rect key={i} x={24 + i * 18} y={44} width="12" height="10" rx="2" fill="#A7F3D0" />
+      ))}
+      {/* Door */}
+      <rect x="37" y="52" width="14" height="16" rx="2" fill="#6EE7B7" />
+      <circle cx="48" cy="60" r="1.5" fill="#1D9E75" />
+      {/* Gear/settings icon top-right */}
+      <circle cx="70" cy="16" r="10" fill="#D1FAE5" />
+      <circle cx="70" cy="16" r="5" fill="white" stroke="#1D9E75" strokeWidth="1.5" />
+      {[0,45,90,135,180,225,270,315].map((deg) => {
+        const rad = deg * Math.PI / 180
+        const x1 = 70 + 6 * Math.cos(rad), y1 = 16 + 6 * Math.sin(rad)
+        const x2 = 70 + 8.5 * Math.cos(rad), y2 = 16 + 8.5 * Math.sin(rad)
+        return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#1D9E75" strokeWidth="2" strokeLinecap="round" />
+      })}
+    </svg>
+  )
+}
+
 function ComplianceIllustration() {
   return (
     <svg width="88" height="72" viewBox="0 0 88 72" fill="none">
@@ -317,6 +344,16 @@ const MODULES = [
     bg: '#EEF2FF',
     border: '#C7D2FE',
     illustration: <OnboardingIllustration />,
+    active: true,
+  },
+  {
+    href: '/practice-profile',
+    title: 'Practice Profile',
+    desc: 'Company details, branding & HR settings',
+    accent: '#1D9E75',
+    bg: '#F0FDF9',
+    border: '#A7F3D0',
+    illustration: <PracticeProfileIllustration />,
     active: true,
   },
   {

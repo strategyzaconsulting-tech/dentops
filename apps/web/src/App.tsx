@@ -19,6 +19,7 @@ import Schedules from './pages/Schedules'
 import OpenShifts from './pages/OpenShifts'
 import Announcements from './pages/Announcements'
 import Onboarding from './pages/Onboarding'
+import PracticeProfile from './pages/PracticeProfile'
 import Login from './pages/Login'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/open-shifts" element={<RequireAuth><OpenShifts /></RequireAuth>} />
           <Route path="/announcements" element={<RequireAuth><Announcements /></RequireAuth>} />
           <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
+          <Route path="/practice-profile" element={<RequireAuth><PracticeProfile /></RequireAuth>} />
 
           <Route
             path="/setup"
