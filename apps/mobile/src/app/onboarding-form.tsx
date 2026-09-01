@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
+import { useAuth } from '../lib/AuthContext'
+import { apiFetch } from '../lib/api'
 
 function formatDob(raw: string): string {
   const digits = raw.replace(/\D/g, '').slice(0, 8)
@@ -27,9 +29,6 @@ const PDF_URLS: Partial<Record<FormType, string>> = {
 }
 const REQUIRES_SIGNATURE: FormType[] = ['i9', 'w4']
 
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.139:3000'
 
 type FormType = 'i9' | 'w4' | 'personal-info' | 'emergency-contact' | 'direct-deposit'
 
@@ -413,6 +412,7 @@ function DirectDepositForm({ data, onChange }: { data: Record<string, string>; o
 // â”€â”€â”€ Main Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function OnboardingFormScreen() {
+  const { user } = useAuth()
   const { type } = useLocalSearchParams<{ type: FormType }>()
   const formType = (type as FormType) ?? 'i9'
 
@@ -430,13 +430,14 @@ export default function OnboardingFormScreen() {
   useFocusEffect(
     useCallback(() => {
       loadExisting()
-    }, [formType])
+    }, [formType, user])
   )
 
   async function loadExisting() {
+    if (!user) return
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/onboarding?practiceId=${PRACTICE_ID}&userId=${USER_ID}`)
+      const res = await apiFetch(`/api/onboarding?practiceId=${user.practiceId}&userId=${user.id}`)
       const data = await res.json()
       const fieldMap: Record<FormType, string> = {
         'i9': 'i9Data',
@@ -478,8 +479,8 @@ export default function OnboardingFormScreen() {
       const payload = needsSignature
         ? { ...formData, signatureName: signatureName.trim(), signatureDate: new Date().toISOString() }
         : formData
-      const res = await fetch(
-        `${API_BASE}/api/onboarding/forms?practiceId=${PRACTICE_ID}&userId=${USER_ID}`,
+      const res = await apiFetch(
+        `/api/onboarding/forms?practiceId=${user!.practiceId}&userId=${user!.id}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },

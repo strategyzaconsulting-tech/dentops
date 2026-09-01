@@ -9,9 +9,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFocusEffect } from 'expo-router'
 import BottomNav from '../components/BottomNav'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const API_BASE = 'http://192.168.0.139:3000'
+import { useAuth } from '../lib/AuthContext'
+import { apiFetch } from '../lib/api'
 
 interface StaffMember {
   id: string
@@ -47,19 +46,21 @@ function avatarColor(str: string) {
 }
 
 export default function TeamDirectoryScreen() {
+  const { user } = useAuth()
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
 
   useFocusEffect(
     useCallback(() => {
-      fetch(`${API_BASE}/api/staff?practiceId=${PRACTICE_ID}`)
+      if (!user) return
+      apiFetch(`/api/staff?practiceId=${user.practiceId}`)
         .then((r) => r.json())
         .then((data) => {
           if (Array.isArray(data)) setStaff(data)
         })
         .catch(() => {})
         .finally(() => setLoading(false))
-    }, [])
+    }, [user])
   )
 
   const leadership = staff.filter((s) => isLeadership(s.role))

@@ -11,10 +11,8 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { markModuleSeen } from '../store/navBadgeStore'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.139:3000'
+import { useAuth } from '../lib/AuthContext'
+import { apiFetch } from '../lib/api'
 
 const CLAIM_STATUS_COLORS: Record<string, string> = {
   pending: '#D97706',
@@ -58,6 +56,7 @@ function formatTime12h(t: string): string {
 }
 
 export default function OpenShiftsScreen() {
+  const { user } = useAuth()
   const [shifts, setShifts] = useState<OpenShift[]>([])
   const [myClaims, setMyClaims] = useState<MyClaim[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,14 +66,15 @@ export default function OpenShiftsScreen() {
 
   useEffect(() => {
     load()
-  }, [])
+  }, [user])
 
   async function load() {
+    if (!user) return
     setLoading(true)
     try {
       const [sRes, cRes] = await Promise.all([
-        fetch(`${API_BASE}/api/open-shifts?practiceId=${PRACTICE_ID}&status=open`),
-        fetch(`${API_BASE}/api/open-shifts/claims?practiceId=${PRACTICE_ID}&userId=${USER_ID}`),
+        apiFetch(`/api/open-shifts?practiceId=${user.practiceId}&status=open`),
+        apiFetch(`/api/open-shifts/claims?practiceId=${user.practiceId}&userId=${user.id}`),
       ])
       const [sData, cData] = await Promise.all([sRes.json(), cRes.json()])
       if (Array.isArray(sData)) setShifts(sData)
@@ -87,12 +87,13 @@ export default function OpenShiftsScreen() {
   }
 
   async function claimShift(shiftId: string) {
+    if (!user) return
     setClaimingId(shiftId)
     try {
-      const res = await fetch(`${API_BASE}/api/open-shifts/${shiftId}/claim`, {
+      const res = await apiFetch(`/api/open-shifts/${shiftId}/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ practiceId: PRACTICE_ID, userId: USER_ID }),
+        body: JSON.stringify({ practiceId: user.practiceId, userId: user.id }),
       })
       if (res.ok) {
         Alert.alert('Claimed!', 'Your request has been sent to your manager for approval.')

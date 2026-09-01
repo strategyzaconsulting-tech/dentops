@@ -11,10 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import BottomNav from '../components/BottomNav'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.139:3000'
+import { useAuth } from '../lib/AuthContext'
+import { apiFetch } from '../lib/api'
 
 interface OfficeManual {
   id: string
@@ -40,6 +38,7 @@ function fmtDate(iso: string) {
 }
 
 export default function OfficeManualScreen() {
+  const { user } = useAuth()
   const [manual, setManual] = useState<OfficeManual | null>(null)
   const [loading, setLoading] = useState(true)
   const [signing, setSigning] = useState(false)
@@ -47,14 +46,15 @@ export default function OfficeManualScreen() {
   useFocusEffect(
     useCallback(() => {
       loadManual()
-    }, [])
+    }, [user])
   )
 
   async function loadManual() {
+    if (!user) return
     setLoading(true)
     try {
-      const res = await fetch(
-        `${API_BASE}/api/office-manual?practiceId=${PRACTICE_ID}&userId=${USER_ID}`
+      const res = await apiFetch(
+        `/api/office-manual?practiceId=${user.practiceId}&userId=${user.id}`
       )
       if (res.ok) {
         const data = await res.json()
@@ -69,12 +69,13 @@ export default function OfficeManualScreen() {
   }
 
   async function handleSign() {
+    if (!user) return
     setSigning(true)
     try {
-      const res = await fetch(`${API_BASE}/api/office-manual/sign`, {
+      const res = await apiFetch(`/api/office-manual/sign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ practiceId: PRACTICE_ID, userId: USER_ID }),
+        body: JSON.stringify({ practiceId: user.practiceId, userId: user.id }),
       })
       if (res.ok) {
         await loadManual()
@@ -89,7 +90,7 @@ export default function OfficeManualScreen() {
     }
   }
 
-  const mySig = manual?.signatures.find((s) => s.userId === USER_ID)
+  const mySig = manual?.signatures.find((s) => s.userId === user?.id)
 
   return (
     <View style={styles.root}>

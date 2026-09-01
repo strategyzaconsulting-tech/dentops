@@ -9,10 +9,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFocusEffect } from 'expo-router'
 import BottomNav from '../components/BottomNav'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.139:3000'
+import { useAuth } from '../lib/AuthContext'
+import { apiFetch } from '../lib/api'
 
 interface TrainingSession {
   id: string
@@ -35,20 +33,22 @@ function fmtDateTime(iso: string) {
 }
 
 export default function TrainingScreen() {
+  const { user } = useAuth()
   const [sessions, setSessions] = useState<TrainingSession[]>([])
   const [loading, setLoading] = useState(true)
 
   useFocusEffect(
     useCallback(() => {
       loadSessions()
-    }, [])
+    }, [user])
   )
 
   async function loadSessions() {
+    if (!user) return
     setLoading(true)
     try {
-      const res = await fetch(
-        `${API_BASE}/api/training?practiceId=${PRACTICE_ID}&userId=${USER_ID}`
+      const res = await apiFetch(
+        `/api/training?practiceId=${user.practiceId}&userId=${user.id}`
       )
       if (res.ok) {
         const data = await res.json()

@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
+import { useAuth } from '../context/AuthContext'
 
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -162,6 +162,7 @@ interface Props {
 }
 
 export default function StaffOnboardingTab({ userId, firstName }: Props) {
+  const { user } = useAuth()
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -184,7 +185,7 @@ export default function StaffOnboardingTab({ userId, firstName }: Props) {
   async function load() {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/onboarding?practiceId=${PRACTICE_ID}&userId=${userId}`)
+      const res = await fetch(`${API_BASE}/api/onboarding?practiceId=${user!.practiceId}&userId=${userId}`)
       const data = await res.json()
       if (data?.id) setChecklist(data)
     } catch { /* silent */ }
@@ -201,7 +202,7 @@ export default function StaffOnboardingTab({ userId, firstName }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          practiceId: PRACTICE_ID, userId,
+          practiceId: user!.practiceId, userId,
           name: equipForm.name.trim(),
           serialNumber: equipForm.serial.trim() || undefined,
           notes: equipForm.notes.trim() || undefined,
@@ -246,7 +247,7 @@ export default function StaffOnboardingTab({ userId, firstName }: Props) {
         payload.listB = { title: sec2Form.listBTitle, authority: sec2Form.listBAuthority, number: sec2Form.listBNumber, expiry: sec2Form.listBExpiry }
         payload.listC = { title: sec2Form.listCTitle, authority: sec2Form.listCAuthority, number: sec2Form.listCNumber, expiry: sec2Form.listCExpiry }
       }
-      const res = await fetch(`${API_BASE}/api/onboarding/i9-section2?practiceId=${PRACTICE_ID}&userId=${userId}`, {
+      const res = await fetch(`${API_BASE}/api/onboarding/i9-section2?practiceId=${user!.practiceId}&userId=${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

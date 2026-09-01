@@ -10,10 +10,8 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { markModuleSeen } from '../store/navBadgeStore'
-
-const PRACTICE_ID = 'd3f9ec81-7070-4be1-aa6d-fa45b72f2357'
-const USER_ID = '165234da-d643-41e8-8ec8-6e400d18a1d2'
-const API_BASE = 'http://192.168.0.139:3000'
+import { useAuth } from '../lib/AuthContext'
+import { apiFetch } from '../lib/api'
 
 interface Benefit {
   id: string
@@ -33,13 +31,15 @@ function getBenefitIcon(name: string) {
 }
 
 export default function BenefitsScreen() {
+  const { user } = useAuth()
   const [benefits, setBenefits] = useState<Benefit[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
   async function fetchBenefits() {
+    if (!user) return
     try {
-      const res = await fetch(`${API_BASE}/api/benefits/user?practiceId=${PRACTICE_ID}&userId=${USER_ID}`)
+      const res = await apiFetch(`/api/benefits/user?practiceId=${user.practiceId}&userId=${user.id}`)
       const data: Benefit[] = await res.json()
       if (Array.isArray(data)) setBenefits(data)
     } catch { /* silent */ }

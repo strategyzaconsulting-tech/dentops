@@ -627,7 +627,7 @@ export default function HomeScreen() {
           )}
 
           <TouchableOpacity
-            style={styles.clockInBtn}
+            style={[styles.clockInBtn, styles.clockInBtnIdle]}
             onPress={() => { setSelectedLocation(null); setSelectedSpecialty(null); setShowLocationDropdown(false); setShowSpecialtyDropdown(false); setShowClockInModal(true) }}
           >
             <Text style={styles.clockInBtnText}>CLOCK IN</Text>
@@ -865,6 +865,7 @@ const styles = StyleSheet.create({
 
   // Clock in button
   clockInBtn: { backgroundColor: '#1D9E75', borderRadius: 10, paddingVertical: 18, marginHorizontal: 90, alignItems: 'center' },
+  clockInBtnIdle: { marginTop: 48 },
   clockInBtnDisabled: { backgroundColor: '#5A6B61' },
   clockInBtnText: { color: '#fff', fontSize: 13, fontWeight: '500', letterSpacing: 5 },
 
