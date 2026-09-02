@@ -54,6 +54,21 @@ interface Benefit {
   notes: string | null
 }
 
+const BENEFIT_ICONS: Record<string, string> = {
+  'Health Insurance': '🏥',
+  'Dental Plan': '🦷',
+  'Vision Plan': '👁️',
+  'Retirement Plan (401k)': '💰',
+  'Retirement Plan': '💰',
+  'PTO': '🏖️',
+  'Commuter Benefits': '🚇',
+  'Life Insurance': '🛡️',
+}
+
+function getBenefitIcon(name: string) {
+  return BENEFIT_ICONS[name] ?? '✅'
+}
+
 
 export default function OnboardingScreen() {
   const { user } = useAuth()
@@ -312,7 +327,7 @@ export default function OnboardingScreen() {
               return (
                 <View key={b.id} style={[styles.benefitSection, idx < benefits.length - 1 && styles.checkRowBorder]}>
                   <View style={styles.checkRow}>
-                    <View style={styles.navIcon}><Text style={styles.navIconText}>✅</Text></View>
+                    <View style={styles.navIcon}><Text style={styles.navIconText}>{getBenefitIcon(b.name)}</Text></View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.checkLabel}>{b.name}</Text>
                       {b.providerName ? <Text style={styles.subText}>{b.providerName}</Text> : null}

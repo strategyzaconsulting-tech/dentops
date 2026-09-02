@@ -205,7 +205,9 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
   const [reportData, setReportData] = useState<unknown>(null)
   const [generatingReport, setGeneratingReport] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'pto' | 'licenses' | 'onboarding'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'pto' | 'licenses' | 'onboarding' | 'benefits'>('overview')
+  const [staffBenefits, setStaffBenefits] = useState<{ id: string; name: string; enabled: boolean; providerName: string | null }[]>([])
+  const [togglingBenefitId, setTogglingBenefitId] = useState<string | null>(null)
   const [ptoSummary, setPtoSummary] = useState<PtoSummary | null>(null)
   const [loadingPto, setLoadingPto] = useState(false)
   const [ptoYear, setPtoYear] = useState(new Date().getFullYear())
@@ -253,6 +255,27 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
       .catch(() => {})
       .finally(() => setLoadingPto(false))
   }, [member.id, activeTab, ptoYear])
+
+  useEffect(() => {
+    if (activeTab !== 'benefits') return
+    apiFetch(`/api/benefits/user?practiceId=${PRACTICE_ID}&userId=${member.id}`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setStaffBenefits(data) })
+      .catch(() => {})
+  }, [member.id, activeTab])
+
+  async function toggleBenefit(benefitId: string, enabled: boolean) {
+    setTogglingBenefitId(benefitId)
+    try {
+      await apiFetch('/api/benefits/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ practiceId: PRACTICE_ID, userId: member.id, benefitId, enabled }),
+      })
+      setStaffBenefits(prev => prev.map(b => b.id === benefitId ? { ...b, enabled } : b))
+    } catch { /* silent */ }
+    finally { setTogglingBenefitId(null) }
+  }
 
   const inRange = occurrences.filter(o => {
     const d = new Date(o.date)
@@ -521,10 +544,11 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
             { key: 'pto',        label: 'PTO'        },
             { key: 'licenses',   label: 'Licenses'   },
             { key: 'onboarding', label: 'Onboarding' },
+            { key: 'benefits',   label: 'Benefits'   },
           ].map(tab => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key as 'overview' | 'pto' | 'licenses' | 'onboarding')}
+              onClick={() => setActiveTab(tab.key as 'overview' | 'pto' | 'licenses' | 'onboarding' | 'benefits')}
               className={`px-4 py-3 text-sm font-semibold border-b-2 -mb-px transition-colors ${
                 activeTab === tab.key
                   ? 'border-[#1D9E75] text-[#1D9E75]'
@@ -845,6 +869,52 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
                 userId={member.id}
                 firstName={member.firstName}
               />
+            </div>
+          )}
+
+          {/* Benefits enrollment tab */}
+          {activeTab === 'benefits' && (
+            <div className="px-6 py-5">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Benefits Enrollment</h3>
+              <p className="text-xs text-gray-400 mb-5">Toggle which benefit plans this employee is enrolled in. Only active benefits will appear in the staff app.</p>
+              {staffBenefits.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-10">Loading…</p>
+              ) : (
+                <div className="space-y-2">
+                  {staffBenefits.map(b => {
+                    const isToggling = togglingBenefitId === b.id
+                    return (
+                      <div
+                        key={b.id}
+                        className={`flex items-center justify-between rounded-xl border px-4 py-3.5 transition-colors ${
+                          b.enabled ? 'border-[#1D9E75] bg-[#F0FAF6]' : 'border-gray-200 bg-white'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <p className={`text-sm font-semibold ${b.enabled ? 'text-[#085041]' : 'text-gray-700'}`}>{b.name}</p>
+                          {b.providerName && (
+                            <p className="text-xs text-gray-400 mt-0.5">{b.providerName}</p>
+                          )}
+                        </div>
+                        <button
+                          disabled={isToggling}
+                          onClick={() => toggleBenefit(b.id, !b.enabled)}
+                          className={`relative ml-4 h-6 w-11 flex-shrink-0 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-60 ${
+                            b.enabled ? 'bg-[#1D9E75]' : 'bg-gray-200'
+                          }`}
+                          aria-label={b.enabled ? 'Disable benefit' : 'Enable benefit'}
+                        >
+                          <span
+                            className={`inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform duration-200 ${
+                              b.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 
