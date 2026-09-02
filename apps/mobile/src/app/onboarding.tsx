@@ -1,6 +1,7 @@
 ﻿import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
+  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -42,6 +43,17 @@ interface TrainingSession {
   trainer: { id: string; firstName: string; lastName: string; role: string } | null
 }
 
+interface Benefit {
+  id: string
+  name: string
+  enabled: boolean
+  providerName: string | null
+  phone: string | null
+  email: string | null
+  website: string | null
+  notes: string | null
+}
+
 
 export default function OnboardingScreen() {
   const { user } = useAuth()
@@ -50,6 +62,7 @@ export default function OnboardingScreen() {
 
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [training, setTraining] = useState<TrainingSession[]>([])
+  const [benefits, setBenefits] = useState<Benefit[]>([])
   const [loading, setLoading] = useState(true)
   const [w4ReviewRequired, setW4ReviewRequired] = useState(false)
   const [completingReview, setCompletingReview] = useState(false)
@@ -64,15 +77,19 @@ export default function OnboardingScreen() {
     setLoading(true)
     try {
       const year = new Date().getFullYear()
-      const [cl, tr, rev] = await Promise.allSettled([
+      const [cl, tr, rev, ben] = await Promise.allSettled([
         apiFetch(`/api/onboarding?practiceId=${practiceId}&userId=${userId}`).then((r) => r.json()),
         apiFetch(`/api/training?practiceId=${practiceId}&userId=${userId}`).then((r) => r.json()),
         apiFetch(`/api/w4-review/status?practiceId=${practiceId}&userId=${userId}&year=${year}`).then((r) => r.json()),
+        apiFetch(`/api/benefits/user?practiceId=${practiceId}&userId=${userId}`).then((r) => r.json()),
       ])
       if (cl.status === 'fulfilled' && cl.value?.id) setChecklist(cl.value)
       if (tr.status === 'fulfilled' && Array.isArray(tr.value)) setTraining(tr.value)
       if (rev.status === 'fulfilled' && rev.value?.required && !rev.value?.completed) {
         setW4ReviewRequired(true)
+      }
+      if (ben.status === 'fulfilled' && Array.isArray(ben.value)) {
+        setBenefits(ben.value.filter((b: Benefit) => b.enabled))
       }
     } catch { /* no-op */ }
     setLoading(false)
@@ -278,6 +295,55 @@ export default function OnboardingScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Section D — Benefits */}
+        <Text style={styles.sectionTitle}>Section D — Benefits</Text>
+        <View style={styles.card}>
+          {benefits.length === 0 ? (
+            <View style={[styles.checkRow]}>
+              <View style={styles.navIcon}><Text style={styles.navIconText}>🎁</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.checkLabel}>No active benefits yet</Text>
+                <Text style={styles.subText}>Contact your manager after your probationary period.</Text>
+              </View>
+            </View>
+          ) : (
+            benefits.map((b, idx) => {
+              const hasContact = !!(b.phone || b.email || b.website)
+              return (
+                <View key={b.id} style={[styles.benefitSection, idx < benefits.length - 1 && styles.checkRowBorder]}>
+                  <View style={styles.checkRow}>
+                    <View style={styles.navIcon}><Text style={styles.navIconText}>✅</Text></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.checkLabel}>{b.name}</Text>
+                      {b.providerName ? <Text style={styles.subText}>{b.providerName}</Text> : null}
+                    </View>
+                  </View>
+                  {hasContact && (
+                    <View style={styles.contactRow}>
+                      {b.phone && (
+                        <TouchableOpacity onPress={() => Linking.openURL(`tel:${b.phone}`)} style={styles.contactChip}>
+                          <Text style={styles.contactChipText}>📞 {b.phone}</Text>
+                        </TouchableOpacity>
+                      )}
+                      {b.email && (
+                        <TouchableOpacity onPress={() => Linking.openURL(`mailto:${b.email}`)} style={styles.contactChip}>
+                          <Text style={styles.contactChipText}>✉️ {b.email}</Text>
+                        </TouchableOpacity>
+                      )}
+                      {b.website && (
+                        <TouchableOpacity onPress={() => Linking.openURL(b.website!)} style={styles.contactChip}>
+                          <Text style={[styles.contactChipText, { color: '#1D9E75' }]}>🌐 Member Portal</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+                  {b.notes ? <Text style={styles.benefitNotes}>{b.notes}</Text> : null}
+                </View>
+              )
+            })
+          )}
+        </View>
+
         <View style={{ height: 32 }} />
       </ScrollView>
 
@@ -390,6 +456,14 @@ const styles = StyleSheet.create({
   subText: { fontSize: 12, color: '#888', marginTop: 2 },
   equipItem: { fontSize: 12, color: '#555', marginTop: 3 },
   equipEmpty: { fontSize: 12, color: '#999', fontStyle: 'italic', marginTop: 2 },
+  benefitSection: { paddingBottom: 4 },
+  contactRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingBottom: 12 },
+  contactChip: {
+    backgroundColor: '#F0FAF6', borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  contactChipText: { fontSize: 12, color: '#2C2C2A', fontWeight: '500' },
+  benefitNotes: { fontSize: 12, color: '#777', paddingHorizontal: 16, paddingBottom: 12, lineHeight: 18 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
