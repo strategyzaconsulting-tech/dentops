@@ -117,6 +117,7 @@ interface LicenseDoc {
 interface Props {
   userId: string
   role?: string
+  onUpdated?: () => void
 }
 
 function fmtBytes(bytes: number): string {
@@ -125,7 +126,7 @@ function fmtBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export default function LicenseVaultTab({ userId, role }: Props) {
+export default function LicenseVaultTab({ userId, role, onUpdated }: Props) {
   const isDoctor = role === 'doctor'
   const [licenses, setLicenses] = useState<License[]>([])
   const [loading, setLoading] = useState(true)
@@ -256,6 +257,7 @@ export default function LicenseVaultTab({ userId, role }: Props) {
     setSaving(false)
     setModal(null)
     await load()
+    onUpdated?.()
   }
 
   async function handleDelete(id: string) {
@@ -264,6 +266,7 @@ export default function LicenseVaultTab({ userId, role }: Props) {
     setDeletingId(null)
     setConfirmDeleteId(null)
     await load()
+    onUpdated?.()
   }
 
   const selectedType = LICENSE_TYPES.find(t => t.key === form.type)

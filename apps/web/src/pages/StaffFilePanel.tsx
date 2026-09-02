@@ -835,7 +835,7 @@ export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: P
 
           {/* Licenses tab */}
           {activeTab === 'licenses' && (
-            <LicenseVaultTab userId={member.id} role={member.role} />
+            <LicenseVaultTab userId={member.id} role={member.role} onUpdated={onUpdated} />
           )}
 
           {/* Onboarding tab */}

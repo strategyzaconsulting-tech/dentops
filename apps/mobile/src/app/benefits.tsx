@@ -1,11 +1,13 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import BottomNav from '../components/BottomNav'
 import {
   ActivityIndicator,
+  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -18,12 +20,22 @@ interface Benefit {
   name: string
   isDefault: boolean
   enabled: boolean
+  providerName: string | null
+  phone: string | null
+  email: string | null
+  website: string | null
+  notes: string | null
 }
 
 const BENEFIT_ICONS: Record<string, string> = {
-  'PTO': '🏖️',
   'Health Insurance': '🏥',
+  'Dental Plan': '🦷',
+  'Vision Plan': '👁️',
+  'Retirement Plan (401k)': '💰',
   'Retirement Plan': '💰',
+  'PTO': '🏖️',
+  'Commuter Benefits': '🚇',
+  'Life Insurance': '🛡️',
 }
 
 function getBenefitIcon(name: string) {
@@ -35,6 +47,7 @@ export default function BenefitsScreen() {
   const [benefits, setBenefits] = useState<Benefit[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   async function fetchBenefits() {
     if (!user) return
@@ -85,18 +98,78 @@ export default function BenefitsScreen() {
               <Text style={styles.emptySubtext}>Contact your manager after your probationary period.</Text>
             </View>
           ) : (
-            active.map((b) => (
-              <View key={b.id} style={styles.benefitCard}>
-                <View style={styles.benefitIcon}>
-                  <Text style={styles.benefitIconText}>{getBenefitIcon(b.name)}</Text>
+            active.map((b) => {
+              const isOpen = expandedId === b.id
+              const hasDetails = !!(b.providerName || b.phone || b.email || b.website || b.notes)
+              return (
+                <View key={b.id} style={styles.benefitCard}>
+                  <TouchableOpacity
+                    activeOpacity={hasDetails ? 0.7 : 1}
+                    onPress={() => hasDetails && setExpandedId(isOpen ? null : b.id)}
+                    style={styles.benefitRow}
+                  >
+                    <View style={styles.benefitIcon}>
+                      <Text style={styles.benefitIconText}>{getBenefitIcon(b.name)}</Text>
+                    </View>
+                    <View style={styles.benefitInfo}>
+                      <Text style={styles.benefitName}>{b.name}</Text>
+                      {b.providerName ? (
+                        <Text style={styles.providerName}>{b.providerName}</Text>
+                      ) : (
+                        <Text style={styles.benefitStatus}>Active</Text>
+                      )}
+                    </View>
+                    <View style={styles.rightCol}>
+                      <View style={styles.activeDot} />
+                      {hasDetails && (
+                        <Text style={styles.chevron}>{isOpen ? '▲' : '▼'}</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+
+                  {isOpen && (
+                    <View style={styles.detailsPanel}>
+                      {b.phone && (
+                        <TouchableOpacity onPress={() => Linking.openURL(`tel:${b.phone}`)} style={styles.detailRow}>
+                          <Text style={styles.detailIcon}>📞</Text>
+                          <View style={styles.detailText}>
+                            <Text style={styles.detailLabel}>Support Phone</Text>
+                            <Text style={styles.detailValue}>{b.phone}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
+                      {b.email && (
+                        <TouchableOpacity onPress={() => Linking.openURL(`mailto:${b.email}`)} style={styles.detailRow}>
+                          <Text style={styles.detailIcon}>✉️</Text>
+                          <View style={styles.detailText}>
+                            <Text style={styles.detailLabel}>Support Email</Text>
+                            <Text style={styles.detailValue}>{b.email}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
+                      {b.website && (
+                        <TouchableOpacity onPress={() => Linking.openURL(b.website!)} style={styles.detailRow}>
+                          <Text style={styles.detailIcon}>🌐</Text>
+                          <View style={styles.detailText}>
+                            <Text style={styles.detailLabel}>Member Portal</Text>
+                            <Text style={[styles.detailValue, styles.linkText]} numberOfLines={1}>{b.website}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
+                      {b.notes && (
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailIcon}>📋</Text>
+                          <View style={styles.detailText}>
+                            <Text style={styles.detailLabel}>Notes</Text>
+                            <Text style={styles.detailValue}>{b.notes}</Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  )}
                 </View>
-                <View style={styles.benefitInfo}>
-                  <Text style={styles.benefitName}>{b.name}</Text>
-                  <Text style={styles.benefitStatus}>Active</Text>
-                </View>
-                <View style={styles.activeDot} />
-              </View>
-            ))
+              )
+            })
           )}
 
           {/* Inactive benefits */}
@@ -105,12 +178,14 @@ export default function BenefitsScreen() {
               <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Not Yet Active</Text>
               {inactive.map((b) => (
                 <View key={b.id} style={[styles.benefitCard, styles.benefitCardInactive]}>
-                  <View style={[styles.benefitIcon, styles.benefitIconInactive]}>
-                    <Text style={styles.benefitIconText}>{getBenefitIcon(b.name)}</Text>
-                  </View>
-                  <View style={styles.benefitInfo}>
-                    <Text style={[styles.benefitName, styles.benefitNameInactive]}>{b.name}</Text>
-                    <Text style={styles.benefitStatusInactive}>Pending eligibility</Text>
+                  <View style={styles.benefitRow}>
+                    <View style={[styles.benefitIcon, styles.benefitIconInactive]}>
+                      <Text style={styles.benefitIconText}>{getBenefitIcon(b.name)}</Text>
+                    </View>
+                    <View style={styles.benefitInfo}>
+                      <Text style={[styles.benefitName, styles.benefitNameInactive]}>{b.name}</Text>
+                      <Text style={styles.benefitStatusInactive}>Pending eligibility</Text>
+                    </View>
                   </View>
                 </View>
               ))}
@@ -146,11 +221,15 @@ const styles = StyleSheet.create({
   emptySubtext: { fontSize: 12, color: '#aaa', textAlign: 'center' },
   benefitCard: {
     backgroundColor: '#fff', borderRadius: 12,
-    flexDirection: 'row', alignItems: 'center',
-    padding: 14, marginBottom: 10,
+    marginBottom: 10,
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+    overflow: 'hidden',
   },
   benefitCardInactive: { opacity: 0.55 },
+  benefitRow: {
+    flexDirection: 'row', alignItems: 'center',
+    padding: 14,
+  },
   benefitIcon: {
     width: 44, height: 44, borderRadius: 12,
     backgroundColor: '#E8F5F0', alignItems: 'center', justifyContent: 'center',
@@ -161,9 +240,26 @@ const styles = StyleSheet.create({
   benefitInfo: { flex: 1 },
   benefitName: { fontSize: 15, fontWeight: '700', color: '#2C2C2A' },
   benefitNameInactive: { color: '#888' },
+  providerName: { fontSize: 12, color: '#666', fontWeight: '500', marginTop: 2 },
   benefitStatus: { fontSize: 12, color: '#1D9E75', fontWeight: '600', marginTop: 2 },
   benefitStatusInactive: { fontSize: 12, color: '#aaa', marginTop: 2 },
-  activeDot: {
-    width: 8, height: 8, borderRadius: 4, backgroundColor: '#1D9E75',
+  rightCol: { alignItems: 'center', gap: 4 },
+  activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#1D9E75' },
+  chevron: { fontSize: 9, color: '#aaa', marginTop: 4 },
+
+  // Details panel
+  detailsPanel: {
+    borderTopWidth: 1, borderTopColor: '#F0EDE5',
+    backgroundColor: '#FAFAF8',
+    paddingHorizontal: 14, paddingVertical: 10,
+    gap: 12,
   },
+  detailRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+  },
+  detailIcon: { fontSize: 18, marginTop: 1 },
+  detailText: { flex: 1 },
+  detailLabel: { fontSize: 10, fontWeight: '700', color: '#999', textTransform: 'uppercase', letterSpacing: 0.4 },
+  detailValue: { fontSize: 13, color: '#2C2C2A', marginTop: 2 },
+  linkText: { color: '#1D9E75' },
 })

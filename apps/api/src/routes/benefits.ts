@@ -2,9 +2,13 @@ import type { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
 
 const DEFAULT_BENEFITS = [
-  { name: 'PTO', isDefault: true, sortOrder: 0 },
-  { name: 'Health Insurance', isDefault: true, sortOrder: 1 },
-  { name: 'Retirement Plan', isDefault: true, sortOrder: 2 },
+  { name: 'Health Insurance', isDefault: true, sortOrder: 0 },
+  { name: 'Dental Plan', isDefault: true, sortOrder: 1 },
+  { name: 'Vision Plan', isDefault: true, sortOrder: 2 },
+  { name: 'Retirement Plan (401k)', isDefault: true, sortOrder: 3 },
+  { name: 'PTO', isDefault: true, sortOrder: 4 },
+  { name: 'Commuter Benefits', isDefault: true, sortOrder: 5 },
+  { name: 'Life Insurance', isDefault: true, sortOrder: 6 },
 ]
 
 export default async function benefitRoutes(server: FastifyInstance) {
@@ -50,6 +54,31 @@ export default async function benefitRoutes(server: FastifyInstance) {
       return reply.status(201).send(benefit)
     }
   )
+
+  // PATCH /api/benefits/:id — update plan contact details
+  server.patch<{
+    Params: { id: string }
+    Body: {
+      name?: string
+      providerName?: string | null
+      phone?: string | null
+      email?: string | null
+      website?: string | null
+      notes?: string | null
+    }
+  }>('/benefits/:id', async (request, reply) => {
+    const { id } = request.params
+    const { name, providerName, phone, email, website, notes } = request.body
+    const data: Record<string, unknown> = {}
+    if (name !== undefined) data.name = name
+    if (providerName !== undefined) data.providerName = providerName || null
+    if (phone !== undefined) data.phone = phone || null
+    if (email !== undefined) data.email = email || null
+    if (website !== undefined) data.website = website || null
+    if (notes !== undefined) data.notes = notes || null
+    const benefit = await prisma.practiceBenefit.update({ where: { id }, data })
+    return reply.send(benefit)
+  })
 
   // DELETE /api/benefits/:id — remove custom benefit (cascades user_benefits)
   server.delete<{ Params: { id: string } }>(

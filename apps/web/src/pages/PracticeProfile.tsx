@@ -75,6 +75,37 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const inputCls = 'w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40 focus:border-[#1D9E75] transition'
 const selectCls = inputCls + ' bg-white'
 
+interface BenefitPlan {
+  id: string
+  name: string
+  isDefault: boolean
+  providerName: string | null
+  phone: string | null
+  email: string | null
+  website: string | null
+  notes: string | null
+}
+
+interface BenefitForm {
+  name: string
+  providerName: string
+  phone: string
+  email: string
+  website: string
+  notes: string
+}
+
+function emptyBenefitForm(b: BenefitPlan): BenefitForm {
+  return {
+    name: b.name,
+    providerName: b.providerName ?? '',
+    phone: b.phone ?? '',
+    email: b.email ?? '',
+    website: b.website ?? '',
+    notes: b.notes ?? '',
+  }
+}
+
 export default function PracticeProfile() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -86,6 +117,25 @@ export default function PracticeProfile() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Benefits Plans state
+  const [benefits, setBenefits] = useState<BenefitPlan[]>([])
+  const [expandedBenefitId, setExpandedBenefitId] = useState<string | null>(null)
+  const [benefitForms, setBenefitForms] = useState<Record<string, BenefitForm>>({})
+  const [benefitSaving, setBenefitSaving] = useState<string | null>(null)
+  const [newBenefitName, setNewBenefitName] = useState('')
+  const [addingBenefit, setAddingBenefit] = useState(false)
+  const [deletingBenefitId, setDeletingBenefitId] = useState<string | null>(null)
+
+  async function loadBenefits() {
+    if (!user) return
+    const res = await apiFetch(`/api/benefits?practiceId=${user.practiceId}`)
+    const data: BenefitPlan[] = await res.json()
+    if (Array.isArray(data)) {
+      setBenefits(data)
+      setBenefitForms(Object.fromEntries(data.map(b => [b.id, emptyBenefitForm(b)])))
+    }
+  }
+
   useEffect(() => {
     if (!user) return
     apiFetch(`/api/practice/${user.practiceId}`)
@@ -93,7 +143,51 @@ export default function PracticeProfile() {
       .then((data) => setForm(data))
       .catch(() => setError('Failed to load practice data.'))
       .finally(() => setLoading(false))
+    loadBenefits()
   }, [user])
+
+  async function saveBenefit(id: string) {
+    const f = benefitForms[id]
+    if (!f) return
+    setBenefitSaving(id)
+    await apiFetch(`/api/benefits/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        name: f.name.trim() || undefined,
+        providerName: f.providerName.trim() || null,
+        phone: f.phone.trim() || null,
+        email: f.email.trim() || null,
+        website: f.website.trim() || null,
+        notes: f.notes.trim() || null,
+      }),
+    })
+    setBenefitSaving(null)
+    await loadBenefits()
+  }
+
+  async function addBenefit() {
+    if (!newBenefitName.trim() || !user) return
+    setAddingBenefit(true)
+    await apiFetch('/api/benefits', {
+      method: 'POST',
+      body: JSON.stringify({ practiceId: user.practiceId, name: newBenefitName.trim() }),
+    })
+    setNewBenefitName('')
+    setAddingBenefit(false)
+    await loadBenefits()
+  }
+
+  async function deleteBenefit(id: string) {
+    setDeletingBenefitId(id)
+    await apiFetch(`/api/benefits/${id}`, { method: 'DELETE' })
+    setDeletingBenefitId(null)
+    setExpandedBenefitId(prev => prev === id ? null : prev)
+    await loadBenefits()
+  }
+
+  function setBenefitField(id: string, key: keyof BenefitForm, value: string) {
+    setBenefitForms(prev => ({ ...prev, [id]: { ...prev[id], [key]: value } }))
+  }
 
   function set<K extends keyof PracticeData>(key: K, value: PracticeData[K]) {
     setForm((f) => f ? { ...f, [key]: value } : f)
@@ -434,6 +528,158 @@ export default function PracticeProfile() {
                 onChange={(v) => set('requireSpecialty', v)}
               />
             </Section>
+
+            {/* Benefits Plans */}
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Benefits Plans</h2>
+                <p className="text-xs text-gray-400">Visible to staff in their profile</p>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {benefits.map(b => {
+                  const f = benefitForms[b.id]
+                  const isOpen = expandedBenefitId === b.id
+                  const isSaving = benefitSaving === b.id
+                  const isDeleting = deletingBenefitId === b.id
+                  const hasDetails = !!(b.providerName || b.phone || b.email || b.website)
+                  return (
+                    <div key={b.id}>
+                      <button
+                        className="w-full flex items-center gap-3 px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+                        onClick={() => setExpandedBenefitId(isOpen ? null : b.id)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800">{b.name}</p>
+                          {hasDetails && (
+                            <p className="text-xs text-gray-400 mt-0.5 truncate">
+                              {[b.providerName, b.phone, b.email].filter(Boolean).join(' · ')}
+                            </p>
+                          )}
+                          {!hasDetails && (
+                            <p className="text-xs text-gray-300 mt-0.5">No provider details added</p>
+                          )}
+                        </div>
+                        <svg
+                          className={`shrink-0 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                          width="16" height="16" viewBox="0 0 16 16" fill="none"
+                        >
+                          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+
+                      {isOpen && f && (
+                        <div className="px-6 pb-5 pt-1 bg-[#FAFAF8] border-t border-gray-100 space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="grid gap-1">
+                              <label className="text-xs font-medium text-gray-500">Plan / Benefit Name</label>
+                              <input
+                                className={inputCls}
+                                value={f.name}
+                                onChange={e => setBenefitField(b.id, 'name', e.target.value)}
+                                placeholder="e.g. Health Insurance"
+                              />
+                            </div>
+                            <div className="grid gap-1">
+                              <label className="text-xs font-medium text-gray-500">Provider / Company Name</label>
+                              <input
+                                className={inputCls}
+                                value={f.providerName}
+                                onChange={e => setBenefitField(b.id, 'providerName', e.target.value)}
+                                placeholder="e.g. Blue Cross Blue Shield"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="grid gap-1">
+                              <label className="text-xs font-medium text-gray-500">Support Phone</label>
+                              <input
+                                className={inputCls}
+                                type="tel"
+                                value={f.phone}
+                                onChange={e => setBenefitField(b.id, 'phone', e.target.value)}
+                                placeholder="(800) 000-0000"
+                              />
+                            </div>
+                            <div className="grid gap-1">
+                              <label className="text-xs font-medium text-gray-500">Support Email</label>
+                              <input
+                                className={inputCls}
+                                type="email"
+                                value={f.email}
+                                onChange={e => setBenefitField(b.id, 'email', e.target.value)}
+                                placeholder="support@provider.com"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid gap-1">
+                            <label className="text-xs font-medium text-gray-500">Website / Portal URL</label>
+                            <input
+                              className={inputCls}
+                              type="url"
+                              value={f.website}
+                              onChange={e => setBenefitField(b.id, 'website', e.target.value)}
+                              placeholder="https://member.provider.com"
+                            />
+                          </div>
+                          <div className="grid gap-1">
+                            <label className="text-xs font-medium text-gray-500">Notes</label>
+                            <textarea
+                              className={inputCls + ' resize-none'}
+                              rows={2}
+                              value={f.notes}
+                              onChange={e => setBenefitField(b.id, 'notes', e.target.value)}
+                              placeholder="Group number, plan name, enrollment instructions…"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              onClick={() => saveBenefit(b.id)}
+                              disabled={isSaving}
+                              className="rounded-lg bg-[#1D9E75] px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                            >
+                              {isSaving ? 'Saving…' : 'Save'}
+                            </button>
+                            <button
+                              onClick={() => setExpandedBenefitId(null)}
+                              className="rounded-lg border border-gray-200 px-4 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+                            >
+                              Cancel
+                            </button>
+                            {!b.isDefault && (
+                              <button
+                                onClick={() => deleteBenefit(b.id)}
+                                disabled={isDeleting}
+                                className="ml-auto rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
+                              >
+                                {isDeleting ? 'Removing…' : 'Remove'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Add new benefit */}
+                <div className="px-6 py-4 flex items-center gap-3">
+                  <input
+                    className={inputCls + ' flex-1'}
+                    placeholder="Add benefit (e.g. Commuter Benefits, Dental Plan, Vision…)"
+                    value={newBenefitName}
+                    onChange={e => setNewBenefitName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') addBenefit() }}
+                  />
+                  <button
+                    onClick={addBenefit}
+                    disabled={!newBenefitName.trim() || addingBenefit}
+                    className="shrink-0 rounded-lg bg-[#1D9E75] px-4 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-40"
+                  >
+                    {addingBenefit ? 'Adding…' : '+ Add'}
+                  </button>
+                </div>
+              </div>
+            </div>
 
             {/* Actions */}
             <div className="flex items-center justify-between">

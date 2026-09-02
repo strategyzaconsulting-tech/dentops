@@ -245,11 +245,16 @@ model BlackoutDate {
 }
 
 model PracticeBenefit {
-  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  practiceId String  @map("practice_id") @db.Uuid
-  name       String
-  isDefault  Boolean @default(false) @map("is_default")
-  sortOrder  Int     @default(0) @map("sort_order")
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId   String  @map("practice_id") @db.Uuid
+  name         String
+  isDefault    Boolean @default(false) @map("is_default")
+  sortOrder    Int     @default(0) @map("sort_order")
+  providerName String? @map("provider_name")
+  phone        String?
+  email        String?
+  website      String?
+  notes        String?
 
   practice     Practice      @relation(fields: [practiceId], references: [id])
   userBenefits UserBenefit[]
