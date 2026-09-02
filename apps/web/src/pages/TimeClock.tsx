@@ -311,38 +311,42 @@ export default function TimeClock() {
   async function fetchTimecards(start: Date, end: Date) {
     setTcLoading(true)
     setTcDateRange({ start, end })
+    setTcPunches([])
+    setTcOccurrences([])
+    const s = start.toISOString().split('T')[0]
+    const e = end.toISOString().split('T')[0]
+
+    // Punches are primary — fetch independently so occurrences can never block them
     try {
-      const s = start.toISOString().split('T')[0]
-      const e = end.toISOString().split('T')[0]
       const punchUrl = tcUserId
         ? `/api/time-punches/range?start=${s}&end=${e}&userId=${tcUserId}`
         : `/api/time-punches/range?start=${s}&end=${e}`
-      const occUrl = `/api/occurrences?practiceId=${PRACTICE_ID}&startDate=${s}&endDate=${e}`
-
-      const [punchRes, occRes] = await Promise.all([
-        apiFetch(punchUrl),
-        apiFetch(occUrl),
-      ])
-      const [punchData, occData]: [RangePunch[], OccurrenceRecord[]] = await Promise.all([
-        punchRes.json(),
-        occRes.json(),
-      ])
-
-      setTcPunches(Array.isArray(punchData) ? punchData : [])
-      setTcOccurrences(Array.isArray(occData) ? occData.filter(o => o.type === 'tardy' || o.type === 'unexcused_absence') : [])
-
+      const punchRes = await apiFetch(punchUrl)
+      const punchData: RangePunch[] = await punchRes.json()
+      const punches = Array.isArray(punchData) ? punchData : []
+      setTcPunches(punches)
       setTcStaff(prev => {
-        const map = new Map(prev.map(s => [s.id, s]))
-        punchData.forEach(p => {
+        const map = new Map(prev.map(st => [st.id, st]))
+        punches.forEach(p => {
           if (!map.has(p.userId)) map.set(p.userId, { id: p.userId, ...p.user })
         })
         return Array.from(map.values()).sort((a, b) => a.lastName.localeCompare(b.lastName))
       })
     } catch {
       // silent
-    } finally {
-      setTcLoading(false)
     }
+
+    // Occurrences are supplementary — failure here must not affect punch display
+    try {
+      const occUrl = `/api/occurrences?practiceId=${PRACTICE_ID}&startDate=${s}&endDate=${e}`
+      const occRes = await apiFetch(occUrl)
+      const occData: OccurrenceRecord[] = await occRes.json()
+      setTcOccurrences(Array.isArray(occData) ? occData.filter(o => o.type === 'tardy' || o.type === 'unexcused_absence') : [])
+    } catch {
+      setTcOccurrences([])
+    }
+
+    setTcLoading(false)
   }
 
   function downloadCSV() {

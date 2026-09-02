@@ -229,7 +229,10 @@ export default function Staff() {
       const alertData = await alertRes.json().catch(() => [])
       const ptoData: PtoSummary[] = await ptoRes.json().catch(() => [])
       const policy: PtoPolicy = await policyRes.json().catch(() => ({ defaultPtoDays: 15, ptoCustomAllowed: false }))
-      setStaff(Array.isArray(staffData) ? staffData : [])
+      const freshStaff: StaffMember[] = Array.isArray(staffData) ? staffData : []
+      setStaff(freshStaff)
+      // Sync the open file panel so it reflects any field changes (e.g. probationStatus after review)
+      setFilePanel(prev => prev ? (freshStaff.find(s => s.id === prev.id) ?? prev) : null)
       setProbationAlerts(Array.isArray(alertData) ? alertData : [])
       const byUser: Record<string, PtoSummary> = {}
       if (Array.isArray(ptoData)) ptoData.forEach((s) => { byUser[s.userId] = s })
