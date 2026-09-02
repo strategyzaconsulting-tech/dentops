@@ -54,16 +54,19 @@ interface Benefit {
   notes: string | null
 }
 
-function getBenefitIcon(name: string) {
+type BenefitTheme = { icon: string; bg: string; accent: string }
+
+function getBenefitTheme(name: string): BenefitTheme {
   const n = name.toLowerCase()
-  if (n.includes('health')) return '🏥'
-  if (n.includes('dental')) return '🦷'
-  if (n.includes('vision')) return '👁️'
-  if (n.includes('retire') || n.includes('401')) return '💰'
-  if (n.includes('pto') || n.includes('vacation') || n.includes('time off')) return '🏖️'
-  if (n.includes('commut')) return '🚇'
-  if (n.includes('life')) return '🛡️'
-  return '✅'
+  if (n.includes('health'))                          return { icon: '🏥', bg: '#FFF0F2', accent: '#E05C6A' }
+  if (n.includes('dental'))                          return { icon: '🦷', bg: '#EDF4FF', accent: '#3B82F6' }
+  if (n.includes('vision'))                          return { icon: '👁️', bg: '#F3EEFF', accent: '#8B5CF6' }
+  if (n.includes('retire') || n.includes('401'))     return { icon: '💰', bg: '#FFFAEB', accent: '#D97706' }
+  if (n.includes('pto') || n.includes('vacation') || n.includes('time off'))
+                                                     return { icon: '🏖️', bg: '#EDFAF4', accent: '#1D9E75' }
+  if (n.includes('commut'))                          return { icon: '🚇', bg: '#FFF4ED', accent: '#EA580C' }
+  if (n.includes('life'))                            return { icon: '🛡️', bg: '#EEF2FF', accent: '#6366F1' }
+  return                                                    { icon: '✅', bg: '#F3F4F6', accent: '#6B7280' }
 }
 
 
@@ -309,52 +312,85 @@ export default function OnboardingScreen() {
 
         {/* Section D — Benefits */}
         <Text style={styles.sectionTitle}>Section D — Benefits</Text>
-        <View style={styles.card}>
-          {benefits.length === 0 ? (
-            <View style={[styles.checkRow]}>
+        {benefits.length === 0 ? (
+          <View style={styles.card}>
+            <View style={styles.checkRow}>
               <View style={styles.navIcon}><Text style={styles.navIconText}>🎁</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.checkLabel}>No active benefits yet</Text>
                 <Text style={styles.subText}>Contact your manager after your probationary period.</Text>
               </View>
             </View>
-          ) : (
-            benefits.map((b, idx) => {
-              const hasContact = !!(b.phone || b.email || b.website)
-              return (
-                <View key={b.id} style={[styles.benefitSection, idx < benefits.length - 1 && styles.checkRowBorder]}>
-                  <View style={styles.checkRow}>
-                    <View style={styles.navIcon}><Text style={styles.navIconText}>{getBenefitIcon(b.name)}</Text></View>
+          </View>
+        ) : (
+          benefits.map((b) => {
+            const theme = getBenefitTheme(b.name)
+            const hasActions = !!(b.phone || b.email || b.website)
+            return (
+              <View key={b.id} style={styles.benefitCard}>
+                <View style={[styles.benefitAccentStrip, { backgroundColor: theme.accent }]} />
+                <View style={styles.benefitCardInner}>
+                  {/* Header row */}
+                  <View style={styles.benefitHeaderRow}>
+                    <View style={[styles.benefitIconBubble, { backgroundColor: theme.bg }]}>
+                      <Text style={styles.benefitIconText}>{theme.icon}</Text>
+                    </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.checkLabel}>{b.name}</Text>
-                      {b.providerName ? <Text style={styles.subText}>{b.providerName}</Text> : null}
+                      <Text style={styles.benefitName}>{b.name}</Text>
+                      {b.providerName
+                        ? <Text style={styles.benefitProvider}>{b.providerName}</Text>
+                        : <View style={[styles.benefitActivePill, { backgroundColor: theme.bg }]}>
+                            <View style={[styles.benefitActiveDot, { backgroundColor: theme.accent }]} />
+                            <Text style={[styles.benefitActivePillText, { color: theme.accent }]}>Active</Text>
+                          </View>
+                      }
                     </View>
                   </View>
-                  {hasContact && (
-                    <View style={styles.contactRow}>
+
+                  {/* Action buttons */}
+                  {hasActions && (
+                    <View style={styles.benefitActions}>
                       {b.phone && (
-                        <TouchableOpacity onPress={() => Linking.openURL(`tel:${b.phone}`)} style={styles.contactChip}>
-                          <Text style={styles.contactChipText}>📞 {b.phone}</Text>
+                        <TouchableOpacity
+                          onPress={() => Linking.openURL(`tel:${b.phone}`)}
+                          style={[styles.benefitActionBtn, { backgroundColor: theme.bg, borderColor: theme.accent + '40' }]}
+                        >
+                          <Text style={styles.benefitActionIcon}>📞</Text>
+                          <Text style={[styles.benefitActionText, { color: theme.accent }]}>Call</Text>
                         </TouchableOpacity>
                       )}
                       {b.email && (
-                        <TouchableOpacity onPress={() => Linking.openURL(`mailto:${b.email}`)} style={styles.contactChip}>
-                          <Text style={styles.contactChipText}>✉️ {b.email}</Text>
+                        <TouchableOpacity
+                          onPress={() => Linking.openURL(`mailto:${b.email}`)}
+                          style={[styles.benefitActionBtn, { backgroundColor: theme.bg, borderColor: theme.accent + '40' }]}
+                        >
+                          <Text style={styles.benefitActionIcon}>✉️</Text>
+                          <Text style={[styles.benefitActionText, { color: theme.accent }]}>Email</Text>
                         </TouchableOpacity>
                       )}
                       {b.website && (
-                        <TouchableOpacity onPress={() => Linking.openURL(b.website!)} style={styles.contactChip}>
-                          <Text style={[styles.contactChipText, { color: '#1D9E75' }]}>🌐 Member Portal</Text>
+                        <TouchableOpacity
+                          onPress={() => Linking.openURL(b.website!)}
+                          style={[styles.benefitActionBtn, { backgroundColor: theme.bg, borderColor: theme.accent + '40' }]}
+                        >
+                          <Text style={styles.benefitActionIcon}>🌐</Text>
+                          <Text style={[styles.benefitActionText, { color: theme.accent }]}>Portal</Text>
                         </TouchableOpacity>
                       )}
                     </View>
                   )}
-                  {b.notes ? <Text style={styles.benefitNotes}>{b.notes}</Text> : null}
+
+                  {/* Notes */}
+                  {b.notes && (
+                    <View style={styles.benefitNotesBox}>
+                      <Text style={styles.benefitNotesText}>{b.notes}</Text>
+                    </View>
+                  )}
                 </View>
-              )
-            })
-          )}
-        </View>
+              </View>
+            )
+          })
+        )}
 
         <View style={{ height: 32 }} />
       </ScrollView>
@@ -468,14 +504,44 @@ const styles = StyleSheet.create({
   subText: { fontSize: 12, color: '#888', marginTop: 2 },
   equipItem: { fontSize: 12, color: '#555', marginTop: 3 },
   equipEmpty: { fontSize: 12, color: '#999', fontStyle: 'italic', marginTop: 2 },
-  benefitSection: { paddingBottom: 4 },
-  contactRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingBottom: 12 },
-  contactChip: {
-    backgroundColor: '#F0FAF6', borderRadius: 20,
-    paddingHorizontal: 12, paddingVertical: 6,
+  benefitCard: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    marginBottom: 12,
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+    overflow: 'hidden',
   },
-  contactChipText: { fontSize: 12, color: '#2C2C2A', fontWeight: '500' },
-  benefitNotes: { fontSize: 12, color: '#777', paddingHorizontal: 16, paddingBottom: 12, lineHeight: 18 },
+  benefitAccentStrip: { width: 4 },
+  benefitCardInner: { flex: 1, padding: 14, gap: 10 },
+  benefitHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  benefitIconBubble: {
+    width: 46, height: 46, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  benefitIconText: { fontSize: 24 },
+  benefitName: { fontSize: 15, fontWeight: '700', color: '#1C1C1A', marginBottom: 4 },
+  benefitProvider: { fontSize: 12, color: '#777', fontWeight: '500' },
+  benefitActivePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 20,
+  },
+  benefitActiveDot: { width: 6, height: 6, borderRadius: 3 },
+  benefitActivePillText: { fontSize: 11, fontWeight: '700' },
+  benefitActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  benefitActionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 22, borderWidth: 1,
+  },
+  benefitActionIcon: { fontSize: 13 },
+  benefitActionText: { fontSize: 12, fontWeight: '700' },
+  benefitNotesBox: {
+    backgroundColor: '#F8F8F6', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 8,
+  },
+  benefitNotesText: { fontSize: 12, color: '#666', lineHeight: 17 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
