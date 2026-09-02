@@ -117,6 +117,17 @@ export default function PracticeProfile() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Locations state
+  interface LocationData { id: string; name: string; address: string | null; city: string | null; state: string | null; zip: string | null }
+  interface LocationForm { name: string; address: string; city: string; state: string; zip: string }
+  const [locations, setLocations] = useState<LocationData[]>([])
+  const [expandedLocationId, setExpandedLocationId] = useState<string | null>(null)
+  const [locationForms, setLocationForms] = useState<Record<string, LocationForm>>({})
+  const [locationSaving, setLocationSaving] = useState<string | null>(null)
+  const [deletingLocationId, setDeletingLocationId] = useState<string | null>(null)
+  const [newLocationName, setNewLocationName] = useState('')
+  const [addingLocation, setAddingLocation] = useState(false)
+
   // Benefits Plans state
   const [benefits, setBenefits] = useState<BenefitPlan[]>([])
   const [expandedBenefitId, setExpandedBenefitId] = useState<string | null>(null)
@@ -125,6 +136,56 @@ export default function PracticeProfile() {
   const [newBenefitName, setNewBenefitName] = useState('')
   const [addingBenefit, setAddingBenefit] = useState(false)
   const [deletingBenefitId, setDeletingBenefitId] = useState<string | null>(null)
+
+  async function loadLocations() {
+    if (!user) return
+    const res = await apiFetch(`/api/locations?practiceId=${user.practiceId}`)
+    const data: LocationData[] = await res.json()
+    if (Array.isArray(data)) {
+      setLocations(data)
+      setLocationForms(Object.fromEntries(data.map(l => [l.id, {
+        name: l.name, address: l.address ?? '', city: l.city ?? '', state: l.state ?? '', zip: l.zip ?? '',
+      }])))
+    }
+  }
+
+  async function saveLocation(id: string) {
+    const f = locationForms[id]
+    if (!f) return
+    setLocationSaving(id)
+    await apiFetch(`/api/locations/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: f.name.trim(), address: f.address.trim() || null, city: f.city.trim() || null, state: f.state.trim() || null, zip: f.zip.trim() || null }),
+    })
+    setLocationSaving(null)
+    await loadLocations()
+  }
+
+  async function addLocation() {
+    if (!newLocationName.trim() || !user) return
+    setAddingLocation(true)
+    await apiFetch('/api/locations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ practiceId: user.practiceId, name: newLocationName.trim() }),
+    })
+    setNewLocationName('')
+    setAddingLocation(false)
+    await loadLocations()
+  }
+
+  async function deleteLocation(id: string) {
+    setDeletingLocationId(id)
+    await apiFetch(`/api/locations/${id}`, { method: 'DELETE' })
+    setDeletingLocationId(null)
+    setExpandedLocationId(prev => prev === id ? null : prev)
+    await loadLocations()
+  }
+
+  function setLocationField(id: string, key: keyof LocationForm, value: string) {
+    setLocationForms(prev => ({ ...prev, [id]: { ...prev[id], [key]: value } }))
+  }
 
   async function loadBenefits() {
     if (!user) return
@@ -143,6 +204,7 @@ export default function PracticeProfile() {
       .then((data) => setForm(data))
       .catch(() => setError('Failed to load practice data.'))
       .finally(() => setLoading(false))
+    loadLocations()
     loadBenefits()
   }, [user])
 
@@ -528,6 +590,101 @@ export default function PracticeProfile() {
                 onChange={(v) => set('requireSpecialty', v)}
               />
             </Section>
+
+            {/* Locations */}
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Office Locations</h2>
+                <p className="text-xs text-gray-400">Available in Schedules &amp; Time Clock</p>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {locations.map(loc => {
+                  const f = locationForms[loc.id]
+                  const isOpen = expandedLocationId === loc.id
+                  const isSaving = locationSaving === loc.id
+                  const isDeleting = deletingLocationId === loc.id
+                  return (
+                    <div key={loc.id}>
+                      <button
+                        className="w-full flex items-center gap-3 px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+                        onClick={() => setExpandedLocationId(isOpen ? null : loc.id)}
+                      >
+                        <span className="text-base">📍</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-800">{loc.name}</p>
+                          {(loc.city || loc.address) && (
+                            <p className="text-xs text-gray-400 truncate">{[loc.address, loc.city, loc.state].filter(Boolean).join(', ')}</p>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-400">{isOpen ? '▲' : '▼'}</span>
+                      </button>
+                      {isOpen && f && (
+                        <div className="px-6 pb-5 space-y-3 border-t border-gray-50 pt-4 bg-gray-50/40">
+                          <div>
+                            <label className="text-xs font-medium text-gray-500 mb-1 block">Location Name</label>
+                            <input className={inputCls} value={f.name} onChange={e => setLocationField(loc.id, 'name', e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-500 mb-1 block">Street Address</label>
+                            <input className={inputCls} placeholder="123 Main St" value={f.address} onChange={e => setLocationField(loc.id, 'address', e.target.value)} />
+                          </div>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="col-span-1">
+                              <label className="text-xs font-medium text-gray-500 mb-1 block">City</label>
+                              <input className={inputCls} value={f.city} onChange={e => setLocationField(loc.id, 'city', e.target.value)} />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-gray-500 mb-1 block">State</label>
+                              <select className={selectCls} value={f.state} onChange={e => setLocationField(loc.id, 'state', e.target.value)}>
+                                <option value="">—</option>
+                                {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-gray-500 mb-1 block">ZIP</label>
+                              <input className={inputCls} value={f.zip} onChange={e => setLocationField(loc.id, 'zip', e.target.value)} />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              onClick={() => saveLocation(loc.id)}
+                              disabled={isSaving || !f.name.trim()}
+                              className="rounded-lg bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                            >
+                              {isSaving ? 'Saving…' : 'Save'}
+                            </button>
+                            <button
+                              onClick={() => deleteLocation(loc.id)}
+                              disabled={isDeleting}
+                              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 disabled:opacity-50"
+                            >
+                              {isDeleting ? 'Removing…' : 'Remove Location'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                {/* Add new location */}
+                <div className="px-6 py-4 flex items-center gap-2">
+                  <input
+                    className={inputCls}
+                    placeholder='New location name, e.g. "Brooklyn Office"'
+                    value={newLocationName}
+                    onChange={e => setNewLocationName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') addLocation() }}
+                  />
+                  <button
+                    onClick={addLocation}
+                    disabled={addingLocation || !newLocationName.trim()}
+                    className="shrink-0 rounded-lg bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    {addingLocation ? 'Adding…' : '+ Add'}
+                  </button>
+                </div>
+              </div>
+            </div>
 
             {/* Benefits Plans */}
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">

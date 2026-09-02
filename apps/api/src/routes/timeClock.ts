@@ -40,13 +40,48 @@ export default async function timeclockRoutes(server: FastifyInstance) {
   // GET /api/locations?practiceId=...
   server.get<{ Querystring: { practiceId: string } }>('/locations', async (request, reply) => {
     const { practiceId } = request.query
-    if (!practiceId) {
-      return reply.status(400).send({ error: 'practiceId is required' })
-    }
+    if (!practiceId) return reply.status(400).send({ error: 'practiceId is required' })
     const locations = await prisma.location.findMany({
       where: { practiceId },
+      orderBy: { name: 'asc' },
     })
     return reply.send(locations)
+  })
+
+  // POST /api/locations
+  server.post<{ Body: { practiceId: string; name: string; address?: string; city?: string; state?: string; zip?: string } }>(
+    '/locations',
+    async (request, reply) => {
+      const { practiceId, name, address, city, state, zip } = request.body
+      if (!practiceId || !name?.trim()) return reply.status(400).send({ error: 'practiceId and name are required' })
+      const location = await prisma.location.create({
+        data: { practiceId, name: name.trim(), address: address || null, city: city || null, state: state || null, zip: zip || null },
+      })
+      return reply.status(201).send(location)
+    }
+  )
+
+  // PATCH /api/locations/:id
+  server.patch<{ Params: { id: string }; Body: { name?: string; address?: string | null; city?: string | null; state?: string | null; zip?: string | null } }>(
+    '/locations/:id',
+    async (request, reply) => {
+      const { id } = request.params
+      const { name, address, city, state, zip } = request.body
+      const data: Record<string, unknown> = {}
+      if (name !== undefined) data.name = name.trim()
+      if (address !== undefined) data.address = address || null
+      if (city !== undefined) data.city = city || null
+      if (state !== undefined) data.state = state || null
+      if (zip !== undefined) data.zip = zip || null
+      const location = await prisma.location.update({ where: { id }, data })
+      return reply.send(location)
+    }
+  )
+
+  // DELETE /api/locations/:id
+  server.delete<{ Params: { id: string } }>('/locations/:id', async (request, reply) => {
+    await prisma.location.delete({ where: { id: request.params.id } })
+    return reply.status(204).send()
   })
 
   // POST /api/time-punches
