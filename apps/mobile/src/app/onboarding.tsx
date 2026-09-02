@@ -54,19 +54,16 @@ interface Benefit {
   notes: string | null
 }
 
-const BENEFIT_ICONS: Record<string, string> = {
-  'Health Insurance': '🏥',
-  'Dental Plan': '🦷',
-  'Vision Plan': '👁️',
-  'Retirement Plan (401k)': '💰',
-  'Retirement Plan': '💰',
-  'PTO': '🏖️',
-  'Commuter Benefits': '🚇',
-  'Life Insurance': '🛡️',
-}
-
 function getBenefitIcon(name: string) {
-  return BENEFIT_ICONS[name] ?? '✅'
+  const n = name.toLowerCase()
+  if (n.includes('health')) return '🏥'
+  if (n.includes('dental')) return '🦷'
+  if (n.includes('vision')) return '👁️'
+  if (n.includes('retire') || n.includes('401')) return '💰'
+  if (n.includes('pto') || n.includes('vacation') || n.includes('time off')) return '🏖️'
+  if (n.includes('commut')) return '🚇'
+  if (n.includes('life')) return '🛡️'
+  return '✅'
 }
 
 
