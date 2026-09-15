@@ -203,6 +203,8 @@ export default function Staff() {
   const [ptoModal, setPtoModal] = useState(false)
   const [ptoForm, setPtoForm] = useState({ defaultPtoDays: '15', ptoCustomAllowed: false })
   const [savingPolicy, setSavingPolicy] = useState(false)
+  const [tempPassword, setTempPassword] = useState('')
+  const [createdTempPassword, setCreatedTempPassword] = useState<string | null>(null)
 
   function toggleView(v: 'grid' | 'list') {
     setView(v)
@@ -276,6 +278,8 @@ export default function Staff() {
     setBenefits([])
     setShowNewBenefitInput(false)
     setNewBenefitName('')
+    setTempPassword('')
+    setCreatedTempPassword(null)
     setModal({ mode: 'add' })
   }
 
@@ -371,8 +375,11 @@ export default function Staff() {
         await apiFetch(`/api/staff`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ practiceId: PRACTICE_ID, ...payload }),
+          body: JSON.stringify({ practiceId: PRACTICE_ID, ...payload, tempPassword }),
         })
+        setCreatedTempPassword(tempPassword)
+        await fetchStaff()
+        return
       } else if (modal?.mode === 'edit' && modal.member) {
         await apiFetch(`/api/staff/${modal.member.id}`, {
           method: 'PATCH',
@@ -868,6 +875,41 @@ export default function Staff() {
           onClick={(e) => { if (e.target === e.currentTarget) setModal(null) }}
         >
           <div className="w-full max-w-md rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh]">
+            {createdTempPassword ? (
+              <>
+                <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+                  <h3 className="text-base font-semibold text-gray-900">Staff Member Added</h3>
+                </div>
+                <div className="px-6 py-6 flex-1">
+                  <div className="mb-4 rounded-lg bg-green-50 border border-green-200 p-4">
+                    <p className="text-sm font-semibold text-green-800 mb-1">
+                      {form.firstName} {form.lastName} has been added.
+                    </p>
+                    <p className="text-xs text-green-700">Their status is <strong>Invited</strong> — they must log in and set a new password.</p>
+                  </div>
+                  <p className="text-xs font-medium text-gray-500 mb-2">Share this temporary password with them:</p>
+                  <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                    <code className="flex-1 text-sm font-mono text-gray-800 tracking-wide">{createdTempPassword}</code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(createdTempPassword)}
+                      className="text-xs font-medium text-[#1D9E75] hover:underline"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <p className="mt-3 text-xs text-gray-400">This password is not stored in plaintext — copy it now.</p>
+                </div>
+                <div className="px-6 py-4 border-t border-gray-100">
+                  <button
+                    onClick={() => setModal(null)}
+                    className="w-full rounded-lg bg-[#1D9E75] py-2 text-sm font-medium text-white hover:opacity-90"
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            ) : (
+            <>
             <div className="px-6 pt-6 pb-4 border-b border-gray-100">
               <h3 className="text-base font-semibold text-gray-900">
                 {modal.mode === 'add' ? 'Add Staff Member' : `Edit — ${modal.member?.firstName} ${modal.member?.lastName}`}
@@ -905,6 +947,22 @@ export default function Staff() {
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 />
               </div>
+
+              {modal.mode === 'add' && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    Temporary password <span className="text-gray-400 font-normal">(staff uses this to log in)</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                    placeholder="min. 8 characters"
+                    value={tempPassword}
+                    onChange={(e) => setTempPassword(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-600">Phone</label>
@@ -1197,12 +1255,14 @@ export default function Staff() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving || !form.firstName || !form.lastName || !form.email}
+                disabled={saving || !form.firstName || !form.lastName || !form.email || (modal.mode === 'add' && tempPassword.length < 8)}
                 className="flex-1 rounded-lg bg-[#1D9E75] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
                 {saving ? 'Saving…' : modal.mode === 'add' ? 'Add Member' : 'Save Changes'}
               </button>
             </div>
+            </>
+            )}
           </div>
         </div>
       )}

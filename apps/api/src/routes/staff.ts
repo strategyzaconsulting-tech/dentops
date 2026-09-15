@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma.js'
 
 export default async function staffRoutes(server: FastifyInstance) {
@@ -23,11 +24,16 @@ export default async function staffRoutes(server: FastifyInstance) {
       lastName: string
       email: string
       role: string
+      tempPassword?: string
     }
   }>('/staff', async (request, reply) => {
-    const { practiceId, firstName, lastName, email, role } = request.body
+    const { practiceId, firstName, lastName, email, role, tempPassword } = request.body
+    if (!tempPassword || tempPassword.length < 8) {
+      return reply.status(400).send({ error: 'tempPassword must be at least 8 characters' })
+    }
+    const passwordHash = await bcrypt.hash(tempPassword, 12)
     const user = await prisma.user.create({
-      data: { practiceId, firstName, lastName, email, role, status: 'active' },
+      data: { practiceId, firstName, lastName, email, role, status: 'invited', passwordHash },
     })
     return reply.status(201).send(user)
   })
