@@ -6,6 +6,14 @@ const TYPE_COLORS: Record<string, string> = {
   vacation: 'bg-blue-100 text-blue-700',
   sick: 'bg-orange-100 text-orange-700',
   personal: 'bg-purple-100 text-purple-700',
+  pto: 'bg-green-100 text-green-700',
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  vacation: 'Vacation',
+  sick: 'Sick',
+  personal: 'Personal',
+  pto: 'PTO',
 }
 
 const STAFF_PALETTE = [
@@ -64,6 +72,8 @@ export default function PtoAdmin() {
   const [blackouts, setBlackouts] = useState<BlackoutDate[]>([])
   const [loading, setLoading] = useState(true)
   const [actioningId, setActioningId] = useState<string | null>(null)
+  const [denyingId, setDenyingId] = useState<string | null>(null)
+  const [denyReason, setDenyReason] = useState('')
 
   const today = new Date()
   const [calYear, setCalYear] = useState(today.getFullYear())
@@ -103,14 +113,16 @@ export default function PtoAdmin() {
 
   useEffect(() => { fetchAll() }, [])
 
-  async function handleAction(id: string, status: 'approved' | 'denied') {
+  async function handleAction(id: string, status: 'approved' | 'denied', notes?: string) {
     setActioningId(id)
     try {
       await apiFetch(`/api/pto/requests/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...(notes ? { notes } : {}) }),
       })
+      setDenyingId(null)
+      setDenyReason('')
       await fetchAll()
     } finally {
       setActioningId(null)
@@ -295,11 +307,11 @@ export default function PtoAdmin() {
                           </div>
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             <span
-                              className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                                 TYPE_COLORS[req.type] ?? 'bg-gray-100 text-gray-600'
                               }`}
                             >
-                              {req.type}
+                              {TYPE_LABELS[req.type] ?? req.type}
                             </span>
                             <span className="text-sm text-gray-600">
                               {formatDateDisplay(req.startDate)}
@@ -313,9 +325,21 @@ export default function PtoAdmin() {
                         </div>
                         <div className="flex shrink-0 gap-2">
                           <button
-                            onClick={() => handleAction(req.id, 'denied')}
+                            onClick={() => {
+                              if (denyingId === req.id) {
+                                setDenyingId(null)
+                                setDenyReason('')
+                              } else {
+                                setDenyingId(req.id)
+                                setDenyReason('')
+                              }
+                            }}
                             disabled={actioningId === req.id}
-                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-[#F0EDE5] disabled:opacity-50"
+                            className={`rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50 transition-colors ${
+                              denyingId === req.id
+                                ? 'border-red-300 bg-red-50 text-red-600'
+                                : 'border-gray-300 text-gray-600 hover:bg-[#F0EDE5]'
+                            }`}
                           >
                             Deny
                           </button>
@@ -328,6 +352,34 @@ export default function PtoAdmin() {
                           </button>
                         </div>
                       </div>
+                      {denyingId === req.id && (
+                        <div className="mt-3 rounded-lg border border-red-100 bg-red-50 p-3">
+                          <p className="mb-2 text-xs font-medium text-red-700">Reason for denial <span className="font-normal text-red-400">(optional)</span></p>
+                          <textarea
+                            autoFocus
+                            rows={2}
+                            placeholder="e.g. Insufficient coverage on this date…"
+                            value={denyReason}
+                            onChange={(e) => setDenyReason(e.target.value)}
+                            className="w-full resize-none rounded-lg border border-red-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                          />
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              onClick={() => handleAction(req.id, 'denied', denyReason || undefined)}
+                              disabled={actioningId === req.id}
+                              className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                            >
+                              {actioningId === req.id ? 'Denying…' : 'Confirm Denial'}
+                            </button>
+                            <button
+                              onClick={() => { setDenyingId(null); setDenyReason('') }}
+                              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}

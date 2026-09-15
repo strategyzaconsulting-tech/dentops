@@ -102,6 +102,8 @@ const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
   missed_clock_in: 'Missed Clock-In',
   missed_clock_out: 'Missed Clock-Out',
   wrong_time: 'Wrong Time',
+  begin_meal: 'Meal Break Start',
+  end_meal: 'Meal Break End',
   other: 'Other',
 }
 
