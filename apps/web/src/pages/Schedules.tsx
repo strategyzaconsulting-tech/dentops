@@ -135,6 +135,13 @@ function saveTemplates(t: ShiftTemplate[]) {
   localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(t))
 }
 
+interface LunchConfig {
+  enabled: boolean
+  minutes: number
+  windowStart: string
+  windowEnd: string
+}
+
 type ModalState =
   | { mode: 'add'; date: string; userId: string }
   | { mode: 'edit'; shift: Shift }
@@ -154,6 +161,9 @@ export default function Schedules() {
   const [deleting, setDeleting] = useState(false)
   const [copying, setCopying] = useState(false)
   const [roleFilter, setRoleFilter] = useState('all')
+  const [lunchConfig, setLunchConfig] = useState<LunchConfig>({
+    enabled: false, minutes: 60, windowStart: '13:00', windowEnd: '14:00',
+  })
   const [templates, setTemplates] = useState<ShiftTemplate[]>(() => loadTemplates())
   const [newTemplateName, setNewTemplateName] = useState('')
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
@@ -173,17 +183,26 @@ export default function Schedules() {
   async function fetchAll() {
     setLoading(true)
     try {
-      const [staffRes, locRes, shiftRes] = await Promise.all([
+      const [staffRes, locRes, shiftRes, practiceRes] = await Promise.all([
         apiFetch(`/api/staff?practiceId=${PRACTICE_ID}`),
         apiFetch(`/api/locations?practiceId=${PRACTICE_ID}`),
         apiFetch(`/api/shifts?practiceId=${PRACTICE_ID}&weekStart=${weekStart}`),
+        apiFetch(`/api/practice/${PRACTICE_ID}`),
       ])
-      const [staffData, locData, shiftData] = await Promise.all([
-        staffRes.json(), locRes.json(), shiftRes.json(),
+      const [staffData, locData, shiftData, practiceData] = await Promise.all([
+        staffRes.json(), locRes.json(), shiftRes.json(), practiceRes.json(),
       ])
       setStaff(Array.isArray(staffData) ? staffData.filter((s: StaffMember) => s.status !== 'inactive') : [])
       setLocations(Array.isArray(locData) ? locData : [])
       setShifts(Array.isArray(shiftData) ? shiftData : [])
+      if (practiceData && typeof practiceData === 'object') {
+        setLunchConfig({
+          enabled: practiceData.lunchBreakEnabled ?? false,
+          minutes: practiceData.lunchBreakMinutes ?? 60,
+          windowStart: practiceData.lunchBreakWindowStart ?? '13:00',
+          windowEnd: practiceData.lunchBreakWindowEnd ?? '14:00',
+        })
+      }
     } catch {
       // silent
     } finally {
@@ -203,15 +222,27 @@ export default function Schedules() {
     return map
   }, [shifts])
 
-  // Weekly hours per staff member
+  // Weekly hours per staff member, optionally deducting a configured lunch break
   const hoursMap = useMemo(() => {
+    const roleMap = new Map(staff.map(s => [s.id, s.role]))
     const map = new Map<string, number>()
+    const [wsh, wsm] = lunchConfig.windowStart.split(':').map(Number)
+    const [weh, wem] = lunchConfig.windowEnd.split(':').map(Number)
+    const windowStartMins = wsh * 60 + wsm
+    const windowEndMins = weh * 60 + wem
     for (const s of shifts) {
-      const h = calcHours(s.startTime, s.endTime)
+      let h = calcHours(s.startTime, s.endTime)
+      if (lunchConfig.enabled && roleMap.get(s.userId) !== 'doctor') {
+        const [sh, sm] = s.startTime.split(':').map(Number)
+        const [eh, em] = s.endTime.split(':').map(Number)
+        if (sh * 60 + sm <= windowStartMins && eh * 60 + em >= windowEndMins) {
+          h -= lunchConfig.minutes / 60
+        }
+      }
       map.set(s.userId, (map.get(s.userId) ?? 0) + h)
     }
     return map
-  }, [shifts])
+  }, [shifts, staff, lunchConfig])
 
   function openAdd(userId: string, date: string) {
     setForm({ ...emptyForm, userId, locationId: locations[0]?.id ?? '' })

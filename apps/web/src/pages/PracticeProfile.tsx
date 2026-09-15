@@ -50,6 +50,10 @@ interface PracticeData {
   payrollPeriod: string | null
   payrollStartDay: number | null
   payrollNextDate: string | null
+  lunchBreakEnabled: boolean
+  lunchBreakMinutes: number
+  lunchBreakWindowStart: string
+  lunchBreakWindowEnd: string
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -282,6 +286,10 @@ export default function PracticeProfile() {
           payrollPeriod: form.payrollPeriod,
           payrollStartDay: form.payrollStartDay,
           payrollNextDate: form.payrollNextDate,
+          lunchBreakEnabled: form.lunchBreakEnabled,
+          lunchBreakMinutes: form.lunchBreakMinutes,
+          lunchBreakWindowStart: form.lunchBreakWindowStart,
+          lunchBreakWindowEnd: form.lunchBreakWindowEnd,
         }),
       })
       if (!res.ok) throw new Error()
@@ -589,6 +597,59 @@ export default function PracticeProfile() {
                 checked={form.requireSpecialty}
                 onChange={(v) => set('requireSpecialty', v)}
               />
+            </Section>
+
+            {/* Schedule Settings */}
+            <Section title="Schedule Settings">
+              <Toggle
+                label="Deduct lunch break from scheduled hours"
+                description="Automatically subtracts break time from weekly hour totals for non-doctor staff whose shift spans the lunch window."
+                checked={form.lunchBreakEnabled}
+                onChange={(v) => set('lunchBreakEnabled', v)}
+              />
+              {form.lunchBreakEnabled && (
+                <>
+                  <Field label="Break Duration">
+                    <div className="flex gap-2">
+                      {[30, 45, 60].map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => set('lunchBreakMinutes', m)}
+                          className={`rounded-lg border-2 px-4 py-1.5 text-sm font-medium transition-all ${
+                            form.lunchBreakMinutes === m
+                              ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#1D9E75]'
+                              : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white'
+                          }`}
+                        >
+                          {m} min
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Window Start">
+                      <input
+                        type="time"
+                        className={inputCls}
+                        value={form.lunchBreakWindowStart}
+                        onChange={(e) => set('lunchBreakWindowStart', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Window End">
+                      <input
+                        type="time"
+                        className={inputCls}
+                        value={form.lunchBreakWindowEnd}
+                        onChange={(e) => set('lunchBreakWindowEnd', e.target.value)}
+                      />
+                    </Field>
+                  </div>
+                  <p className="text-xs text-gray-400 -mt-1">
+                    Deduction applies when a shift starts at or before the window start and ends at or after the window end.
+                  </p>
+                </>
+              )}
             </Section>
 
             {/* Locations */}

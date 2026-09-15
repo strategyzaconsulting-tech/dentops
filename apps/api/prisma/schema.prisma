@@ -27,6 +27,10 @@ model Practice {
   payrollPeriod     String?  @map("payroll_period")
   payrollStartDay   Int?     @map("payroll_start_day")
   payrollNextDate   DateTime? @map("payroll_next_date") @db.Date
+  lunchBreakEnabled     Boolean @default(false) @map("lunch_break_enabled")
+  lunchBreakMinutes     Int     @default(60)    @map("lunch_break_minutes")
+  lunchBreakWindowStart String  @default("13:00") @map("lunch_break_window_start")
+  lunchBreakWindowEnd   String  @default("14:00") @map("lunch_break_window_end")
   createdAt         DateTime @default(now()) @map("created_at")
 
   users         User[]

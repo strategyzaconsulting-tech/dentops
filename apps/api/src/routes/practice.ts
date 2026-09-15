@@ -29,6 +29,10 @@ export default async function practiceRoutes(server: FastifyInstance) {
       payrollPeriod?: string | null
       payrollStartDay?: number | null
       payrollNextDate?: string | null
+      lunchBreakEnabled?: boolean
+      lunchBreakMinutes?: number
+      lunchBreakWindowStart?: string
+      lunchBreakWindowEnd?: string
     }
   }>(
     '/practice/:id',
@@ -39,6 +43,7 @@ export default async function practiceRoutes(server: FastifyInstance) {
         phone, email, address, city, state, zip, website,
         requireSpecialty, defaultPtoDays, ptoCustomAllowed,
         payrollPeriod, payrollStartDay, payrollNextDate,
+        lunchBreakEnabled, lunchBreakMinutes, lunchBreakWindowStart, lunchBreakWindowEnd,
       } = request.body
       const practice = await prisma.practice.update({
         where: { id },
@@ -60,6 +65,10 @@ export default async function practiceRoutes(server: FastifyInstance) {
           ...(payrollPeriod !== undefined && { payrollPeriod: payrollPeriod ?? null }),
           ...(payrollStartDay !== undefined && { payrollStartDay: payrollStartDay ?? null }),
           ...(payrollNextDate !== undefined && { payrollNextDate: payrollNextDate ? new Date(payrollNextDate) : null }),
+          ...(lunchBreakEnabled !== undefined && { lunchBreakEnabled }),
+          ...(lunchBreakMinutes !== undefined && { lunchBreakMinutes }),
+          ...(lunchBreakWindowStart !== undefined && { lunchBreakWindowStart }),
+          ...(lunchBreakWindowEnd !== undefined && { lunchBreakWindowEnd }),
         },
       })
       return reply.send(practice)
