@@ -2,6 +2,16 @@ import type { FastifyInstance } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma.js'
 
+const userSelect = {
+  id: true, practiceId: true, firstName: true, lastName: true, email: true,
+  role: true, status: true, shiftStart: true, shiftEnd: true, hireDate: true,
+  managerId: true, separationDate: true, phone: true, address: true,
+  probationDays: true, probationEndDate: true, probationStatus: true,
+  probationNotes: true, probationCompletedAt: true, probationAlertDays: true,
+  benefitsEligibleAt: true, ptoDaysPerYear: true, seasonedEmployee: true,
+  pushToken: true,
+} as const
+
 export default async function staffRoutes(server: FastifyInstance) {
   // GET /api/staff?practiceId=
   server.get<{ Querystring: { practiceId: string } }>('/staff', async (request, reply) => {
@@ -11,6 +21,7 @@ export default async function staffRoutes(server: FastifyInstance) {
     }
     const staff = await prisma.user.findMany({
       where: { practiceId },
+      select: userSelect,
       orderBy: [{ role: 'asc' }, { lastName: 'asc' }],
     })
     return reply.send(staff)
@@ -34,6 +45,7 @@ export default async function staffRoutes(server: FastifyInstance) {
     const passwordHash = await bcrypt.hash(tempPassword, 12)
     const user = await prisma.user.create({
       data: { practiceId, firstName, lastName, email, role, status: 'invited', passwordHash },
+      select: userSelect,
     })
     return reply.status(201).send(user)
   })
@@ -97,7 +109,7 @@ export default async function staffRoutes(server: FastifyInstance) {
     if (ptoDaysPerYear !== undefined) data.ptoDaysPerYear = ptoDaysPerYear ?? null
     if (seasonedEmployee !== undefined) data.seasonedEmployee = seasonedEmployee
 
-    const user = await prisma.user.update({ where: { id }, data })
+    const user = await prisma.user.update({ where: { id }, data, select: userSelect })
     return reply.send(user)
   })
 
