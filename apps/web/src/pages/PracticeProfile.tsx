@@ -610,7 +610,7 @@ export default function PracticeProfile() {
               {form.lunchBreakEnabled && (
                 <>
                   <Field label="Break Duration">
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {[30, 45, 60].map((m) => (
                         <button
                           key={m}
@@ -625,6 +625,29 @@ export default function PracticeProfile() {
                           {m} min
                         </button>
                       ))}
+                      {/* Custom chip */}
+                      {![30, 45, 60].includes(form.lunchBreakMinutes) ? (
+                        <div className="flex items-center gap-1.5 rounded-lg border-2 border-[#1D9E75] bg-[#F0FAF6] px-3 py-1.5">
+                          <input
+                            type="number"
+                            min={1}
+                            max={120}
+                            autoFocus
+                            className="w-12 bg-transparent text-sm font-medium text-[#1D9E75] focus:outline-none tabular-nums"
+                            value={form.lunchBreakMinutes}
+                            onChange={(e) => set('lunchBreakMinutes', Math.max(1, parseInt(e.target.value) || 1))}
+                          />
+                          <span className="text-sm font-medium text-[#1D9E75]">min</span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => set('lunchBreakMinutes', 20)}
+                          className="rounded-lg border-2 border-gray-200 px-4 py-1.5 text-sm font-medium text-gray-600 hover:border-gray-300 bg-white transition-all"
+                        >
+                          Custom
+                        </button>
+                      )}
                     </div>
                   </Field>
                   <div className="grid grid-cols-2 gap-4">
