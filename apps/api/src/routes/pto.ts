@@ -163,8 +163,17 @@ export default async function ptoRoutes(server: FastifyInstance) {
     const { id } = request.params
     const { status, startDate, endDate, type, notes } = request.body
 
+    if (request.user.role !== 'manager') {
+      return reply.status(403).send({ error: 'Forbidden' })
+    }
+
     if (status !== undefined && !['approved', 'denied', 'pending'].includes(status)) {
       return reply.status(400).send({ error: 'Invalid status' })
+    }
+
+    const existing = await prisma.ptoRequest.findUnique({ where: { id }, select: { practiceId: true } })
+    if (!existing || existing.practiceId !== request.user.practiceId) {
+      return reply.status(404).send({ error: 'Not found' })
     }
 
     const data: Record<string, unknown> = {}
