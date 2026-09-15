@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @dentops/web build",
+  "outputDirectory": "apps/web/dist",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": "vite"
+}
