@@ -61,7 +61,7 @@ model Practice {
 
 model User {
   id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  practiceId String @map("practice_id") @db.Uuid
+  practiceId String? @map("practice_id") @db.Uuid
   firstName  String @map("first_name")
   lastName   String @map("last_name")
   email      String @unique

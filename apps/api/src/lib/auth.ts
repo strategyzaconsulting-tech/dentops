@@ -2,7 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify'
 
 export interface JwtPayload {
   userId: string
-  practiceId: string
+  practiceId: string | null
   role: string
   email: string
 }
@@ -17,6 +17,7 @@ const PUBLIC_ROUTES = new Set([
   'POST /api/auth/login',
   'POST /api/setup',
   'GET /api/health',
+  'POST /api/admin/super-admin',
 ])
 
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
@@ -30,10 +31,13 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
   }
 
   // IDOR guard: if caller passes a practiceId, it must match their token
-  const body = request.body as Record<string, unknown> | null
-  const query = request.query as Record<string, unknown>
-  const incoming = (body?.practiceId ?? query?.practiceId) as string | undefined
-  if (incoming && incoming !== request.user.practiceId) {
-    return reply.status(403).send({ error: 'Forbidden' })
+  // super_admin bypasses tenant isolation entirely
+  if (request.user.role !== 'super_admin') {
+    const body = request.body as Record<string, unknown> | null
+    const query = request.query as Record<string, unknown>
+    const incoming = (body?.practiceId ?? query?.practiceId) as string | undefined
+    if (incoming && incoming !== request.user.practiceId) {
+      return reply.status(403).send({ error: 'Forbidden' })
+    }
   }
 }

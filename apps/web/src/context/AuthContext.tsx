@@ -4,7 +4,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export interface AuthUser {
   id: string
-  practiceId: string
+  practiceId: string | null
   role: string
   email: string
   firstName: string
@@ -15,7 +15,7 @@ interface AuthContextValue {
   user: AuthUser | null
   token: string | null
   loading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<AuthUser>
   logout: () => void
 }
 
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }
 
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string): Promise<AuthUser> {
     const res = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -57,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('auth_token', data.token)
     setToken(data.token)
     setUser(data.user)
+    return data.user as AuthUser
   }
 
   function logout() {

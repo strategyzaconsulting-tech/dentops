@@ -15,8 +15,8 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      await login(email, password)
-      navigate('/')
+      const loggedInUser = await login(email, password)
+      navigate(loggedInUser.role === 'super_admin' ? '/admin' : '/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {

@@ -21,11 +21,19 @@ import Announcements from './pages/Announcements'
 import Onboarding from './pages/Onboarding'
 import PracticeProfile from './pages/PracticeProfile'
 import Login from './pages/Login'
+import AdminDashboard from './pages/AdminDashboard'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return <div className="min-h-screen bg-[#F5F0E8] flex items-center justify-center"><div className="text-sm text-gray-400">Loading…</div></div>
   if (!user) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
+
+function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="min-h-screen bg-[#F5F0E8] flex items-center justify-center"><div className="text-sm text-gray-400">Loading…</div></div>
+  if (!user || user.role !== 'super_admin') return <Navigate to="/" replace />
   return <>{children}</>
 }
 
@@ -45,6 +53,7 @@ export default function App() {
           <Route path="/announcements" element={<RequireAuth><Announcements /></RequireAuth>} />
           <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
           <Route path="/practice-profile" element={<RequireAuth><PracticeProfile /></RequireAuth>} />
+          <Route path="/admin" element={<RequireSuperAdmin><AdminDashboard /></RequireSuperAdmin>} />
 
           <Route
             path="/setup"

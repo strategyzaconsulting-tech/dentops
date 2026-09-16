@@ -24,6 +24,7 @@ import w4ReviewRoutes from "./routes/w4Review.js";
 import occurrenceRoutes from "./routes/occurrences.js";
 import reportRoutes from "./routes/reports.js";
 import licenseRoutes from "./routes/licenses.js";
+import adminRoutes from "./routes/admin.js";
 import { requireAuth } from "./lib/auth.js";
 import { sendExpoPushNotifications } from "./lib/expoPush.js";
 import { prisma } from "./lib/prisma.js";
@@ -105,13 +106,14 @@ export async function createServer() {
   await server.register(occurrenceRoutes, { prefix: "/api" });
   await server.register(reportRoutes, { prefix: "/api" });
   await server.register(licenseRoutes, { prefix: "/api" });
+  await server.register(adminRoutes, { prefix: "/api" });
 
   // Jan 1 at midnight — create review records + notify all active staff
   cron.schedule("0 0 1 1 *", async () => {
     const year = new Date().getFullYear();
     try {
       const users = await prisma.user.findMany({
-        where: { status: "active" },
+        where: { status: "active", practiceId: { not: null } },
         select: { id: true, practiceId: true, pushToken: true },
       });
 
