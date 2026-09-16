@@ -182,8 +182,8 @@ const STATUS_GROUPS = [
 ]
 
 export default function Staff() {
-  const { user } = useAuth()
-  const PRACTICE_ID = user!.practiceId
+  const { user, activePracticeId } = useAuth()
+  const PRACTICE_ID = activePracticeId
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<{ mode: ModalMode; member?: StaffMember } | null>(null)

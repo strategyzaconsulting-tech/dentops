@@ -194,8 +194,8 @@ function FormDataPanel({ formKey, label, data, date }: {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function Onboarding() {
-  const { user } = useAuth()
-  const PRACTICE_ID = user!.practiceId
+  const { user, activePracticeId } = useAuth()
+  const PRACTICE_ID = activePracticeId
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [manual, setManual] = useState<OfficeManual | null>(null)
   const [training, setTraining] = useState<TrainingSession[]>([])

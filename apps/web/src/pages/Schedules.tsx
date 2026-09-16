@@ -148,8 +148,8 @@ type ModalState =
   | null
 
 export default function Schedules() {
-  const { user } = useAuth()
-  const PRACTICE_ID = user!.practiceId
+  const { user, activePracticeId } = useAuth()
+  const PRACTICE_ID = activePracticeId
   const [monday, setMonday] = useState<Date>(() => getMonday(new Date()))
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [locations, setLocations] = useState<Location[]>([])

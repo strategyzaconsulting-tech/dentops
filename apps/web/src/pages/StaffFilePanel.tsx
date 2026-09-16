@@ -180,8 +180,8 @@ interface Props {
 }
 
 export default function StaffFilePanel({ member, onClose, onEdit, onUpdated }: Props) {
-  const { user } = useAuth()
-  const PRACTICE_ID = user!.practiceId
+  const { user, activePracticeId } = useAuth()
+  const PRACTICE_ID = activePracticeId
   const [occurrences, setOccurrences] = useState<Occurrence[]>([])
   const [scheduledDays, setScheduledDays] = useState<number | null>(null)
   const [loadingOcc, setLoadingOcc] = useState(true)

@@ -381,8 +381,8 @@ const MODULES = [
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const { user, logout } = useAuth()
-  const PRACTICE_ID = user!.practiceId
+  const { user, logout, activePracticeId } = useAuth()
+  const PRACTICE_ID = activePracticeId
   const [probationCount, setProbationCount] = useState(0)
 
   useEffect(() => {

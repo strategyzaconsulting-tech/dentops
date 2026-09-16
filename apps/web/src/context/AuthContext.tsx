@@ -15,8 +15,12 @@ interface AuthContextValue {
   user: AuthUser | null
   token: string | null
   loading: boolean
+  activePracticeId: string | null
+  selectedPracticeName: string | null
   login: (email: string, password: string) => Promise<AuthUser>
   logout: () => void
+  selectPractice: (id: string, name: string) => void
+  exitPractice: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -25,6 +29,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('auth_token'))
   const [loading, setLoading] = useState(true)
+  const [selectedPracticeId, setSelectedPracticeId] = useState<string | null>(
+    () => localStorage.getItem('selected_practice_id')
+  )
+  const [selectedPracticeName, setSelectedPracticeName] = useState<string | null>(
+    () => localStorage.getItem('selected_practice_name')
+  )
+
+  const activePracticeId =
+    user?.role === 'super_admin' ? selectedPracticeId : (user?.practiceId ?? null)
 
   useEffect(() => {
     if (!token) { setLoading(false); return }
@@ -39,8 +52,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function clearAuth() {
     localStorage.removeItem('auth_token')
+    localStorage.removeItem('selected_practice_id')
+    localStorage.removeItem('selected_practice_name')
     setToken(null)
     setUser(null)
+    setSelectedPracticeId(null)
+    setSelectedPracticeName(null)
+  }
+
+  function selectPractice(id: string, name: string) {
+    localStorage.setItem('selected_practice_id', id)
+    localStorage.setItem('selected_practice_name', name)
+    setSelectedPracticeId(id)
+    setSelectedPracticeName(name)
+  }
+
+  function exitPractice() {
+    localStorage.removeItem('selected_practice_id')
+    localStorage.removeItem('selected_practice_name')
+    setSelectedPracticeId(null)
+    setSelectedPracticeName(null)
   }
 
   async function login(email: string, password: string): Promise<AuthUser> {
@@ -66,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, activePracticeId, selectedPracticeName, login, logout, selectPractice, exitPractice }}>
       {children}
     </AuthContext.Provider>
   )

@@ -111,7 +111,7 @@ function emptyBenefitForm(b: BenefitPlan): BenefitForm {
 }
 
 export default function PracticeProfile() {
-  const { user } = useAuth()
+  const { user, activePracticeId } = useAuth()
   const navigate = useNavigate()
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'manager'
 
@@ -143,7 +143,7 @@ export default function PracticeProfile() {
 
   async function loadLocations() {
     if (!user) return
-    const res = await apiFetch(`/api/locations?practiceId=${user.practiceId}`)
+    const res = await apiFetch(`/api/locations?practiceId=${activePracticeId}`)
     const data: LocationData[] = await res.json()
     if (Array.isArray(data)) {
       setLocations(data)
@@ -172,7 +172,7 @@ export default function PracticeProfile() {
     await apiFetch('/api/locations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ practiceId: user.practiceId, name: newLocationName.trim() }),
+      body: JSON.stringify({ practiceId: activePracticeId, name: newLocationName.trim() }),
     })
     setNewLocationName('')
     setAddingLocation(false)
@@ -193,7 +193,7 @@ export default function PracticeProfile() {
 
   async function loadBenefits() {
     if (!user) return
-    const res = await apiFetch(`/api/benefits?practiceId=${user.practiceId}`)
+    const res = await apiFetch(`/api/benefits?practiceId=${activePracticeId}`)
     const data: BenefitPlan[] = await res.json()
     if (Array.isArray(data)) {
       setBenefits(data)
@@ -203,7 +203,7 @@ export default function PracticeProfile() {
 
   useEffect(() => {
     if (!user) return
-    apiFetch(`/api/practice/${user.practiceId}`)
+    apiFetch(`/api/practice/${activePracticeId}`)
       .then((r) => r.json())
       .then((data) => setForm(data))
       .catch(() => setError('Failed to load practice data.'))
@@ -236,7 +236,7 @@ export default function PracticeProfile() {
     setAddingBenefit(true)
     await apiFetch('/api/benefits', {
       method: 'POST',
-      body: JSON.stringify({ practiceId: user.practiceId, name: newBenefitName.trim() }),
+      body: JSON.stringify({ practiceId: activePracticeId, name: newBenefitName.trim() }),
     })
     setNewBenefitName('')
     setAddingBenefit(false)
@@ -265,7 +265,7 @@ export default function PracticeProfile() {
     setSaving(true)
     setError(null)
     try {
-      const res = await apiFetch(`/api/practice/${user.practiceId}`, {
+      const res = await apiFetch(`/api/practice/${activePracticeId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

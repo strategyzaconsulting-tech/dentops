@@ -1,7 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+import { apiFetch } from '../lib/apiFetch'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -162,7 +161,7 @@ interface Props {
 }
 
 export default function StaffOnboardingTab({ userId, firstName }: Props) {
-  const { user } = useAuth()
+  const { user, activePracticeId } = useAuth()
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -185,7 +184,7 @@ export default function StaffOnboardingTab({ userId, firstName }: Props) {
   async function load() {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/onboarding?practiceId=${user!.practiceId}&userId=${userId}`)
+      const res = await apiFetch(`/api/onboarding?practiceId=${activePracticeId}&userId=${userId}`)
       const data = await res.json()
       if (data?.id) setChecklist(data)
     } catch { /* silent */ }
@@ -198,11 +197,11 @@ export default function StaffOnboardingTab({ userId, firstName }: Props) {
     if (!equipForm || !equipForm.name.trim() || !checklist) return
     setSavingEquip(true)
     try {
-      const res = await fetch(`${API_BASE}/api/onboarding/equipment`, {
+      const res = await apiFetch(`/api/onboarding/equipment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          practiceId: user!.practiceId, userId,
+          practiceId: activePracticeId, userId,
           name: equipForm.name.trim(),
           serialNumber: equipForm.serial.trim() || undefined,
           notes: equipForm.notes.trim() || undefined,
@@ -213,7 +212,7 @@ export default function StaffOnboardingTab({ userId, firstName }: Props) {
   }
 
   async function markReturned(itemId: string) {
-    await fetch(`${API_BASE}/api/onboarding/equipment/${itemId}`, {
+    await apiFetch(`/api/onboarding/equipment/${itemId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ returnedAt: new Date().toISOString() }),
@@ -223,7 +222,7 @@ export default function StaffOnboardingTab({ userId, firstName }: Props) {
 
   async function deleteEquipment(itemId: string) {
     if (!confirm('Remove this equipment record?')) return
-    await fetch(`${API_BASE}/api/onboarding/equipment/${itemId}`, { method: 'DELETE' })
+    await apiFetch(`/api/onboarding/equipment/${itemId}`, { method: 'DELETE' })
     load()
   }
 
@@ -247,7 +246,7 @@ export default function StaffOnboardingTab({ userId, firstName }: Props) {
         payload.listB = { title: sec2Form.listBTitle, authority: sec2Form.listBAuthority, number: sec2Form.listBNumber, expiry: sec2Form.listBExpiry }
         payload.listC = { title: sec2Form.listCTitle, authority: sec2Form.listCAuthority, number: sec2Form.listCNumber, expiry: sec2Form.listCExpiry }
       }
-      const res = await fetch(`${API_BASE}/api/onboarding/i9-section2?practiceId=${user!.practiceId}&userId=${userId}`, {
+      const res = await apiFetch(`/api/onboarding/i9-section2?practiceId=${activePracticeId}&userId=${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -14,7 +15,8 @@ interface Practice {
 }
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuth()
+  const { user, logout, selectPractice } = useAuth()
+  const navigate = useNavigate()
   const [practices, setPractices] = useState<Practice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -78,6 +80,7 @@ export default function AdminDashboard() {
                   <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide text-center">Users</th>
                   <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide text-center">Locations</th>
                   <th className="px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Created</th>
+                  <th className="px-5 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -97,6 +100,14 @@ export default function AdminDashboard() {
                     <td className="px-5 py-4 text-center text-gray-700">{p.locationCount}</td>
                     <td className="px-5 py-4 text-gray-500">
                       {new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <button
+                        onClick={() => { selectPractice(p.id, p.name); navigate('/') }}
+                        className="text-xs font-medium text-[#1D9E75] hover:underline"
+                      >
+                        Enter →
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -74,8 +74,8 @@ function formatTime12h(t: string) {
 }
 
 export default function OpenShifts() {
-  const { user } = useAuth()
-  const PRACTICE_ID = user!.practiceId
+  const { user, activePracticeId } = useAuth()
+  const PRACTICE_ID = activePracticeId
   const [shifts, setShifts] = useState<OpenShift[]>([])
   const [locations, setLocations] = useState<Location[]>([])
   const [statusFilter, setStatusFilter] = useState<'open' | 'filled' | 'cancelled' | 'all'>('open')

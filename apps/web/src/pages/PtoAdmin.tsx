@@ -64,8 +64,8 @@ function dayKey(d: Date): string {
 }
 
 export default function PtoAdmin() {
-  const { user } = useAuth()
-  const PRACTICE_ID = user!.practiceId
+  const { user, activePracticeId } = useAuth()
+  const PRACTICE_ID = activePracticeId
   const [tab, setTab] = useState<Tab>('pending')
   const [pendingRequests, setPendingRequests] = useState<PtoRequest[]>([])
   const [approvedRequests, setApprovedRequests] = useState<PtoRequest[]>([])

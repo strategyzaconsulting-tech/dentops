@@ -37,8 +37,8 @@ interface Props {
 }
 
 export default function ProbationSection({ member, onUpdated }: Props) {
-  const { user } = useAuth()
-  const PRACTICE_ID = user!.practiceId
+  const { user, activePracticeId } = useAuth()
+  const PRACTICE_ID = activePracticeId
   const [showReview, setShowReview] = useState(false)
   const [reviewOutcome, setReviewOutcome] = useState<'passed' | 'failed'>('passed')
   const [nextSteps, setNextSteps] = useState<string[]>(['benefits', 'permanent'])

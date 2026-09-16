@@ -8,6 +8,8 @@ export async function apiFetch(input: string, init: RequestInit = {}): Promise<R
   const token = getToken()
   const headers = new Headers(init.headers)
   if (token) headers.set('Authorization', `Bearer ${token}`)
+  const selectedPracticeId = localStorage.getItem('selected_practice_id')
+  if (selectedPracticeId) headers.set('X-Practice-Id', selectedPracticeId)
   if (!headers.has('Content-Type') && init.body && typeof init.body === 'string') {
     headers.set('Content-Type', 'application/json')
   }

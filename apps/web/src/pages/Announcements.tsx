@@ -17,8 +17,8 @@ function formatDate(iso: string) {
 }
 
 export default function Announcements() {
-  const { user } = useAuth()
-  const PRACTICE_ID = user!.practiceId
+  const { user, activePracticeId } = useAuth()
+  const PRACTICE_ID = activePracticeId
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')

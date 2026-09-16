@@ -261,8 +261,8 @@ function toDatetimeLocal(iso: string | null): string {
 }
 
 export default function TimeClock() {
-  const { user } = useAuth()
-  const PRACTICE_ID = user!.practiceId
+  const { user, activePracticeId } = useAuth()
+  const PRACTICE_ID = activePracticeId
 
   // Live + today
   const [livePunches, setLivePunches] = useState<LivePunch[]>([])

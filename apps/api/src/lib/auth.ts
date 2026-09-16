@@ -30,14 +30,20 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
     return reply.status(401).send({ error: 'Unauthorized' })
   }
 
-  // IDOR guard: if caller passes a practiceId, it must match their token
-  // super_admin bypasses tenant isolation entirely
-  if (request.user.role !== 'super_admin') {
-    const body = request.body as Record<string, unknown> | null
-    const query = request.query as Record<string, unknown>
-    const incoming = (body?.practiceId ?? query?.practiceId) as string | undefined
-    if (incoming && incoming !== request.user.practiceId) {
-      return reply.status(403).send({ error: 'Forbidden' })
+  // Super admin can impersonate any practice by passing X-Practice-Id header
+  if (request.user.role === 'super_admin') {
+    const override = request.headers['x-practice-id']
+    if (typeof override === 'string' && override) {
+      request.user.practiceId = override
     }
+    return
+  }
+
+  // IDOR guard: practiceId in body/query must match the token
+  const body = request.body as Record<string, unknown> | null
+  const query = request.query as Record<string, unknown>
+  const incoming = (body?.practiceId ?? query?.practiceId) as string | undefined
+  if (incoming && incoming !== request.user.practiceId) {
+    return reply.status(403).send({ error: 'Forbidden' })
   }
 }

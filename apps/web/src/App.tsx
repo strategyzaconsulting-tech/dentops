@@ -23,6 +23,22 @@ import PracticeProfile from './pages/PracticeProfile'
 import Login from './pages/Login'
 import AdminDashboard from './pages/AdminDashboard'
 
+function PracticeViewBanner() {
+  const { user, selectedPracticeName, exitPractice } = useAuth()
+  if (!user || user.role !== 'super_admin' || !selectedPracticeName) return null
+  return (
+    <div className="bg-[#1D9E75] text-white text-xs flex items-center justify-between px-4 py-2">
+      <span>Viewing as: <strong>{selectedPracticeName}</strong></span>
+      <button
+        onClick={() => { exitPractice(); window.location.href = '/admin' }}
+        className="underline hover:no-underline"
+      >
+        ← Back to Admin
+      </button>
+    </div>
+  )
+}
+
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return <div className="min-h-screen bg-[#F5F0E8] flex items-center justify-center"><div className="text-sm text-gray-400">Loading…</div></div>
@@ -41,6 +57,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <PracticeViewBanner />
         <Routes>
           <Route path="/login" element={<Login />} />
 
