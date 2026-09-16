@@ -5,6 +5,6 @@ buildCommand = "pnpm install --frozen-lockfile && cd apps/api && npx prisma gene
 [deploy]
 startCommand = "cd apps/api && npx prisma migrate deploy && npx tsx src/index.ts"
 healthcheckPath = "/api/health"
-healthcheckTimeout = 30
+healthcheckTimeout = 120
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
