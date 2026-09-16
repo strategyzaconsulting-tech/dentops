@@ -45,3 +45,6 @@ android/
 
 # Test coverage
 coverage/
+
+.vercel
+.env*
