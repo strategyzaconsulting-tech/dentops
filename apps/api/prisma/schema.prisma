@@ -87,7 +87,7 @@ model User {
   benefitsEligibleAt DateTime? @map("benefits_eligible_at") @db.Date
   seasonedEmployee   Boolean   @default(false) @map("seasoned_employee")
 
-  practice         Practice          @relation(fields: [practiceId], references: [id])
+  practice         Practice?         @relation(fields: [practiceId], references: [id])
   manager          User?             @relation("ManagerRelation", fields: [managerId], references: [id])
   directReports    User[]            @relation("ManagerRelation")
   timePunches      TimePunch[]
