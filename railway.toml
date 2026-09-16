@@ -3,7 +3,7 @@ builder = "nixpacks"
 buildCommand = "pnpm install --frozen-lockfile && cd apps/api && npx prisma generate && echo 'build-ok'"
 
 [deploy]
-startCommand = "cd apps/api && npx prisma migrate deploy && npx tsx src/index.ts"
+startCommand = "cd apps/api && npx tsx src/index.ts"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 120
 restartPolicyType = "on_failure"

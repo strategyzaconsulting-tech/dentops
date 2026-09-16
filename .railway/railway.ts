@@ -7,7 +7,7 @@ export const partial = "dentops";
 export default defineRailway(() => {
   const dentops = service("dentops", {
     build: "pnpm install --frozen-lockfile && cd apps/api && npx prisma generate && echo 'build-ok'",
-    start: "cd apps/api && npx prisma migrate deploy && npx tsx src/index.ts",
+    start: "cd apps/api && npx tsx src/index.ts",
     healthcheck: "/api/health",
     healthcheckTimeout: 120,
     // builder from CaC: "nixpacks"
