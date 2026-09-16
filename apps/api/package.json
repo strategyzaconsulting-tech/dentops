@@ -22,7 +22,8 @@
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^3.0.3",
     "fastify": "^4.28.1",
-    "node-cron": "^4.2.1"
+    "node-cron": "^4.2.1",
+    "tsx": "^4.22.3"
   },
   "devDependencies": {
     "@dentops/eslint-config": "workspace:*",
@@ -34,7 +35,6 @@
     "eslint": "^9.10.0",
     "prettier": "^3.3.3",
     "prisma": "^5.22.0",
-    "tsx": "^4.22.3",
     "typescript": "^5.5.3"
   },
   "prettier": "@dentops/prettier-config"

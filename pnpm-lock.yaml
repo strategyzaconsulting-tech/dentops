@@ -60,6 +60,9 @@ importers:
       node-cron:
         specifier: ^4.2.1
         version: 4.2.1
+      tsx:
+        specifier: ^4.22.3
+        version: 4.22.3
     devDependencies:
       '@dentops/eslint-config':
         specifier: workspace:*
@@ -88,9 +91,6 @@ importers:
       prisma:
         specifier: ^5.22.0
         version: 5.22.0
-      tsx:
-        specifier: ^4.22.3
-        version: 4.22.3
       typescript:
         specifier: ^5.5.3
         version: 5.9.3
