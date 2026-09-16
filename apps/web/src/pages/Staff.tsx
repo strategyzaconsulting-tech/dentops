@@ -735,7 +735,8 @@ export default function Staff() {
                   <div className="flex items-center justify-between border-t border-gray-50 px-5 py-3">
                     <button
                       onClick={() => setFilePanel(member)}
-                      className="rounded-lg bg-[#1D9E75] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+                      disabled={user?.role === 'manager' && member.id === user.id}
+                      className="rounded-lg bg-[#1D9E75] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       Open File
                     </button>
@@ -839,7 +840,8 @@ export default function Staff() {
                   <div className="flex items-center gap-3 shrink-0">
                     <button
                       onClick={() => setFilePanel(member)}
-                      className="text-xs font-semibold text-[#1D9E75] hover:underline"
+                      disabled={user?.role === 'manager' && member.id === user.id}
+                      className="text-xs font-semibold text-[#1D9E75] hover:underline disabled:opacity-30 disabled:cursor-not-allowed disabled:no-underline"
                     >
                       File
                     </button>

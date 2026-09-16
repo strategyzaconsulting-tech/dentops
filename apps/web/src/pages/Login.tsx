@@ -16,6 +16,11 @@ export default function Login() {
     setLoading(true)
     try {
       const loggedInUser = await login(email, password)
+      if (loggedInUser.role === 'doctor' || loggedInUser.role === 'staff') {
+        localStorage.removeItem('auth_token')
+        setError('Please use the BRISA mobile app to sign in.')
+        return
+      }
       navigate(loggedInUser.role === 'super_admin' ? '/admin' : '/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
