@@ -8,22 +8,31 @@ export default function Step9Launch() {
   const { state } = useSetup()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   const handleLaunch = async () => {
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
     setLoading(true)
     setError(null)
-    if (state.logoFile) {
-      console.log('Logo upload:', state.logoFile.name)
-    }
     try {
-      await submitSetup({
+      const { token } = await submitSetup({
         practice: state.practice,
         brandColor: state.brandColor,
         specialties: state.specialties,
         doctors: state.doctors,
         staff: state.staff,
         locations: state.locations,
+        adminPassword: password,
       })
+      localStorage.setItem('auth_token', token)
       navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
@@ -168,6 +177,42 @@ export default function Step9Launch() {
           ) : (
             <p className="text-xs text-gray-400 italic">None added</p>
           )}
+        </div>
+      </div>
+
+      {/* Admin credentials */}
+      <div className="bg-white border border-gray-200 rounded-lg px-5 py-5 mb-6">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
+          Create your admin password
+        </p>
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-gray-600 mb-1">Email (your login)</label>
+          <input
+            type="email"
+            value={state.practice.email}
+            disabled
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+          />
+        </div>
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="At least 8 characters"
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Confirm password</label>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Re-enter password"
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent"
+          />
         </div>
       </div>
 

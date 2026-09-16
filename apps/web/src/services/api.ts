@@ -7,15 +7,17 @@ export interface SetupPayload {
   doctors: Doctor[]
   staff: StaffMember[]
   locations: Location[]
+  adminPassword: string
 }
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-export async function submitSetup(data: SetupPayload): Promise<void> {
+export async function submitSetup(data: SetupPayload): Promise<{ token: string }> {
   const res = await fetch(`${API_BASE}/api/setup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
   if (!res.ok) throw new Error(await res.text())
+  return res.json()
 }
