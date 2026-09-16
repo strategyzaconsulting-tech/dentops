@@ -21,7 +21,7 @@ const PUBLIC_ROUTES = new Set([
 ])
 
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
-  const routeKey = `${request.method} ${request.routeOptions?.url ?? request.url.split('?')[0]}`
+  const routeKey = `${request.method} ${request.url.split('?')[0]}`
   if (PUBLIC_ROUTES.has(routeKey)) return
 
   try {
