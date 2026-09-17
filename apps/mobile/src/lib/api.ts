@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store'
 
-export const API_BASE = 'http://192.168.0.139:3000'
+export const API_BASE = 'https://dentops-production-9ffe.up.railway.app'
 
 const TOKEN_KEY = 'auth_token'
 
