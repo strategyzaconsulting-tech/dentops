@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import Svg, { Path, Rect } from 'react-native-svg'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '../lib/AuthContext'
 
@@ -40,7 +41,12 @@ export default function LoginScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <View style={styles.logoMark} />
+            <Svg width={64} height={64} viewBox="0 0 44 44" style={styles.logoMark}>
+              <Rect width="44" height="44" rx="10" fill="#1E2E2A" />
+              <Path d="M8 16 Q15 11 22 16 Q29 21 36 16" stroke="#A8D5E2" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <Path d="M8 22 Q16 16 24 22 Q30 26 36 22" stroke="#5BA4BE" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <Path d="M8 28 Q14 23 20 28 Q28 34 36 28" stroke="#8BAF9A" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+            </Svg>
             <Text style={styles.appName}>BRISA</Text>
             <Text style={styles.tagline}>Staff Portal</Text>
           </View>
@@ -101,10 +107,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
   header: { alignItems: 'center', marginBottom: 32 },
-  logoMark: {
-    width: 52, height: 52, borderRadius: 16,
-    backgroundColor: '#1D9E75', marginBottom: 12,
-  },
+  logoMark: { marginBottom: 12 },
   appName: { fontSize: 26, fontWeight: '700', color: '#1A2E29', letterSpacing: -0.5 },
   tagline: { fontSize: 13, color: '#6B7280', marginTop: 2 },
   card: {
