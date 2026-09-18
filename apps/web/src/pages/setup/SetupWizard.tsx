@@ -43,12 +43,12 @@ export default function SetupWizard() {
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => navigate('/setup/welcome')}
           >
-            <div
-              className="w-8 h-8 rounded-md flex items-center justify-center text-white font-bold text-base"
-              style={{ backgroundColor: '#1D9E75' }}
-            >
-              D
-            </div>
+            <svg width="32" height="32" viewBox="0 0 44 44" fill="none">
+              <rect width="44" height="44" rx="10" fill="#1E2E2A" />
+              <path d="M8 16 Q15 11 22 16 Q29 21 36 16" stroke="#A8D5E2" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M8 22 Q16 16 24 22 Q30 26 36 22" stroke="#5BA4BE" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M8 28 Q14 23 20 28 Q28 34 36 28" stroke="#8BAF9A" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+            </svg>
             <span className="font-semibold text-[#2C2C2A] text-base">BRISA</span>
           </div>
 
