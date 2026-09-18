@@ -99,7 +99,7 @@ export default function Step4BrandColor() {
                     <path d="M8 28 Q14 23 20 28 Q28 34 36 28" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none" />
                   </svg>
                   <span className="text-white text-xs font-semibold truncate">
-                    DentOps
+                    BRISA
                   </span>
                 </div>
 
