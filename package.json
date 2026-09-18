@@ -10,7 +10,8 @@
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .gitignore",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "start": "cd apps/api && npx tsx src/index.ts"
   },
   "devDependencies": {
     "@dentops/prettier-config": "workspace:*",
