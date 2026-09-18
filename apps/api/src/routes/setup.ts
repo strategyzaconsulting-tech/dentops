@@ -72,8 +72,10 @@ export default async function setupRoutes(server: FastifyInstance) {
 
     // 3. Create admin/owner user with password
     const ownerEmail = practice.email.toLowerCase().trim()
-    const [ownerFirst, ...rest] = practice.ownerName.trim().split(' ')
-    const ownerLast = rest.join(' ') || ownerFirst
+    const cleanName = practice.ownerName.trim().replace(/^(Dr|Mr|Mrs|Ms|Miss|Prof|Rev|Sir)\.?\s+/i, '')
+    const nameParts = cleanName.split(' ')
+    const ownerFirst = nameParts[0]
+    const ownerLast = nameParts.slice(1).join(' ') || ownerFirst
     const owner = await prisma.user.create({
       data: {
         practiceId, firstName: ownerFirst, lastName: ownerLast,
