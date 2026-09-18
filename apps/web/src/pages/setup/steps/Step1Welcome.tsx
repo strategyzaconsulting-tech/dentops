@@ -8,12 +8,12 @@ export default function Step1Welcome() {
       <div className="max-w-lg w-full text-center">
         {/* Large logo mark */}
         <div className="flex justify-center mb-6">
-          <div
-            className="w-14 h-14 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-md"
-            style={{ backgroundColor: '#1D9E75' }}
-          >
-            D
-          </div>
+          <svg width="56" height="56" viewBox="0 0 44 44" fill="none" className="shadow-md rounded-xl">
+            <rect width="44" height="44" rx="10" fill="#1E2E2A" />
+            <path d="M8 16 Q15 11 22 16 Q29 21 36 16" stroke="#A8D5E2" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+            <path d="M8 22 Q16 16 24 22 Q30 26 36 22" stroke="#5BA4BE" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+            <path d="M8 28 Q14 23 20 28 Q28 34 36 28" stroke="#8BAF9A" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          </svg>
         </div>
 
         <h1 className="text-3xl font-semibold text-[#2C2C2A] mb-3">

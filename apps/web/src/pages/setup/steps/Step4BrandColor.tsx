@@ -92,12 +92,12 @@ export default function Step4BrandColor() {
               <div className="bg-[#2C2C2A] h-full flex flex-col">
                 {/* Logo area */}
                 <div className="px-2.5 pt-3 pb-2 flex items-center gap-1.5">
-                  <div
-                    className="w-5 h-5 rounded flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
-                    style={{ backgroundColor: selected }}
-                  >
-                    D
-                  </div>
+                  <svg width="20" height="20" viewBox="0 0 44 44" fill="none" className="flex-shrink-0 rounded">
+                    <rect width="44" height="44" rx="8" style={{ fill: selected }} />
+                    <path d="M8 16 Q15 11 22 16 Q29 21 36 16" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none" />
+                    <path d="M8 22 Q16 16 24 22 Q30 26 36 22" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none" />
+                    <path d="M8 28 Q14 23 20 28 Q28 34 36 28" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none" />
+                  </svg>
                   <span className="text-white text-xs font-semibold truncate">
                     DentOps
                   </span>
