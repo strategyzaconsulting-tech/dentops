@@ -95,7 +95,7 @@ export default function AdminDashboard() {
                         <span className="font-medium text-[#2C2C2A]">{p.name}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-gray-500">{p.type ?? '—'}</td>
+                    <td className="px-5 py-4 text-gray-500">{p.type ? p.type.charAt(0).toUpperCase() + p.type.slice(1).toLowerCase() : '—'}</td>
                     <td className="px-5 py-4 text-center text-gray-700">{p.userCount}</td>
                     <td className="px-5 py-4 text-center text-gray-700">{p.locationCount}</td>
                     <td className="px-5 py-4 text-gray-500">
