@@ -41,7 +41,7 @@ export default function LoginScreen() {
         <View style={styles.container}>
           <View style={styles.header}>
             <View style={styles.logoMark} />
-            <Text style={styles.appName}>DentOps</Text>
+            <Text style={styles.appName}>BRISA</Text>
             <Text style={styles.tagline}>Staff Portal</Text>
           </View>
 
