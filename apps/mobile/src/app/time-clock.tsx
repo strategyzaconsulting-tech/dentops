@@ -49,6 +49,8 @@ interface MyPunch {
   isTardy: boolean
   breakStart: string | null
   breakEnd:   string | null
+  punchInLat: number | null
+  punchInLng: number | null
 }
 
 interface Adjustment {
@@ -366,6 +368,9 @@ export default function TimeClockScreen() {
                         <Text style={styles.punchTime}>{lastOut ? formatTime(lastOut) : '—'}</Text>
                         {totalStr ? <Text style={styles.punchDuration}>{totalStr}</Text> : null}
                         {isTardy && <Text style={styles.tardyTag}>Tardy</Text>}
+                        {dayPunches[0].punchInLat != null && (
+                          <Text style={styles.geoTag}>📍</Text>
+                        )}
                       </View>
                     )
                   })()}
@@ -447,6 +452,7 @@ const styles = StyleSheet.create({
   punchBreak: { fontSize: 11, color: '#aaa', fontStyle: 'italic' },
   punchDuration: { fontSize: 12, color: '#888', marginLeft: 'auto' as unknown as number },
   tardyTag: { fontSize: 11, color: '#DC2626', fontStyle: 'italic' },
+  geoTag: { fontSize: 13 },
 
   adjSection: { marginTop: 8 },
   adjSectionTitle: { fontSize: 11, fontWeight: '700', color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },

@@ -23,6 +23,8 @@ interface LivePunch {
   breakStart: string | null
   breakEnd: string | null
   isTardy: boolean
+  punchInLat: number | null
+  punchInLng: number | null
 }
 
 interface TodayPunch {
@@ -37,6 +39,8 @@ interface TodayPunch {
   breakStart: string | null
   breakEnd: string | null
   isTardy: boolean
+  punchInLat: number | null
+  punchInLng: number | null
 }
 
 interface RangePunch {
@@ -628,6 +632,9 @@ export default function TimeClock() {
                       {p.breakStart && !p.breakEnd && (
                         <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">On break</span>
                       )}
+                      {p.punchInLat != null && (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700" title={`${p.punchInLat.toFixed(5)}, ${p.punchInLng?.toFixed(5)}`}>📍 On-site</span>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -673,9 +680,12 @@ export default function TimeClock() {
                       <td className="px-4 py-3 text-gray-600">{p.location.name}</td>
                       <td className="px-4 py-3 text-gray-600">{p.specialty ?? '—'}</td>
                       <td className="px-4 py-3 text-gray-600">
-                        <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
                           <span>{formatHm(p.punchIn)}</span>
                           {p.isTardy && <span className="text-xs italic text-red-600">Tardy</span>}
+                          {p.punchInLat != null && (
+                            <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-700" title={`${p.punchInLat.toFixed(5)}, ${p.punchInLng?.toFixed(5)}`}>📍</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
