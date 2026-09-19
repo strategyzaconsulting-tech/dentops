@@ -108,6 +108,10 @@ export default async function timeclockRoutes(server: FastifyInstance) {
     const { practiceId, userId, locationId, specialty, punchIn, latitude, longitude } = request.body
     const punchInDate = new Date(punchIn)
 
+    if (latitude === undefined || longitude === undefined) {
+      return reply.status(422).send({ error: 'Location is required to clock in. Please enable location access and try again.' })
+    }
+
     const activePunch = await prisma.timePunch.findFirst({
       where: { userId, punchOut: null },
     })
