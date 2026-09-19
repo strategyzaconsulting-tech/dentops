@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import * as Location from 'expo-location'
+import * as ExpoLocation from 'expo-location'
 import { useAuth } from '../lib/AuthContext'
 import { apiFetch } from '../lib/api'
 
@@ -234,6 +234,7 @@ export default function HomeScreen() {
 
   // Geolocation
   const [geoLoading, setGeoLoading] = useState(false)
+  const [geoStatus, setGeoStatus] = useState<'unknown' | 'granted' | 'denied'>('unknown')
 
   // Adjustment request
   const [showAdjModal, setShowAdjModal] = useState(false)
@@ -315,26 +316,13 @@ export default function HomeScreen() {
   }, [showTimesheet, practiceId, userId])
 
 
-  async function requestLocationAndShowModal() {
-    setGeoLoading(true)
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync()
-      if (status !== 'granted') {
-        Alert.alert(
-          'Location Required',
-          'Location access is required to clock in. Please enable it in Settings.',
-          [{ text: 'OK' }]
-        )
-        return
-      }
-      setSelectedLocation(null)
-      setSelectedSpecialty(null)
-      setShowLocationDropdown(false)
-      setShowSpecialtyDropdown(false)
-      setShowClockInModal(true)
-    } finally {
-      setGeoLoading(false)
-    }
+  function openClockInModal() {
+    setGeoStatus('unknown')
+    setSelectedLocation(null)
+    setSelectedSpecialty(null)
+    setShowLocationDropdown(false)
+    setShowSpecialtyDropdown(false)
+    setShowClockInModal(true)
   }
 
   async function handleClockIn(): Promise<boolean> {
@@ -342,12 +330,34 @@ export default function HomeScreen() {
     setClockingIn(true)
     const now = new Date()
     try {
+      // Request permission then capture GPS with timeout + last-known fallback
+      const { status } = await ExpoLocation.requestForegroundPermissionsAsync()
+      setGeoStatus(status === 'granted' ? 'granted' : 'denied')
+      if (status !== 'granted') {
+        Alert.alert('Location Required', 'Location access is required to clock in. Please enable it in Settings.')
+        return false
+      }
+
       let coords: { latitude: number; longitude: number } | undefined
       try {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+        const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+        const loc = await Promise.race([
+          ExpoLocation.getCurrentPositionAsync({ accuracy: ExpoLocation.Accuracy.Lowest }),
+          timeout,
+        ])
         coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude }
       } catch {
-        Alert.alert('Location Unavailable', 'Could not get your location. Please ensure GPS is enabled.')
+        // Fall back to last known position
+        try {
+          const last = await ExpoLocation.getLastKnownPositionAsync()
+          if (last) {
+            coords = { latitude: last.coords.latitude, longitude: last.coords.longitude }
+          }
+        } catch { /* no cached position */ }
+      }
+
+      if (!coords) {
+        Alert.alert('Location Unavailable', 'Could not get your location. Please ensure GPS is enabled and try again.')
         return false
       }
 
@@ -489,7 +499,7 @@ export default function HomeScreen() {
       try {
         let outCoords: { punchOutLat: number; punchOutLng: number } | undefined
         try {
-          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+          const loc = await ExpoLocation.getCurrentPositionAsync({ accuracy: ExpoLocation.Accuracy.Balanced })
           outCoords = { punchOutLat: loc.coords.latitude, punchOutLng: loc.coords.longitude }
         } catch { /* best effort — don't block clock-out */ }
         await apiFetch(`/api/time-punches/${punchId}`, {
@@ -668,13 +678,10 @@ export default function HomeScreen() {
           )}
 
           <TouchableOpacity
-            style={[styles.clockInBtn, styles.clockInBtnIdle, geoLoading && styles.clockInBtnDisabled]}
-            onPress={requestLocationAndShowModal}
-            disabled={geoLoading}
+            style={[styles.clockInBtn, styles.clockInBtnIdle]}
+            onPress={openClockInModal}
           >
-            {geoLoading
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={styles.clockInBtnText}>CLOCK IN</Text>}
+            <Text style={styles.clockInBtnText}>CLOCK IN</Text>
           </TouchableOpacity>
 
           {/* Time correction link */}
@@ -693,6 +700,12 @@ export default function HomeScreen() {
           <TouchableOpacity style={styles.clockInSheet} activeOpacity={1}>
             <View style={styles.locationSheetHandle} />
             <Text style={styles.clockInSheetTitle}>CLOCK IN</Text>
+            <View style={styles.geoRow}>
+              <View style={[styles.geoDot, { backgroundColor: geoStatus === 'granted' ? '#1D9E75' : geoStatus === 'denied' ? '#EF4444' : '#D97706' }]} />
+              <Text style={styles.geoText}>
+                {geoStatus === 'granted' ? 'Location verified' : geoStatus === 'denied' ? 'Location denied — enable in Settings' : 'Verifying location…'}
+              </Text>
+            </View>
 
             {/* Location dropdown */}
             <View style={styles.adjField}>
@@ -916,6 +929,9 @@ const styles = StyleSheet.create({
   // Clock-in modal sheet
   clockInSheet: { backgroundColor: '#1E1E1C', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 16 },
   clockInSheetTitle: { fontSize: 11, fontWeight: '600', color: '#9A9A96', letterSpacing: 4, textAlign: 'center' },
+  geoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  geoDot: { width: 7, height: 7, borderRadius: 4 },
+  geoText: { fontSize: 11, color: '#8BAF9A', fontWeight: '500' },
 
   // Location / specialty dropdown (used inside modal)
   dropdownSection: { marginHorizontal: 24, marginBottom: 12 },

@@ -1,6 +1,7 @@
 ﻿import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Modal,
   ScrollView,
@@ -71,7 +72,7 @@ function getBenefitTheme(name: string): BenefitTheme {
 
 
 export default function OnboardingScreen() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const practiceId = user?.practiceId ?? ''
   const userId = user?.id ?? ''
 
@@ -391,6 +392,31 @@ export default function OnboardingScreen() {
             )
           })
         )}
+
+        {/* Account */}
+        <Text style={styles.sectionTitle}>Account</Text>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.checkRow}
+            onPress={() => router.push('/change-password' as never)}
+          >
+            <View style={styles.navIcon}><Text style={styles.navIconText}>🔑</Text></View>
+            <Text style={styles.checkLabel}>Change Password</Text>
+            <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.checkRow, styles.checkRowBorder]}
+            onPress={() =>
+              Alert.alert('Log Out', 'Are you sure you want to log out?', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Log Out', style: 'destructive', onPress: () => logout() },
+              ])
+            }
+          >
+            <View style={styles.navIcon}><Text style={styles.navIconText}>🚪</Text></View>
+            <Text style={[styles.checkLabel, { color: '#DC2626' }]}>Log Out</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={{ height: 32 }} />
       </ScrollView>

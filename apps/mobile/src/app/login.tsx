@@ -17,6 +17,7 @@ export default function LoginScreen() {
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -71,16 +72,23 @@ export default function LoginScreen() {
 
             <View style={styles.field}>
               <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="••••••••"
-                placeholderTextColor="#9CA3AF"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
-              />
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="••••••••"
+                  placeholderTextColor="#9CA3AF"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(v => !v)}>
+                  <Text style={styles.eyeText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {!!error && <Text style={styles.error}>{error}</Text>}
@@ -124,6 +132,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 11,
     fontSize: 15, color: '#111827', backgroundColor: '#FAFAFA',
   },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 10,
+    backgroundColor: '#FAFAFA',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 14, paddingVertical: 11,
+    fontSize: 15, color: '#111827',
+  },
+  eyeBtn: { paddingHorizontal: 14, paddingVertical: 11 },
+  eyeText: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
   error: { fontSize: 13, color: '#DC2626', marginBottom: 12 },
   button: {
     backgroundColor: '#1D9E75', borderRadius: 10,
