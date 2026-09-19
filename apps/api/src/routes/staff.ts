@@ -75,6 +75,7 @@ export default async function staffRoutes(server: FastifyInstance) {
       benefitsEligibleAt?: string | null
       ptoDaysPerYear?: number | null
       seasonedEmployee?: boolean
+      tempPassword?: string
     }
   }>('/staff/:id', async (request, reply) => {
     const { id } = request.params
@@ -83,7 +84,7 @@ export default async function staffRoutes(server: FastifyInstance) {
       hireDate, managerId, separationDate, phone, address,
       probationDays, probationEndDate, probationStatus, probationNotes,
       probationCompletedAt, probationAlertDays, benefitsEligibleAt,
-      ptoDaysPerYear, seasonedEmployee,
+      ptoDaysPerYear, seasonedEmployee, tempPassword,
     } = request.body
 
     const data: Record<string, unknown> = {}
@@ -108,6 +109,7 @@ export default async function staffRoutes(server: FastifyInstance) {
     if (benefitsEligibleAt !== undefined) data.benefitsEligibleAt = benefitsEligibleAt ? new Date(benefitsEligibleAt) : null
     if (ptoDaysPerYear !== undefined) data.ptoDaysPerYear = ptoDaysPerYear ?? null
     if (seasonedEmployee !== undefined) data.seasonedEmployee = seasonedEmployee
+    if (tempPassword) data.passwordHash = await bcrypt.hash(tempPassword, 12)
 
     const user = await prisma.user.update({ where: { id }, data, select: userSelect })
     return reply.send(user)
