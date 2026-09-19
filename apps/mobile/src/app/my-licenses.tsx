@@ -70,9 +70,16 @@ interface FormState {
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function fmtDate(iso: string) {
-  return new Date(iso.split('T')[0] + 'T12:00:00').toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  })
+  const d = new Date(iso.split('T')[0] + 'T12:00:00')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${mm}-${dd}-${d.getFullYear()}`
+}
+
+function toIsoDate(mmddyyyy: string): string {
+  const [mm, dd, yyyy] = mmddyyyy.split('-')
+  if (mm && dd && yyyy && yyyy.length === 4) return `${yyyy}-${mm}-${dd}`
+  return mmddyyyy
 }
 
 function licStatus(exp: string | null, alertDays: number) {
@@ -229,8 +236,8 @@ export default function MyLicensesScreen() {
           label: form.type === 'other' ? (form.customLabel.trim() || null) : null,
           licenseNumber: form.licenseNumber.trim() || null,
           state: form.state || null,
-          issuedDate: form.issuedDate || null,
-          expirationDate: form.expirationDate || null,
+          issuedDate: form.issuedDate ? toIsoDate(form.issuedDate) : null,
+          expirationDate: form.expirationDate ? toIsoDate(form.expirationDate) : null,
           notes: form.notes.trim() || null,
           alertDays: 30,
         }),
@@ -455,7 +462,7 @@ export default function MyLicensesScreen() {
               <Text style={s.label}>Issue date<Text style={s.optional}> (optional)</Text></Text>
               <TextInput
                 style={s.input}
-                placeholder="YYYY-MM-DD"
+                placeholder="MM-DD-YYYY"
                 value={form.issuedDate}
                 onChangeText={v => setForm(f => ({ ...f, issuedDate: v }))}
                 keyboardType="numbers-and-punctuation"
@@ -468,7 +475,7 @@ export default function MyLicensesScreen() {
               <Text style={s.label}>Expiration date<Text style={s.optional}> (optional)</Text></Text>
               <TextInput
                 style={s.input}
-                placeholder="YYYY-MM-DD"
+                placeholder="MM-DD-YYYY"
                 value={form.expirationDate}
                 onChangeText={v => setForm(f => ({ ...f, expirationDate: v }))}
                 keyboardType="numbers-and-punctuation"

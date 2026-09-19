@@ -14,14 +14,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dentops.mobile"
+      "bundleIdentifier": "com.dentops.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Your location is required to verify you are on-site when clocking in."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1e40af"
       },
-      "package": "com.dentops.mobile"
+      "package": "com.dentops.mobile",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
     },
     "web": {
       "bundler": "metro",
@@ -31,7 +35,9 @@
     "plugins": [
       "expo-router",
       "expo-web-browser",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font",
+      "expo-location"
     ],
     "updates": {
       "checkAutomatically": "NEVER"

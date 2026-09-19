@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pnpm install --frozen-lockfile && cd apps/api && npx prisma generate && echo 'build-ok'"
+buildCommand = "pnpm install --frozen-lockfile && cd apps/api && npx prisma generate && npx prisma migrate deploy && echo 'build-ok'"
 
 [deploy]
 startCommand = "cd apps/api && npx tsx src/index.ts"

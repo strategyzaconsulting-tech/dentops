@@ -36,6 +36,15 @@ function getMonday(date: Date): Date {
   return d
 }
 
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 export default async function timeclockRoutes(server: FastifyInstance) {
   // GET /api/locations?practiceId=...
   server.get<{ Querystring: { practiceId: string } }>('/locations', async (request, reply) => {
@@ -92,9 +101,11 @@ export default async function timeclockRoutes(server: FastifyInstance) {
       locationId: string
       specialty?: string
       punchIn: string
+      latitude?: number
+      longitude?: number
     }
   }>('/time-punches', async (request, reply) => {
-    const { practiceId, userId, locationId, specialty, punchIn } = request.body
+    const { practiceId, userId, locationId, specialty, punchIn, latitude, longitude } = request.body
     const punchInDate = new Date(punchIn)
 
     const activePunch = await prisma.timePunch.findFirst({
@@ -104,9 +115,26 @@ export default async function timeclockRoutes(server: FastifyInstance) {
       return reply.status(409).send({ error: 'Already clocked in', punchId: activePunch.id })
     }
 
+    // Geofence check — only enforced when location has coordinates configured
+    if (latitude !== undefined && longitude !== undefined) {
+      const loc = await prisma.location.findUnique({ where: { id: locationId } })
+      if (loc?.latitude && loc?.longitude) {
+        const dist = haversineMeters(latitude, longitude, loc.latitude, loc.longitude)
+        if (dist > loc.radiusMeters) {
+          return reply.status(403).send({
+            error: `You are ${Math.round(dist)}m from ${loc.name}. Must be within ${loc.radiusMeters}m to clock in.`,
+            distanceMeters: Math.round(dist),
+          })
+        }
+      }
+    }
+
     const [punch, shift, user] = await Promise.all([
       prisma.timePunch.create({
-        data: { practiceId, userId, locationId, specialty: specialty ?? null, punchIn: punchInDate },
+        data: {
+          practiceId, userId, locationId, specialty: specialty ?? null, punchIn: punchInDate,
+          punchInLat: latitude ?? null, punchInLng: longitude ?? null,
+        },
       }),
       prisma.shift.findFirst({
         where: {
@@ -148,10 +176,12 @@ export default async function timeclockRoutes(server: FastifyInstance) {
       punchIn?: string
       locationId?: string
       specialty?: string
+      punchOutLat?: number
+      punchOutLng?: number
     }
   }>('/time-punches/:id', async (request, reply) => {
     const { id } = request.params
-    const { punchOut, breakStart, breakEnd, punchIn, locationId, specialty } = request.body
+    const { punchOut, breakStart, breakEnd, punchIn, locationId, specialty, punchOutLat, punchOutLng } = request.body
 
     const data: Record<string, unknown> = {}
     if (punchOut !== undefined) data.punchOut = new Date(punchOut)
@@ -160,6 +190,8 @@ export default async function timeclockRoutes(server: FastifyInstance) {
     if (punchIn !== undefined) data.punchIn = new Date(punchIn)
     if (locationId !== undefined) data.locationId = locationId
     if (specialty !== undefined) data.specialty = specialty
+    if (punchOutLat !== undefined) data.punchOutLat = punchOutLat
+    if (punchOutLng !== undefined) data.punchOutLng = punchOutLng
 
     const punch = await prisma.timePunch.update({
       where: { id },

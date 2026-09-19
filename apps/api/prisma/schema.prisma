@@ -112,13 +112,16 @@ model User {
 }
 
 model Location {
-  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  practiceId String  @map("practice_id") @db.Uuid
-  name       String
-  address    String?
-  city       String?
-  state      String?
-  zip        String?
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId   String  @map("practice_id") @db.Uuid
+  name         String
+  address      String?
+  city         String?
+  state        String?
+  zip          String?
+  latitude     Float?
+  longitude    Float?
+  radiusMeters Int     @default(200) @map("radius_meters")
 
   practice    Practice     @relation(fields: [practiceId], references: [id])
   timePunches TimePunch[]
@@ -129,15 +132,19 @@ model Location {
 }
 
 model TimePunch {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  practiceId String    @map("practice_id") @db.Uuid
-  userId     String    @map("user_id") @db.Uuid
-  locationId String    @map("location_id") @db.Uuid
-  punchIn    DateTime  @map("punch_in")
-  punchOut   DateTime? @map("punch_out")
-  specialty  String?
-  breakStart DateTime? @map("break_start")
-  breakEnd   DateTime? @map("break_end")
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  practiceId  String    @map("practice_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  locationId  String    @map("location_id") @db.Uuid
+  punchIn     DateTime  @map("punch_in")
+  punchOut    DateTime? @map("punch_out")
+  specialty   String?
+  breakStart  DateTime? @map("break_start")
+  breakEnd    DateTime? @map("break_end")
+  punchInLat  Float?    @map("punch_in_lat")
+  punchInLng  Float?    @map("punch_in_lng")
+  punchOutLat Float?    @map("punch_out_lat")
+  punchOutLng Float?    @map("punch_out_lng")
 
   practice  Practice  @relation(fields: [practiceId], references: [id])
   user      User      @relation(fields: [userId], references: [id])

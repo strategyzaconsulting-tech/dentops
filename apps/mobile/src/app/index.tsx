@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import * as Location from 'expo-location'
 import { useAuth } from '../lib/AuthContext'
 import { apiFetch } from '../lib/api'
 
@@ -231,6 +232,9 @@ export default function HomeScreen() {
   const [weekAbsent, setWeekAbsent] = useState<string[]>([])
   const [timesheetLoading, setTimesheetLoading] = useState(false)
 
+  // Geolocation
+  const [geoLoading, setGeoLoading] = useState(false)
+
   // Adjustment request
   const [showAdjModal, setShowAdjModal] = useState(false)
   const [corrections, setCorrections] = useState<CorrEntry[]>([{ id: '1', dateStr: todayDateStr(), type: 'clock_in', time: '' }])
@@ -311,11 +315,42 @@ export default function HomeScreen() {
   }, [showTimesheet, practiceId, userId])
 
 
+  async function requestLocationAndShowModal() {
+    setGeoLoading(true)
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert(
+          'Location Required',
+          'Location access is required to clock in. Please enable it in Settings.',
+          [{ text: 'OK' }]
+        )
+        return
+      }
+      setSelectedLocation(null)
+      setSelectedSpecialty(null)
+      setShowLocationDropdown(false)
+      setShowSpecialtyDropdown(false)
+      setShowClockInModal(true)
+    } finally {
+      setGeoLoading(false)
+    }
+  }
+
   async function handleClockIn(): Promise<boolean> {
     if (!selectedLocation || !practiceId || !userId) return false
     setClockingIn(true)
     const now = new Date()
     try {
+      let coords: { latitude: number; longitude: number } | undefined
+      try {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+        coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude }
+      } catch {
+        Alert.alert('Location Unavailable', 'Could not get your location. Please ensure GPS is enabled.')
+        return false
+      }
+
       const res = await apiFetch('/api/time-punches', {
         method: 'POST',
         body: JSON.stringify({
@@ -324,6 +359,7 @@ export default function HomeScreen() {
           locationId: selectedLocation,
           specialty: selectedSpecialty ?? undefined,
           punchIn: now.toISOString(),
+          ...coords,
         }),
       })
 
@@ -402,7 +438,7 @@ export default function HomeScreen() {
 
       let msg = `Server error (${res.status})`
       try { const e = await res.json(); if (e?.error) msg = e.error } catch {}
-      Alert.alert('Clock-In Failed', msg)
+      Alert.alert(res.status === 403 ? 'Outside Geofence' : 'Clock-In Failed', msg)
       return false
     } catch {
       Alert.alert('Connection Error', 'Could not reach the server. Check that the app and API are on the same network.')
@@ -451,9 +487,14 @@ export default function HomeScreen() {
     setClockingOut(false)
     if (!punchId.startsWith('local-')) {
       try {
+        let outCoords: { punchOutLat: number; punchOutLng: number } | undefined
+        try {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+          outCoords = { punchOutLat: loc.coords.latitude, punchOutLng: loc.coords.longitude }
+        } catch { /* best effort — don't block clock-out */ }
         await apiFetch(`/api/time-punches/${punchId}`, {
           method: 'PATCH',
-          body: JSON.stringify({ punchOut: new Date().toISOString() }),
+          body: JSON.stringify({ punchOut: new Date().toISOString(), ...outCoords }),
         })
       } catch { /* API unavailable */ }
     }
@@ -627,10 +668,13 @@ export default function HomeScreen() {
           )}
 
           <TouchableOpacity
-            style={[styles.clockInBtn, styles.clockInBtnIdle]}
-            onPress={() => { setSelectedLocation(null); setSelectedSpecialty(null); setShowLocationDropdown(false); setShowSpecialtyDropdown(false); setShowClockInModal(true) }}
+            style={[styles.clockInBtn, styles.clockInBtnIdle, geoLoading && styles.clockInBtnDisabled]}
+            onPress={requestLocationAndShowModal}
+            disabled={geoLoading}
           >
-            <Text style={styles.clockInBtnText}>CLOCK IN</Text>
+            {geoLoading
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Text style={styles.clockInBtnText}>CLOCK IN</Text>}
           </TouchableOpacity>
 
           {/* Time correction link */}
