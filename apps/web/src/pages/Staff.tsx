@@ -200,9 +200,6 @@ export default function Staff() {
   const [malpracticeGap, setMalpracticeGap] = useState<{ id: string; firstName: string; lastName: string; role: string }[]>([])
   const [ptoSummaries, setPtoSummaries] = useState<Record<string, PtoSummary>>({})
   const [ptoPolicy, setPtoPolicy] = useState<PtoPolicy>({ defaultPtoDays: 15, ptoCustomAllowed: false })
-  const [ptoModal, setPtoModal] = useState(false)
-  const [ptoForm, setPtoForm] = useState({ defaultPtoDays: '15', ptoCustomAllowed: false })
-  const [savingPolicy, setSavingPolicy] = useState(false)
   const [tempPassword, setTempPassword] = useState('')
   const [createdTempPassword, setCreatedTempPassword] = useState<string | null>(null)
 
@@ -240,7 +237,6 @@ export default function Staff() {
       if (Array.isArray(ptoData)) ptoData.forEach((s) => { byUser[s.userId] = s })
       setPtoSummaries(byUser)
       setPtoPolicy(policy)
-      setPtoForm({ defaultPtoDays: String(policy.defaultPtoDays), ptoCustomAllowed: policy.ptoCustomAllowed })
       const licAlertData = await licAlertRes.json().catch(() => [])
       setLicenseAlerts(Array.isArray(licAlertData) ? licAlertData : [])
       const complianceData = await complianceRes.json().catch(() => [])
@@ -249,25 +245,6 @@ export default function Staff() {
       // silent
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function savePtoPolicy() {
-    setSavingPolicy(true)
-    try {
-      const res = await apiFetch(`/api/pto/policy`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          defaultPtoDays: parseInt(ptoForm.defaultPtoDays) || 15,
-          ptoCustomAllowed: ptoForm.ptoCustomAllowed,
-        }),
-      })
-      const updated = await res.json()
-      setPtoPolicy(updated)
-      setPtoModal(false)
-      await fetchStaff()
-    } finally {
-      setSavingPolicy(false)
     }
   }
 
@@ -432,13 +409,6 @@ export default function Staff() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPtoModal(true)}
-              className="rounded-lg border border-[#4A5C52] px-3 py-2 text-xs font-semibold text-[#8BAF9A] hover:border-[#8BAF9A] hover:text-white transition-colors"
-              title={`Default: ${ptoPolicy.defaultPtoDays} PTO days/yr`}
-            >
-              PTO Policy
-            </button>
             <button
               onClick={openAdd}
               className="rounded-lg bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
@@ -1265,81 +1235,6 @@ export default function Staff() {
             </div>
             </>
             )}
-          </div>
-        </div>
-      )}
-      {/* PTO Policy Modal */}
-      {ptoModal && (
-        <div
-          className="fixed inset-0 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 50 }}
-          onClick={(e) => { if (e.target === e.currentTarget) setPtoModal(false) }}
-        >
-          <div className="w-full max-w-sm rounded-xl bg-white shadow-xl">
-            <div className="px-6 pt-6 pb-4 border-b border-gray-100">
-              <h3 className="text-base font-semibold text-gray-900">PTO Policy</h3>
-              <p className="text-xs text-gray-500 mt-1">Sets the default annual PTO for all staff</p>
-            </div>
-            <div className="px-6 py-5 space-y-5">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
-                  Default Annual PTO Days
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min="0"
-                    max="30"
-                    step="1"
-                    className="flex-1 accent-[#1D9E75]"
-                    value={ptoForm.defaultPtoDays}
-                    onChange={(e) => setPtoForm((f) => ({ ...f, defaultPtoDays: e.target.value }))}
-                  />
-                  <div className="w-14 text-center">
-                    <input
-                      type="number"
-                      min="0"
-                      max="365"
-                      className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-                      value={ptoForm.defaultPtoDays}
-                      onChange={(e) => setPtoForm((f) => ({ ...f, defaultPtoDays: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  New employees completing probation mid-year receive a prorated amount
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-gray-800">Allow per-employee custom amounts</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Override default for individual staff in their edit form</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPtoForm((f) => ({ ...f, ptoCustomAllowed: !f.ptoCustomAllowed }))}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${ptoForm.ptoCustomAllowed ? 'bg-[#1D9E75]' : 'bg-gray-300'}`}
-                >
-                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${ptoForm.ptoCustomAllowed ? 'translate-x-[18px]' : 'translate-x-[3px]'}`} />
-                </button>
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
-              <button
-                onClick={() => setPtoModal(false)}
-                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={savePtoPolicy}
-                disabled={savingPolicy}
-                className="flex-1 rounded-lg bg-[#1D9E75] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-              >
-                {savingPolicy ? 'Saving…' : 'Save Policy'}
-              </button>
-            </div>
           </div>
         </div>
       )}
