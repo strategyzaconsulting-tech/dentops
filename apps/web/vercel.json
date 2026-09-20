@@ -1,5 +1,5 @@
 {
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @dentops/web build",
+  "buildCommand": "npx vite build",
   "outputDirectory": "dist"
 }
