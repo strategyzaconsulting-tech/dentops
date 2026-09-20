@@ -573,24 +573,43 @@ export default function PracticeProfile() {
               )}
             </Section>
 
-            {/* HR Settings */}
-            <Section title="HR Settings">
-              <Field label="Default PTO Days Per Year">
-                <input
-                  className={inputCls + ' w-24'}
-                  type="number"
-                  min={0}
-                  max={365}
-                  value={form.defaultPtoDays}
-                  onChange={(e) => set('defaultPtoDays', parseInt(e.target.value) || 0)}
-                />
-              </Field>
+            {/* PTO Policy */}
+            <Section title="PTO Policy">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-3">Default Annual PTO Days</label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="range"
+                    min="0"
+                    max="30"
+                    step="1"
+                    className="flex-1 accent-[#1D9E75]"
+                    value={Math.min(form.defaultPtoDays, 30)}
+                    onChange={(e) => set('defaultPtoDays', parseInt(e.target.value) || 0)}
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    max="365"
+                    className={inputCls + ' w-20 text-center font-semibold'}
+                    value={form.defaultPtoDays}
+                    onChange={(e) => set('defaultPtoDays', parseInt(e.target.value) || 0)}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Applied to all new staff. Employees completing probation mid-year receive a prorated amount.
+                </p>
+              </div>
               <Toggle
-                label="Allow per-staff custom PTO allocation"
-                description="Managers can set individual PTO days that override the practice default."
+                label="Allow per-staff custom PTO amounts"
+                description="When enabled, managers can override the practice default for individual staff members in their employee file."
                 checked={form.ptoCustomAllowed}
                 onChange={(v) => set('ptoCustomAllowed', v)}
               />
+            </Section>
+
+            {/* HR Settings */}
+            <Section title="HR Settings">
               <Toggle
                 label="Require specialty on clock-in"
                 description="Staff must select a specialty when clocking in at this practice."
