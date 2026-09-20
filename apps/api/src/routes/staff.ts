@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma.js'
+import { sendStaffWelcome, sendPasswordReset } from '../lib/email.js'
 
 const userSelect = {
   id: true, practiceId: true, firstName: true, lastName: true, email: true,
@@ -43,10 +44,20 @@ export default async function staffRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'tempPassword must be at least 8 characters' })
     }
     const passwordHash = await bcrypt.hash(tempPassword, 12)
-    const user = await prisma.user.create({
-      data: { practiceId, firstName, lastName, email, role, status: 'invited', passwordHash },
-      select: userSelect,
-    })
+    const [user, practice] = await Promise.all([
+      prisma.user.create({
+        data: { practiceId, firstName, lastName, email, role, status: 'invited', passwordHash },
+        select: userSelect,
+      }),
+      prisma.practice.findUnique({ where: { id: practiceId }, select: { name: true } }),
+    ])
+
+    if (practice) {
+      sendStaffWelcome({ to: email, firstName, practiceName: practice.name, tempPassword }).catch(
+        (err) => console.error('[email] sendStaffWelcome failed:', err)
+      )
+    }
+
     return reply.status(201).send(user)
   })
 
@@ -112,6 +123,20 @@ export default async function staffRoutes(server: FastifyInstance) {
     if (tempPassword) data.passwordHash = await bcrypt.hash(tempPassword, 12)
 
     const user = await prisma.user.update({ where: { id }, data, select: userSelect })
+
+    if (tempPassword && user.practiceId) {
+      prisma.practice.findUnique({ where: { id: user.practiceId }, select: { name: true } }).then((practice) => {
+        if (practice) {
+          sendPasswordReset({
+            to: user.email,
+            firstName: user.firstName,
+            practiceName: practice.name,
+            tempPassword,
+          }).catch((err) => console.error('[email] sendPasswordReset failed:', err))
+        }
+      }).catch((err) => console.error('[email] practice lookup failed:', err))
+    }
+
     return reply.send(user)
   })
 

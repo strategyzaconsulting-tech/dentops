@@ -23,6 +23,7 @@
     "bcryptjs": "^3.0.3",
     "fastify": "^4.28.1",
     "node-cron": "^4.2.1",
+    "resend": "^6.28.1",
     "tsx": "^4.22.3"
   },
   "devDependencies": {
