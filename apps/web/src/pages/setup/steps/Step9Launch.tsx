@@ -1,24 +1,30 @@
 ﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSetup } from '../../../context/SetupContext'
+import { useAuth } from '../../../context/AuthContext'
 import { submitSetup } from '../../../services/api'
 
 export default function Step9Launch() {
   const navigate = useNavigate()
   const { state } = useSetup()
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
+  const alreadyAuthenticated = !!user
+
   const handleLaunch = async () => {
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.')
-      return
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
+    if (!alreadyAuthenticated) {
+      if (password.length < 8) {
+        setError('Password must be at least 8 characters.')
+        return
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match.')
+        return
+      }
     }
     setLoading(true)
     setError(null)
@@ -30,10 +36,12 @@ export default function Step9Launch() {
         doctors: state.doctors,
         staff: state.staff,
         locations: state.locations,
-        adminPassword: password,
+        ...(alreadyAuthenticated
+          ? { existingUserId: user.id }
+          : { adminPassword: password }),
       })
       localStorage.setItem('auth_token', token)
-      navigate('/')
+      window.location.href = '/'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -180,41 +188,53 @@ export default function Step9Launch() {
         </div>
       </div>
 
-      {/* Admin credentials */}
-      <div className="bg-white border border-gray-200 rounded-lg px-5 py-5 mb-6">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
-          Create your admin password
-        </p>
-        <div className="mb-3">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Email (your login)</label>
-          <input
-            type="email"
-            value={state.practice.email}
-            disabled
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
-          />
+      {/* Admin credentials — only shown when not already signed in */}
+      {alreadyAuthenticated ? (
+        <div className="bg-[#F0FDF9] border border-[#A7F3D0] rounded-lg px-5 py-4 mb-6 flex items-center gap-3">
+          <svg className="w-5 h-5 text-[#1D9E75] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-[#065F46]">Signed in as {user.firstName} {user.lastName}</p>
+            <p className="text-xs text-[#047857] mt-0.5">{user.email} · This account will become the practice admin.</p>
+          </div>
         </div>
-        <div className="mb-3">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 8 characters"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent"
-          />
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-lg px-5 py-5 mb-6">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
+            Create your admin password
+          </p>
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Email (your login)</label>
+            <input
+              type="email"
+              value={state.practice.email}
+              disabled
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+            />
+          </div>
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 8 characters"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Confirm password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter password"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent"
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Confirm password</label>
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Re-enter password"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent"
-          />
-        </div>
-      </div>
+      )}
 
       {/* Error */}
       {error && (

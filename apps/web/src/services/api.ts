@@ -7,7 +7,8 @@ export interface SetupPayload {
   doctors: Doctor[]
   staff: StaffMember[]
   locations: Location[]
-  adminPassword: string
+  adminPassword?: string
+  existingUserId?: string
 }
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'

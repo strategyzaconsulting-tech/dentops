@@ -40,18 +40,17 @@ interface SetupBody {
   doctors: Doctor[]
   staff: StaffMember[]
   locations: LocationInput[]
-  adminPassword: string
+  adminPassword?: string
+  existingUserId?: string
 }
 
 export default async function setupRoutes(server: FastifyInstance) {
   server.post<{ Body: SetupBody }>('/setup', async (request, reply) => {
-    const { practice, brandColor, doctors, staff, locations, adminPassword } = request.body
+    const { practice, brandColor, doctors, staff, locations, adminPassword, existingUserId } = request.body
 
-    if (!adminPassword || adminPassword.length < 8) {
+    if (!existingUserId && (!adminPassword || adminPassword.length < 8)) {
       return reply.status(400).send({ error: 'adminPassword must be at least 8 characters' })
     }
-
-    const passwordHash = await bcrypt.hash(adminPassword, 12)
 
     // 1. Create the practice
     const createdPractice = await prisma.practice.create({
@@ -70,18 +69,27 @@ export default async function setupRoutes(server: FastifyInstance) {
       })
     }
 
-    // 3. Create admin/owner user with password
-    const ownerEmail = practice.email.toLowerCase().trim()
-    const cleanName = practice.ownerName.trim().replace(/^(Dr|Mr|Mrs|Ms|Miss|Prof|Rev|Sir)\.?\s+/i, '')
-    const nameParts = cleanName.split(' ')
-    const ownerFirst = nameParts[0]
-    const ownerLast = nameParts.slice(1).join(' ') || ownerFirst
-    const owner = await prisma.user.create({
-      data: {
-        practiceId, firstName: ownerFirst, lastName: ownerLast,
-        email: ownerEmail, role: 'manager', status: 'active', passwordHash,
-      },
-    })
+    // 3. Create or link admin/owner user
+    let owner
+    if (existingUserId) {
+      owner = await prisma.user.update({
+        where: { id: existingUserId },
+        data: { practiceId, role: 'manager', status: 'active' },
+      })
+    } else {
+      const passwordHash = await bcrypt.hash(adminPassword!, 12)
+      const ownerEmail = practice.email.toLowerCase().trim()
+      const cleanName = practice.ownerName.trim().replace(/^(Dr|Mr|Mrs|Ms|Miss|Prof|Rev|Sir)\.?\s+/i, '')
+      const nameParts = cleanName.split(' ')
+      const ownerFirst = nameParts[0]
+      const ownerLast = nameParts.slice(1).join(' ') || ownerFirst
+      owner = await prisma.user.create({
+        data: {
+          practiceId, firstName: ownerFirst, lastName: ownerLast,
+          email: ownerEmail, role: 'manager', status: 'active', passwordHash,
+        },
+      })
+    }
 
     // 4. Create doctors
     if (doctors && doctors.length > 0) {

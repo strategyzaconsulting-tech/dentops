@@ -21,6 +21,7 @@ import Announcements from './pages/Announcements'
 import Onboarding from './pages/Onboarding'
 import PracticeProfile from './pages/PracticeProfile'
 import Login from './pages/Login'
+import Signup from './pages/Signup'
 import AdminDashboard from './pages/AdminDashboard'
 
 function PracticeViewBanner() {
@@ -60,6 +61,7 @@ export default function App() {
         <PracticeViewBanner />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
 
           <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
           <Route path="/time-clock" element={<RequireAuth><TimeClock /></RequireAuth>} />

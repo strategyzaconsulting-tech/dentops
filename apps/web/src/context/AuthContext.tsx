@@ -18,6 +18,7 @@ interface AuthContextValue {
   activePracticeId: string | null
   selectedPracticeName: string | null
   login: (email: string, password: string) => Promise<AuthUser>
+  signup: (firstName: string, lastName: string, email: string, password: string) => Promise<AuthUser>
   logout: () => void
   selectPractice: (id: string, name: string) => void
   exitPractice: () => void
@@ -91,13 +92,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.user as AuthUser
   }
 
+  async function signup(firstName: string, lastName: string, email: string, password: string): Promise<AuthUser> {
+    const res = await fetch(`${API_BASE}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, email, password }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error ?? 'Sign up failed')
+    }
+    const data = await res.json()
+    localStorage.setItem('auth_token', data.token)
+    setToken(data.token)
+    setUser(data.user)
+    return data.user as AuthUser
+  }
+
   function logout() {
     clearAuth()
     window.location.href = '/login'
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, activePracticeId, selectedPracticeName, login, logout, selectPractice, exitPractice }}>
+    <AuthContext.Provider value={{ user, token, loading, activePracticeId, selectedPracticeName, login, signup, logout, selectPractice, exitPractice }}>
       {children}
     </AuthContext.Provider>
   )

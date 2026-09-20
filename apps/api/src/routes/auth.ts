@@ -3,6 +3,44 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma.js'
 
 export default async function authRoutes(server: FastifyInstance) {
+  // POST /api/auth/signup
+  server.post<{ Body: { firstName: string; lastName: string; email: string; password: string } }>(
+    '/auth/signup',
+    async (request, reply) => {
+      const { firstName, lastName, email, password } = request.body
+      if (!firstName?.trim() || !lastName?.trim() || !email?.trim() || !password) {
+        return reply.status(400).send({ error: 'All fields are required' })
+      }
+      if (password.length < 8) {
+        return reply.status(400).send({ error: 'Password must be at least 8 characters' })
+      }
+      const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } })
+      if (existing) {
+        return reply.status(409).send({ error: 'An account with this email already exists' })
+      }
+      const passwordHash = await bcrypt.hash(password, 12)
+      const user = await prisma.user.create({
+        data: {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.toLowerCase().trim(),
+          role: 'manager',
+          status: 'active',
+          practiceId: null,
+          passwordHash,
+        },
+      })
+      const token = server.jwt.sign(
+        { userId: user.id, practiceId: null, role: user.role, email: user.email },
+        { expiresIn: '8h' }
+      )
+      return reply.status(201).send({
+        token,
+        user: { id: user.id, practiceId: null, role: user.role, email: user.email, firstName: user.firstName, lastName: user.lastName },
+      })
+    }
+  )
+
   // POST /api/auth/login
   server.post<{ Body: { email: string; password: string } }>(
     '/auth/login',
