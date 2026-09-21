@@ -118,6 +118,24 @@ function formatTime(t: string): string {
   return m === 0 ? `${h12}${ampm}` : `${h12}:${m.toString().padStart(2, '0')}${ampm}`
 }
 
+function buildGcalUrl(shift: Shift, staffName: string): string {
+  const d = shift.date.split('T')[0].replace(/-/g, '')
+  const start = shift.startTime.replace(':', '') + '00'
+  const end = shift.endTime.replace(':', '') + '00'
+  const details = [
+    shift.specialty && `Specialty: ${shift.specialty}`,
+    shift.notes && `Notes: ${shift.notes}`,
+  ].filter(Boolean).join('\n')
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `${staffName} – Work Shift`,
+    dates: `${d}T${start}/${d}T${end}`,
+    location: shift.location.name,
+  })
+  if (details) params.set('details', details)
+  return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
 function calcHours(start: string, end: string): number {
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)
@@ -547,17 +565,28 @@ export default function Schedules() {
                           >
                             <div className="space-y-1">
                               {dayShifts.map((shift) => (
-                                <button
-                                  key={shift.id}
-                                  onClick={() => openEdit(shift)}
-                                  className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium text-white transition-opacity hover:opacity-80"
-                                  style={{ backgroundColor: avatarColor(member.id) }}
-                                >
-                                  <div className="font-semibold">{formatTime(shift.startTime)} – {formatTime(shift.endTime)}</div>
-                                  {shift.location.name && (
-                                    <div className="mt-0.5 opacity-75 truncate">{shift.location.name}</div>
-                                  )}
-                                </button>
+                                <div key={shift.id} className="group/card relative">
+                                  <button
+                                    onClick={() => openEdit(shift)}
+                                    className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium text-white transition-opacity hover:opacity-80"
+                                    style={{ backgroundColor: avatarColor(member.id) }}
+                                  >
+                                    <div className="font-semibold">{formatTime(shift.startTime)} – {formatTime(shift.endTime)}</div>
+                                    {shift.location.name && (
+                                      <div className="mt-0.5 opacity-75 truncate">{shift.location.name}</div>
+                                    )}
+                                  </button>
+                                  <a
+                                    href={buildGcalUrl(shift, `${member.firstName} ${member.lastName}`)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title="Add to Google Calendar"
+                                    onClick={e => e.stopPropagation()}
+                                    className="absolute top-1 right-1 hidden group-hover/card:flex items-center justify-center w-5 h-5 rounded bg-white/20 hover:bg-white/40 transition-colors text-white text-[10px] leading-none"
+                                  >
+                                    📅
+                                  </a>
+                                </div>
                               ))}
                               <button
                                 onClick={() => openAdd(member.id, dateKey(day))}
@@ -753,29 +782,43 @@ export default function Schedules() {
             </div>
 
             {/* Modal footer */}
-            <div className="px-6 py-4 border-t border-gray-100 flex gap-2">
-              {modal.mode === 'edit' && (
+            <div className="px-6 py-4 border-t border-gray-100">
+              <div className="flex gap-2">
+                {modal.mode === 'edit' && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {deleting ? '…' : 'Delete'}
+                  </button>
+                )}
                 <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-50 disabled:opacity-50"
+                  onClick={() => setModal(null)}
+                  className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-[#F0EDE5]"
                 >
-                  {deleting ? '…' : 'Delete'}
+                  Cancel
                 </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!canSave || saving}
+                  className="flex-1 rounded-lg bg-[#1D9E75] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {saving ? 'Saving…' : modal.mode === 'add' ? 'Add Shift' : 'Save'}
+                </button>
+              </div>
+              {modal.mode === 'edit' && (
+                <div className="mt-3 text-center">
+                  <a
+                    href={buildGcalUrl(modal.shift, modalStaffMember ? `${modalStaffMember.firstName} ${modalStaffMember.lastName}` : 'Staff')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#1D9E75] transition-colors"
+                  >
+                    <span>📅</span> Add to Google Calendar
+                  </a>
+                </div>
               )}
-              <button
-                onClick={() => setModal(null)}
-                className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-[#F0EDE5]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={!canSave || saving}
-                className="flex-1 rounded-lg bg-[#1D9E75] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-              >
-                {saving ? 'Saving…' : modal.mode === 'add' ? 'Add Shift' : 'Save'}
-              </button>
             </div>
           </div>
         </div>
