@@ -408,8 +408,28 @@ export default function Schedules() {
 
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
+      <style>{`
+        @media print {
+          @page { size: A4 landscape; margin: 1.2cm; }
+          body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          [data-no-print] { display: none !important; }
+          [data-print-only] { display: block !important; }
+          .sticky { position: static !important; }
+          .overflow-x-auto { overflow: visible !important; }
+          .shadow-sm, .shadow-xl { box-shadow: none !important; }
+          .min-h-screen { min-height: unset !important; }
+          main.container { padding-top: 0.5rem !important; }
+        }
+      `}</style>
+
+      {/* Print-only header */}
+      <div data-print-only style={{ display: 'none' }} className="mb-4 border-b border-gray-300 pb-3">
+        <h1 className="text-xl font-bold text-gray-900">Weekly Schedule</h1>
+        <p className="text-sm text-gray-500">{formatWeekRange(monday)}</p>
+      </div>
+
       {/* Header */}
-      <header className="bg-[#2C3E3A]">
+      <header data-no-print className="bg-[#2C3E3A]">
         <div className="container flex h-16 items-center justify-between gap-4">
           <div className="flex items-center gap-3 shrink-0">
             <a href="/" className="text-sm text-[#8BAF9A] hover:text-white">← Back</a>
@@ -446,12 +466,19 @@ export default function Schedules() {
             >
               {copying ? 'Copying…' : '⇉ Copy Week →'}
             </button>
+            <button
+              onClick={() => window.print()}
+              title="Export schedule as PDF"
+              className="flex items-center gap-1.5 rounded-lg border border-[#3D5450] px-3 py-1.5 text-xs font-semibold text-gray-300 hover:bg-[#3D5450]"
+            >
+              ↓ Export PDF
+            </button>
           </div>
         </div>
       </header>
 
       {/* Role filter tabs + summary bar */}
-      <div className="border-b border-gray-200 bg-white shadow-sm">
+      <div data-no-print className="border-b border-gray-200 bg-white shadow-sm">
         <div className="container flex items-center justify-between">
           <div className="flex">
             {ROLE_TABS.map(tab => {
