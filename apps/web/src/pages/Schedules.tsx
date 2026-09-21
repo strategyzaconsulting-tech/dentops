@@ -197,12 +197,6 @@ export default function Schedules() {
 
   const weekStart = dateKey(monday)
 
-  const filteredStaff = useMemo(() => {
-    let result = roleFilter === 'all' ? staff : staff.filter(s => s.role === roleFilter)
-    if (showUnscheduledOnly) result = result.filter(s => !hoursMap.has(s.id))
-    return result
-  }, [staff, roleFilter, showUnscheduledOnly, hoursMap])
-
   async function fetchAll() {
     setLoading(true)
     try {
@@ -266,6 +260,12 @@ export default function Schedules() {
     }
     return map
   }, [shifts, staff, lunchConfig])
+
+  const filteredStaff = useMemo(() => {
+    let result = roleFilter === 'all' ? staff : staff.filter(s => s.role === roleFilter)
+    if (showUnscheduledOnly) result = result.filter(s => !hoursMap.has(s.id))
+    return result
+  }, [staff, roleFilter, showUnscheduledOnly, hoursMap])
 
   function openAdd(userId: string, date: string, defaultLocationId?: string) {
     setForm({ ...emptyForm, userId, locationId: defaultLocationId ?? locations[0]?.id ?? '' })
