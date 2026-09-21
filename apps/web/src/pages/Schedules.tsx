@@ -179,6 +179,7 @@ export default function Schedules() {
   const [deleting, setDeleting] = useState(false)
   const [copying, setCopying] = useState(false)
   const [roleFilter, setRoleFilter] = useState('all')
+  const [viewMode, setViewMode] = useState<'staff' | 'location'>('staff')
   const [lunchConfig, setLunchConfig] = useState<LunchConfig>({
     enabled: false, minutes: 60, windowStart: '13:00', windowEnd: '14:00',
   })
@@ -262,8 +263,8 @@ export default function Schedules() {
     return map
   }, [shifts, staff, lunchConfig])
 
-  function openAdd(userId: string, date: string) {
-    setForm({ ...emptyForm, userId, locationId: locations[0]?.id ?? '' })
+  function openAdd(userId: string, date: string, defaultLocationId?: string) {
+    setForm({ ...emptyForm, userId, locationId: defaultLocationId ?? locations[0]?.id ?? '' })
     setModal({ mode: 'add', date, userId })
     setShowSaveTemplate(false)
     setNewTemplateName('')
@@ -504,12 +505,25 @@ export default function Schedules() {
               )
             })}
           </div>
-          {!loading && filteredStaff.length > 0 && (
-            <div className="flex items-center gap-4 text-xs text-gray-500 pr-1">
-              <span><span className="font-semibold text-gray-800">{filteredStaff.length}</span> staff</span>
-              <span><span className="font-semibold text-gray-800">{totalScheduled.toFixed(1)}</span> hrs this week</span>
+          <div className="flex items-center gap-3 pr-1">
+            {/* View toggle */}
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-semibold">
+              <button
+                onClick={() => setViewMode('staff')}
+                className={`px-3 py-1.5 transition-colors ${viewMode === 'staff' ? 'bg-[#1D9E75] text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+              >By Staff</button>
+              <button
+                onClick={() => setViewMode('location')}
+                className={`px-3 py-1.5 border-l border-gray-200 transition-colors ${viewMode === 'location' ? 'bg-[#1D9E75] text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+              >By Location</button>
             </div>
-          )}
+            {!loading && filteredStaff.length > 0 && (
+              <div className="flex items-center gap-4 text-xs text-gray-500">
+                <span><span className="font-semibold text-gray-800">{filteredStaff.length}</span> staff</span>
+                <span><span className="font-semibold text-gray-800">{totalScheduled.toFixed(1)}</span> hrs this week</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -523,7 +537,114 @@ export default function Schedules() {
           </div>
         ) : filteredStaff.length === 0 ? (
           <div className="py-20 text-center text-sm text-gray-400">No staff in this role group.</div>
+        ) : viewMode === 'location' ? (
+          /* ── By-Location view ── */
+          <div className="space-y-6">
+            {locations.map(loc => {
+              const locShifts = shifts.filter(s => s.locationId === loc.id)
+              const locStaffIds = new Set(locShifts.map(s => s.userId))
+              const locStaff = filteredStaff.filter(s => locStaffIds.has(s.id))
+              const locShiftMap = new Map<string, Shift[]>()
+              for (const s of locShifts) {
+                const key = `${s.userId}__${s.date.split('T')[0]}`
+                if (!locShiftMap.has(key)) locShiftMap.set(key, [])
+                locShiftMap.get(key)!.push(s)
+              }
+              const locHoursMap = new Map<string, number>()
+              for (const s of locShifts) {
+                let h = calcHours(s.startTime, s.endTime)
+                const [wsh, wsm] = lunchConfig.windowStart.split(':').map(Number)
+                const [weh, wem] = lunchConfig.windowEnd.split(':').map(Number)
+                const wStart = wsh * 60 + wsm, wEnd = weh * 60 + wem
+                if (lunchConfig.enabled) {
+                  const [sh, sm] = s.startTime.split(':').map(Number)
+                  const [eh, em] = s.endTime.split(':').map(Number)
+                  const staffRole = staff.find(m => m.id === s.userId)?.role
+                  if (staffRole !== 'doctor' && sh * 60 + sm <= wStart && eh * 60 + em >= wEnd)
+                    h -= lunchConfig.minutes / 60
+                }
+                locHoursMap.set(s.userId, (locHoursMap.get(s.userId) ?? 0) + h)
+              }
+              return (
+                <div key={loc.id}>
+                  <div className="flex items-center gap-3 mb-2 px-1">
+                    <h2 className="text-sm font-bold text-gray-700">{loc.name}</h2>
+                    <span className="text-xs text-gray-400">{locStaff.length} staff · {[...locHoursMap.values()].reduce((a, b) => a + b, 0).toFixed(1)} hrs</span>
+                  </div>
+                  {locStaff.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-200 bg-white px-6 py-8 text-center text-sm text-gray-400">
+                      No shifts scheduled at {loc.name} this week.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+                      <table className="min-w-full border-collapse">
+                        <thead>
+                          <tr className="border-b bg-[#EFECE4]">
+                            <th className="sticky left-0 z-20 w-52 border-r border-gray-200 bg-[#EFECE4] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Staff</th>
+                            {weekDays.map((day, i) => {
+                              const isToday = dateKey(day) === dateKey(new Date())
+                              return (
+                                <th key={i} className={`min-w-[130px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide ${isToday ? 'text-[#1D9E75]' : 'text-gray-500'}`}>
+                                  <div>{DAY_LABELS[i]}</div>
+                                  <div className={`mt-0.5 text-base font-bold ${isToday ? 'text-[#1D9E75]' : 'text-gray-700'}`}>{formatMonthDay(day)}</div>
+                                </th>
+                              )
+                            })}
+                            <th className="w-20 px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Hrs</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {locStaff.map(member => {
+                            const hrs = locHoursMap.get(member.id) ?? 0
+                            return (
+                              <tr key={member.id} className="group hover:bg-[#F7F5F0]">
+                                <td className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3 group-hover:bg-[#F7F5F0]">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: avatarColor(member.id) }}>
+                                      {`${member.firstName[0]}${member.lastName[0]}`.toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-semibold text-gray-900 leading-tight truncate">{member.firstName} {member.lastName}</p>
+                                      <p className="text-xs text-gray-400 capitalize leading-tight">{member.role.replace('_', ' ')}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                {weekDays.map((day, i) => {
+                                  const key = `${member.id}__${dateKey(day)}`
+                                  const dayShifts = locShiftMap.get(key) ?? []
+                                  const isToday = dateKey(day) === dateKey(new Date())
+                                  return (
+                                    <td key={i} className={`min-w-[130px] px-2 py-2 align-top ${isToday ? 'bg-[#F0FBF6]' : ''}`}>
+                                      <div className="space-y-1">
+                                        {dayShifts.map(shift => (
+                                          <div key={shift.id} className="group/card relative">
+                                            <button onClick={() => openEdit(shift)} className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium text-white transition-opacity hover:opacity-80" style={{ backgroundColor: avatarColor(member.id) }}>
+                                              <div className="font-semibold">{formatTime(shift.startTime)} – {formatTime(shift.endTime)}</div>
+                                            </button>
+                                            <a href={buildGcalUrl(shift, `${member.firstName} ${member.lastName}`)} target="_blank" rel="noopener noreferrer" title="Add to Google Calendar" onClick={e => e.stopPropagation()} className="absolute top-1 right-1 hidden group-hover/card:flex items-center justify-center w-5 h-5 rounded bg-white/20 hover:bg-white/40 transition-colors text-white text-[10px] leading-none">📅</a>
+                                          </div>
+                                        ))}
+                                        <button onClick={() => openAdd(member.id, dateKey(day), loc.id)} className={`w-full rounded-lg border border-dashed py-1.5 text-center text-xs transition-all ${dayShifts.length === 0 ? 'min-h-[44px] border-transparent text-gray-300 hover:border-[#1D9E75] hover:text-[#1D9E75] group-hover:border-gray-200' : 'border-gray-200 text-gray-300 hover:border-[#1D9E75] hover:text-[#1D9E75]'}`}>+</button>
+                                      </div>
+                                    </td>
+                                  )
+                                })}
+                                <td className="w-20 px-3 py-3 text-center">
+                                  {hrs > 0 ? <span className={`text-sm font-bold tabular-nums ${hrs >= 40 ? 'text-amber-600' : 'text-gray-700'}`}>{hrs % 1 === 0 ? hrs : hrs.toFixed(1)}</span> : <span className="text-xs text-gray-300">—</span>}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         ) : (
+          /* ── By-Staff view (original) ── */
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
             <table className="min-w-full border-collapse">
               <thead>
@@ -650,6 +771,7 @@ export default function Schedules() {
           </div>
         )}
       </main>
+
 
       {/* Add / Edit shift modal */}
       {modal && (
