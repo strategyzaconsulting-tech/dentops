@@ -1,5 +1,5 @@
 {
-  "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "./node_modules/.bin/vite build",
-  "outputDirectory": "dist"
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && pnpm --filter @dentops/web build",
+  "outputDirectory": "apps/web/dist"
 }
