@@ -928,20 +928,6 @@ export default function Schedules() {
                 </select>
               </div>
 
-              {/* Notes */}
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
-                  Notes <span className="font-normal text-gray-400">(optional)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Any notes…"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-                  value={form.notes}
-                  onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))}
-                />
-              </div>
-
               {/* Repeat pattern — add mode only */}
               {modal.mode === 'add' && (
                 <div>
@@ -978,6 +964,20 @@ export default function Schedules() {
                   )}
                 </div>
               )}
+
+              {/* Notes */}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Notes <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Any notes…"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                  value={form.notes}
+                  onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))}
+                />
+              </div>
 
               {/* Save as template */}
               {showSaveTemplate ? (
