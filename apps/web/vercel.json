@@ -1,5 +1,5 @@
 {
-  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
-  "buildCommand": "npx vite build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "./node_modules/.bin/vite build",
   "outputDirectory": "dist"
 }
