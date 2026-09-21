@@ -179,7 +179,10 @@ export default function Schedules() {
   const [deleting, setDeleting] = useState(false)
   const [copying, setCopying] = useState(false)
   const [roleFilter, setRoleFilter] = useState('all')
+  const [showUnscheduledOnly, setShowUnscheduledOnly] = useState(false)
   const [viewMode, setViewMode] = useState<'staff' | 'location'>('staff')
+  const [recurrence, setRecurrence] = useState<'none' | 'weekly' | 'biweekly' | 'monthly'>('none')
+  const [repeatCount, setRepeatCount] = useState(4)
   const [lunchConfig, setLunchConfig] = useState<LunchConfig>({
     enabled: false, minutes: 60, windowStart: '13:00', windowEnd: '14:00',
   })
@@ -195,9 +198,10 @@ export default function Schedules() {
   const weekStart = dateKey(monday)
 
   const filteredStaff = useMemo(() => {
-    if (roleFilter === 'all') return staff
-    return staff.filter(s => s.role === roleFilter)
-  }, [staff, roleFilter])
+    let result = roleFilter === 'all' ? staff : staff.filter(s => s.role === roleFilter)
+    if (showUnscheduledOnly) result = result.filter(s => !hoursMap.has(s.id))
+    return result
+  }, [staff, roleFilter, showUnscheduledOnly, hoursMap])
 
   async function fetchAll() {
     setLoading(true)
@@ -266,6 +270,8 @@ export default function Schedules() {
   function openAdd(userId: string, date: string, defaultLocationId?: string) {
     setForm({ ...emptyForm, userId, locationId: defaultLocationId ?? locations[0]?.id ?? '' })
     setModal({ mode: 'add', date, userId })
+    setRecurrence('none')
+    setRepeatCount(4)
     setShowSaveTemplate(false)
     setNewTemplateName('')
   }
@@ -321,20 +327,36 @@ export default function Schedules() {
     setSaving(true)
     try {
       if (modal?.mode === 'add') {
-        await apiFetch(`/api/shifts`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            practiceId: PRACTICE_ID,
-            userId: form.userId,
-            locationId: form.locationId,
-            date: modal.date,
-            startTime: form.startTime,
-            endTime: form.endTime,
-            specialty: form.specialty || undefined,
-            notes: form.notes || undefined,
-          }),
-        })
+        const dates: string[] = [modal.date]
+        if (recurrence !== 'none') {
+          const base = new Date(modal.date + 'T12:00:00')
+          for (let i = 1; i < repeatCount; i++) {
+            let next: Date
+            if (recurrence === 'monthly') {
+              next = new Date(base.getFullYear(), base.getMonth() + i, base.getDate())
+            } else {
+              const intervalDays = recurrence === 'weekly' ? 7 : 14
+              next = addDays(base, intervalDays * i)
+            }
+            dates.push(dateKey(next))
+          }
+        }
+        await Promise.all(dates.map(date =>
+          apiFetch(`/api/shifts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              practiceId: PRACTICE_ID,
+              userId: form.userId,
+              locationId: form.locationId,
+              date,
+              startTime: form.startTime,
+              endTime: form.endTime,
+              specialty: form.specialty || undefined,
+              notes: form.notes || undefined,
+            }),
+          })
+        ))
       } else if (modal?.mode === 'edit') {
         await apiFetch(`/api/shifts/${modal.shift.id}`, {
           method: 'PATCH',
@@ -506,6 +528,25 @@ export default function Schedules() {
             })}
           </div>
           <div className="flex items-center gap-3 pr-1">
+            {/* Unscheduled filter */}
+            {!loading && (
+              <button
+                onClick={() => setShowUnscheduledOnly(v => !v)}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border transition-colors ${
+                  showUnscheduledOnly
+                    ? 'bg-amber-50 border-amber-300 text-amber-700'
+                    : 'border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${showUnscheduledOnly ? 'bg-amber-400' : 'bg-gray-300'}`} />
+                Unscheduled
+                {!showUnscheduledOnly && (
+                  <span className="ml-0.5 font-bold text-gray-500">
+                    {staff.filter(s => !hoursMap.has(s.id)).length}
+                  </span>
+                )}
+              </button>
+            )}
             {/* View toggle */}
             <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-semibold">
               <button
@@ -678,8 +719,9 @@ export default function Schedules() {
               <tbody className="divide-y divide-gray-100">
                 {filteredStaff.map((member) => {
                   const weekHours = hoursMap.get(member.id) ?? 0
+                  const isUnscheduled = weekHours === 0
                   return (
-                    <tr key={member.id} className="group hover:bg-[#F7F5F0]">
+                    <tr key={member.id} className={`group hover:bg-[#F7F5F0] ${isUnscheduled ? 'border-l-2 border-l-amber-300' : ''}`}>
                       {/* Sticky staff cell */}
                       <td className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3 group-hover:bg-[#F7F5F0]">
                         <div className="flex items-center gap-2.5">
@@ -760,7 +802,9 @@ export default function Schedules() {
                             {weekHours % 1 === 0 ? weekHours : weekHours.toFixed(1)}
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-300">—</span>
+                          <span className="inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-600">
+                            Open
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -898,6 +942,43 @@ export default function Schedules() {
                 />
               </div>
 
+              {/* Repeat pattern — add mode only */}
+              {modal.mode === 'add' && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Repeat</label>
+                  <div className="flex gap-2">
+                    <select
+                      className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      value={recurrence}
+                      onChange={e => setRecurrence(e.target.value as typeof recurrence)}
+                    >
+                      <option value="none">No repeat</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="biweekly">Every 2 weeks</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                    {recurrence !== 'none' && (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min={2}
+                          max={26}
+                          className="w-16 rounded-lg border border-gray-300 px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                          value={repeatCount}
+                          onChange={e => setRepeatCount(Math.max(2, Math.min(26, parseInt(e.target.value) || 2)))}
+                        />
+                        <span className="text-xs text-gray-400 whitespace-nowrap">times</span>
+                      </div>
+                    )}
+                  </div>
+                  {recurrence !== 'none' && (
+                    <p className="mt-1 text-xs text-gray-400">
+                      Creates {repeatCount} shifts — this one + {repeatCount - 1} more
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Save as template */}
               {showSaveTemplate ? (
                 <div className="flex gap-2">
@@ -953,7 +1034,10 @@ export default function Schedules() {
                   disabled={!canSave || saving}
                   className="flex-1 rounded-lg bg-[#1D9E75] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
                 >
-                  {saving ? 'Saving…' : modal.mode === 'add' ? 'Add Shift' : 'Save'}
+                  {saving ? 'Saving…' : modal.mode === 'add'
+                    ? recurrence !== 'none' ? `Add ${repeatCount} Shifts` : 'Add Shift'
+                    : 'Save'
+                  }
                 </button>
               </div>
               {modal.mode === 'edit' && (
