@@ -49,11 +49,12 @@ export default async function shiftsRoutes(server: FastifyInstance) {
       date: string
       startTime: string
       endTime: string
+      type?: string
       specialty?: string
       notes?: string
     }
   }>('/shifts', async (request, reply) => {
-    const { practiceId, userId, locationId, date, startTime, endTime, specialty, notes } =
+    const { practiceId, userId, locationId, date, startTime, endTime, type, specialty, notes } =
       request.body
     const shift = await prisma.shift.create({
       data: {
@@ -63,6 +64,7 @@ export default async function shiftsRoutes(server: FastifyInstance) {
         date: new Date(date),
         startTime,
         endTime,
+        type: type ?? 'shift',
         specialty: specialty ?? null,
         notes: notes ?? null,
       },
@@ -81,17 +83,19 @@ export default async function shiftsRoutes(server: FastifyInstance) {
       locationId?: string
       startTime?: string
       endTime?: string
+      type?: string
       specialty?: string
       notes?: string
     }
   }>('/shifts/:id', async (request, reply) => {
     const { id } = request.params
-    const { locationId, startTime, endTime, specialty, notes } = request.body
+    const { locationId, startTime, endTime, type, specialty, notes } = request.body
 
     const data: Record<string, unknown> = {}
     if (locationId !== undefined) data.locationId = locationId
     if (startTime !== undefined) data.startTime = startTime
     if (endTime !== undefined) data.endTime = endTime
+    if (type !== undefined) data.type = type
     if (specialty !== undefined) data.specialty = specialty
     if (notes !== undefined) data.notes = notes
 

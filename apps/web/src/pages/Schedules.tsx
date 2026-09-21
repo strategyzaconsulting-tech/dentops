@@ -33,6 +33,15 @@ interface Location {
   name: string
 }
 
+const ABSENCE_TYPES = ['pto', 'unpaid', 'jury_duty'] as const
+type AbsenceType = typeof ABSENCE_TYPES[number]
+const ABSENCE_LABELS: Record<string, string> = {
+  pto: 'PTO',
+  unpaid: 'Unpaid Leave',
+  jury_duty: 'Jury Duty',
+}
+function isAbsence(type: string) { return ABSENCE_TYPES.includes(type as AbsenceType) }
+
 interface Shift {
   id: string
   userId: string
@@ -40,6 +49,7 @@ interface Shift {
   date: string
   startTime: string
   endTime: string
+  type: string
   specialty: string | null
   notes: string | null
   user: { id: string; firstName: string; lastName: string }
@@ -51,6 +61,7 @@ interface ShiftForm {
   locationId: string
   startTime: string
   endTime: string
+  type: string
   specialty: string
   notes: string
 }
@@ -69,6 +80,7 @@ const emptyForm: ShiftForm = {
   locationId: '',
   startTime: '09:00',
   endTime: '17:00',
+  type: 'shift',
   specialty: '',
   notes: '',
 }
@@ -134,6 +146,13 @@ function buildGcalUrl(shift: Shift, staffName: string): string {
   })
   if (details) params.set('details', details)
   return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
+function absenceColor(type: string): string {
+  if (type === 'pto') return '#3B82F6'
+  if (type === 'unpaid') return '#F59E0B'
+  if (type === 'jury_duty') return '#8B5CF6'
+  return '#1D9E75'
 }
 
 function calcHours(start: string, end: string): number {
@@ -282,6 +301,7 @@ export default function Schedules() {
       locationId: shift.locationId,
       startTime: shift.startTime,
       endTime: shift.endTime,
+      type: shift.type ?? 'shift',
       specialty: shift.specialty ?? '',
       notes: shift.notes ?? '',
     })
@@ -341,6 +361,7 @@ export default function Schedules() {
             dates.push(dateKey(next))
           }
         }
+        const locationId = form.locationId || locations[0]?.id
         await Promise.all(dates.map(date =>
           apiFetch(`/api/shifts`, {
             method: 'POST',
@@ -348,11 +369,12 @@ export default function Schedules() {
             body: JSON.stringify({
               practiceId: PRACTICE_ID,
               userId: form.userId,
-              locationId: form.locationId,
+              locationId,
               date,
               startTime: form.startTime,
               endTime: form.endTime,
-              specialty: form.specialty || undefined,
+              type: form.type || 'shift',
+              specialty: !isAbsence(form.type) ? (form.specialty || undefined) : undefined,
               notes: form.notes || undefined,
             }),
           })
@@ -362,10 +384,11 @@ export default function Schedules() {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            locationId: form.locationId,
+            locationId: form.locationId || locations[0]?.id,
             startTime: form.startTime,
             endTime: form.endTime,
-            specialty: form.specialty || undefined,
+            type: form.type || 'shift',
+            specialty: !isAbsence(form.type) ? (form.specialty || undefined) : undefined,
             notes: form.notes || undefined,
           }),
         })
@@ -418,7 +441,7 @@ export default function Schedules() {
     }
   }
 
-  const canSave = form.locationId && form.startTime && form.endTime && form.userId
+  const canSave = (form.locationId || isAbsence(form.type)) && form.startTime && form.endTime && form.userId
 
   const modalStaffMember = modal
     ? staff.find(s => s.id === (modal.mode === 'add' ? modal.userId : modal.shift.userId))
@@ -477,6 +500,12 @@ export default function Schedules() {
               onClick={() => setMonday(getMonday(new Date()))}
               className="rounded-lg border border-[#3D5450] px-3 py-1.5 text-xs font-medium text-gray-400 hover:bg-[#3D5450]"
             >Today</button>
+            <input
+              type="date"
+              title="Jump to week"
+              className="rounded-lg border border-[#3D5450] bg-transparent px-2 py-1.5 text-xs text-gray-400 focus:outline-none focus:border-[#8BAF9A] [color-scheme:dark]"
+              onChange={e => { if (e.target.value) setMonday(getMonday(new Date(e.target.value + 'T12:00:00'))) }}
+            />
           </div>
 
           {/* Actions */}
@@ -659,10 +688,16 @@ export default function Schedules() {
                                       <div className="space-y-1">
                                         {dayShifts.map(shift => (
                                           <div key={shift.id} className="group/card relative">
-                                            <button onClick={() => openEdit(shift)} className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium text-white transition-opacity hover:opacity-80" style={{ backgroundColor: avatarColor(member.id) }}>
-                                              <div className="font-semibold">{formatTime(shift.startTime)} – {formatTime(shift.endTime)}</div>
+                                            <button onClick={() => openEdit(shift)} className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium text-white transition-opacity hover:opacity-80" style={{ backgroundColor: isAbsence(shift.type) ? absenceColor(shift.type) : avatarColor(member.id) }}>
+                                              {isAbsence(shift.type) ? (
+                                                <div className="font-semibold">{ABSENCE_LABELS[shift.type]}</div>
+                                              ) : (
+                                                <div className="font-semibold">{formatTime(shift.startTime)} – {formatTime(shift.endTime)}</div>
+                                              )}
                                             </button>
-                                            <a href={buildGcalUrl(shift, `${member.firstName} ${member.lastName}`)} target="_blank" rel="noopener noreferrer" title="Add to Google Calendar" onClick={e => e.stopPropagation()} className="absolute top-1 right-1 hidden group-hover/card:flex items-center justify-center w-5 h-5 rounded bg-white/20 hover:bg-white/40 transition-colors text-white text-[10px] leading-none">📅</a>
+                                            {!isAbsence(shift.type) && (
+                                              <a href={buildGcalUrl(shift, `${member.firstName} ${member.lastName}`)} target="_blank" rel="noopener noreferrer" title="Add to Google Calendar" onClick={e => e.stopPropagation()} className="absolute top-1 right-1 hidden group-hover/card:flex items-center justify-center w-5 h-5 rounded bg-white/20 hover:bg-white/40 transition-colors text-white text-[10px] leading-none">📅</a>
+                                            )}
                                           </div>
                                         ))}
                                         <button onClick={() => openAdd(member.id, dateKey(day), loc.id)} className={`w-full rounded-lg border border-dashed py-1.5 text-center text-xs transition-all ${dayShifts.length === 0 ? 'min-h-[44px] border-transparent text-gray-300 hover:border-[#1D9E75] hover:text-[#1D9E75] group-hover:border-gray-200' : 'border-gray-200 text-gray-300 hover:border-[#1D9E75] hover:text-[#1D9E75]'}`}>+</button>
@@ -759,23 +794,31 @@ export default function Schedules() {
                                   <button
                                     onClick={() => openEdit(shift)}
                                     className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium text-white transition-opacity hover:opacity-80"
-                                    style={{ backgroundColor: avatarColor(member.id) }}
+                                    style={{ backgroundColor: isAbsence(shift.type) ? absenceColor(shift.type) : avatarColor(member.id) }}
                                   >
-                                    <div className="font-semibold">{formatTime(shift.startTime)} – {formatTime(shift.endTime)}</div>
-                                    {shift.location.name && (
-                                      <div className="mt-0.5 opacity-75 truncate">{shift.location.name}</div>
+                                    {isAbsence(shift.type) ? (
+                                      <div className="font-semibold">{ABSENCE_LABELS[shift.type]}</div>
+                                    ) : (
+                                      <>
+                                        <div className="font-semibold">{formatTime(shift.startTime)} – {formatTime(shift.endTime)}</div>
+                                        {shift.location.name && (
+                                          <div className="mt-0.5 opacity-75 truncate">{shift.location.name}</div>
+                                        )}
+                                      </>
                                     )}
                                   </button>
-                                  <a
-                                    href={buildGcalUrl(shift, `${member.firstName} ${member.lastName}`)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    title="Add to Google Calendar"
-                                    onClick={e => e.stopPropagation()}
-                                    className="absolute top-1 right-1 hidden group-hover/card:flex items-center justify-center w-5 h-5 rounded bg-white/20 hover:bg-white/40 transition-colors text-white text-[10px] leading-none"
-                                  >
-                                    📅
-                                  </a>
+                                  {!isAbsence(shift.type) && (
+                                    <a
+                                      href={buildGcalUrl(shift, `${member.firstName} ${member.lastName}`)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      title="Add to Google Calendar"
+                                      onClick={e => e.stopPropagation()}
+                                      className="absolute top-1 right-1 hidden group-hover/card:flex items-center justify-center w-5 h-5 rounded bg-white/20 hover:bg-white/40 transition-colors text-white text-[10px] leading-none"
+                                    >
+                                      📅
+                                    </a>
+                                  )}
                                 </div>
                               ))}
                               <button
@@ -867,6 +910,32 @@ export default function Schedules() {
                 </div>
               )}
 
+              {/* Shift type */}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Type</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { value: 'shift', label: 'Work Shift', color: 'bg-[#1D9E75] text-white border-[#1D9E75]' },
+                    { value: 'pto', label: 'PTO', color: 'bg-blue-500 text-white border-blue-500' },
+                    { value: 'unpaid', label: 'Unpaid Leave', color: 'bg-amber-500 text-white border-amber-500' },
+                    { value: 'jury_duty', label: 'Jury Duty', color: 'bg-purple-500 text-white border-purple-500' },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, type: opt.value }))}
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                        form.type === opt.value
+                          ? opt.color
+                          : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Times */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -896,37 +965,41 @@ export default function Schedules() {
                 </p>
               )}
 
-              {/* Location */}
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Location</label>
-                <select
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-                  value={form.locationId}
-                  onChange={(e) => setForm(f => ({ ...f, locationId: e.target.value }))}
-                >
-                  <option value="">Select location…</option>
-                  {locations.map(l => (
-                    <option key={l.id} value={l.id}>{l.name}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Location — hidden for absence types */}
+              {!isAbsence(form.type) && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Location</label>
+                  <select
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                    value={form.locationId}
+                    onChange={(e) => setForm(f => ({ ...f, locationId: e.target.value }))}
+                  >
+                    <option value="">Select location…</option>
+                    {locations.map(l => (
+                      <option key={l.id} value={l.id}>{l.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              {/* Specialty */}
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
-                  Specialty <span className="font-normal text-gray-400">(optional)</span>
-                </label>
-                <select
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-                  value={form.specialty}
-                  onChange={(e) => setForm(f => ({ ...f, specialty: e.target.value }))}
-                >
-                  <option value="">None</option>
-                  {SPECIALTIES.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Specialty — hidden for absence types */}
+              {!isAbsence(form.type) && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    Specialty <span className="font-normal text-gray-400">(optional)</span>
+                  </label>
+                  <select
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                    value={form.specialty}
+                    onChange={(e) => setForm(f => ({ ...f, specialty: e.target.value }))}
+                  >
+                    <option value="">None</option>
+                    {SPECIALTIES.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Repeat pattern — add mode only */}
               {modal.mode === 'add' && (

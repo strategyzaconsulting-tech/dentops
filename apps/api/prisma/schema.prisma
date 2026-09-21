@@ -177,6 +177,7 @@ model Shift {
   date       DateTime @db.Date
   startTime  String   @map("start_time")
   endTime    String   @map("end_time")
+  type       String   @default("shift")
   specialty  String?
   notes      String?
 
